@@ -232,7 +232,8 @@ function expectSameSet(actual: Set<string>, expected: Set<string>): void {
 }
 
 describe('reference evaluator anchors (fixed ctx sanity pins)', () => {
-  const anchor = (rel: Relative): string => new Date(resolveReldateInstant(rel, refCtx)).toISOString();
+  const anchor = (rel: Relative): string =>
+    new Date(resolveReldateInstant(rel, refCtx)).toISOString();
   it('pins today / this_week / this_month for the fixed now in America/New_York', () => {
     expect(anchor({ form: 'named', name: 'today' })).toBe('2026-06-03T04:00:00.000Z');
     expect(anchor({ form: 'named', name: 'this_week' })).toBe('2026-06-01T04:00:00.000Z');
@@ -288,78 +289,58 @@ describe('keyset pagination + sort options (DB order is ground truth)', () => {
     return res.rows.map((r) => r.id);
   }
 
-  it(
-    'page1+page2 are disjoint and equal the unpaginated prefix (created desc)',
-    async () => {
-      const all = await run({ limit: 200 });
-      expect(all.length).toBeGreaterThan(60); // needs ≥3 pages of 30 to be meaningful
-      expect(all.length).toBeLessThan(200); // one-shot list is complete
+  it('page1+page2 are disjoint and equal the unpaginated prefix (created desc)', async () => {
+    const all = await run({ limit: 200 });
+    expect(all.length).toBeGreaterThan(60); // needs ≥3 pages of 30 to be meaningful
+    expect(all.length).toBeLessThan(200); // one-shot list is complete
 
-      // The filtered set itself matches the reference.
-      expectSameSet(new Set(all), reference.evaluate(ast));
+    // The filtered set itself matches the reference.
+    expectSameSet(new Set(all), reference.evaluate(ast));
 
-      const page1 = await run({ limit: 30 });
-      const lastP1 = page1[page1.length - 1];
-      expect(lastP1).toBeDefined();
-      if (lastP1 === undefined) return;
-      const c1 = createdById.get(lastP1);
-      if (c1 === undefined) throw new Error('missing createdAt');
-      const page2 = await run({ limit: 30, cursor: { sortValue: c1, id: lastP1 } });
+    const page1 = await run({ limit: 30 });
+    const lastP1 = page1[page1.length - 1];
+    expect(lastP1).toBeDefined();
+    if (lastP1 === undefined) return;
+    const c1 = createdById.get(lastP1);
+    if (c1 === undefined) throw new Error('missing createdAt');
+    const page2 = await run({ limit: 30, cursor: { sortValue: c1, id: lastP1 } });
 
-      expect(page1).toEqual(all.slice(0, 30));
-      expect(page2).toEqual(all.slice(30, 60));
-      expect(page1.filter((id) => page2.includes(id))).toEqual([]);
-    },
-    60_000,
-  );
+    expect(page1).toEqual(all.slice(0, 30));
+    expect(page2).toEqual(all.slice(30, 60));
+    expect(page1.filter((id) => page2.includes(id))).toEqual([]);
+  }, 60_000);
 
-  it(
-    'order is stable across repeated execution',
-    async () => {
-      const a = await run({ limit: 200 });
-      const b = await run({ limit: 200 });
-      expect(a).toEqual(b);
-    },
-    60_000,
-  );
+  it('order is stable across repeated execution', async () => {
+    const a = await run({ limit: 200 });
+    const b = await run({ limit: 200 });
+    expect(a).toEqual(b);
+  }, 60_000);
 
-  it(
-    'sort by name asc paginates consistently with its own unpaginated order',
-    async () => {
-      const sort = { field: 'name', direction: 'asc' } as const;
-      const all = await run({ limit: 200, sort });
-      expectSameSet(new Set(all), reference.evaluate(ast)); // sort never changes the set
+  it('sort by name asc paginates consistently with its own unpaginated order', async () => {
+    const sort = { field: 'name', direction: 'asc' } as const;
+    const all = await run({ limit: 200, sort });
+    expectSameSet(new Set(all), reference.evaluate(ast)); // sort never changes the set
 
-      const page1 = await run({ limit: 25, sort });
-      const lastP1 = page1[page1.length - 1];
-      expect(lastP1).toBeDefined();
-      if (lastP1 === undefined) return;
-      const n1 = nameById.get(lastP1);
-      if (n1 === undefined) throw new Error('missing name');
-      const page2 = await run({ limit: 25, sort, cursor: { sortValue: n1, id: lastP1 } });
+    const page1 = await run({ limit: 25, sort });
+    const lastP1 = page1[page1.length - 1];
+    expect(lastP1).toBeDefined();
+    if (lastP1 === undefined) return;
+    const n1 = nameById.get(lastP1);
+    if (n1 === undefined) throw new Error('missing name');
+    const page2 = await run({ limit: 25, sort, cursor: { sortValue: n1, id: lastP1 } });
 
-      expect(page1).toEqual(all.slice(0, 25));
-      expect(page2).toEqual(all.slice(25, 50));
-    },
-    60_000,
-  );
+    expect(page1).toEqual(all.slice(0, 25));
+    expect(page2).toEqual(all.slice(25, 50));
+  }, 60_000);
 
-  it(
-    'sort by updated desc returns the same set (order backed by load-time column)',
-    async () => {
-      const all = await run({ limit: 200, sort: { field: 'updated', direction: 'desc' } });
-      expectSameSet(new Set(all), reference.evaluate(ast));
-    },
-    60_000,
-  );
+  it('sort by updated desc returns the same set (order backed by load-time column)', async () => {
+    const all = await run({ limit: 200, sort: { field: 'updated', direction: 'desc' } });
+    expectSameSet(new Set(all), reference.evaluate(ast));
+  }, 60_000);
 
-  it(
-    'keyword case-insensitive twin queries yield identical sets',
-    async () => {
-      const lower = await fetchAllIds(parse('no call within 30 d', { fieldCatalog: FIELD_CATALOG }));
-      const upper = await fetchAllIds(parse('NO CALL WITHIN 30 D', { fieldCatalog: FIELD_CATALOG }));
-      expect(new Set(upper)).toEqual(new Set(lower));
-    },
-    60_000,
-  );
+  it('keyword case-insensitive twin queries yield identical sets', async () => {
+    const lower = await fetchAllIds(parse('no call within 30 d', { fieldCatalog: FIELD_CATALOG }));
+    const upper = await fetchAllIds(parse('NO CALL WITHIN 30 D', { fieldCatalog: FIELD_CATALOG }));
+    expect(new Set(upper)).toEqual(new Set(lower));
+  }, 60_000);
 });

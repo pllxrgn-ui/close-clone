@@ -12,3 +12,4 @@ CONTRACTS.md
 DECISIONS.md
 STATUS.md
 HUMAN_TODO.md
+apps/api/src/db/migrations/meta/

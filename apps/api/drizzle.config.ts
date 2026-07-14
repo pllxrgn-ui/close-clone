@@ -15,7 +15,8 @@ export default defineConfig({
   schema: './src/db/schema.ts',
   out: './src/db/migrations',
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? 'postgres://switchboard:switchboard@localhost:5432/switchboard',
+    url:
+      process.env.DATABASE_URL ?? 'postgres://switchboard:switchboard@localhost:5432/switchboard',
   },
   strict: true,
   verbose: false,

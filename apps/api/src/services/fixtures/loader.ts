@@ -199,7 +199,11 @@ class DimensionResolver {
 
 // --- Row mappers ------------------------------------------------------------
 
-function mapLead(f: FixtureLead, ownerId: string, statusId: string): InferInsertModel<typeof leads> {
+function mapLead(
+  f: FixtureLead,
+  ownerId: string,
+  statusId: string,
+): InferInsertModel<typeof leads> {
   return {
     id: f.id,
     name: f.name,
@@ -435,7 +439,11 @@ export async function loadLatencyFixtures(
   await contactBatch.flush();
 
   // Opportunities (+ stage dimension).
-  const oppBatch = new Batcher<InferInsertModel<typeof opportunities>>(db, opportunities, batchSize);
+  const oppBatch = new Batcher<InferInsertModel<typeof opportunities>>(
+    db,
+    opportunities,
+    batchSize,
+  );
   for await (const f of streamNdjson<FixtureOpportunity>(resolve(dir, 'opportunities.ndjson'))) {
     if (!inScope(f.leadId)) break;
     const ownerId = await dims.ensureUser(f.ownerId);

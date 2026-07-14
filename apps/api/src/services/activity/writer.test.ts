@@ -15,7 +15,10 @@ afterEach(async () => {
 });
 
 async function seedLead(): Promise<string> {
-  const [row] = await ctx.db.insert(leads).values({ name: 'Acme Corp' }).returning({ id: leads.id });
+  const [row] = await ctx.db
+    .insert(leads)
+    .values({ name: 'Acme Corp' })
+    .returning({ id: leads.id });
   if (!row) throw new Error('seed failed');
   return row.id;
 }

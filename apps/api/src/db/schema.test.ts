@@ -108,20 +108,28 @@ describe('C1 unique constraints (insert dup → error)', () => {
   });
 
   test('users.idp_subject is unique', async () => {
-    await ctx.db.insert(users).values({ email: 'a1@x.test', name: 'A', role: 'rep', idpSubject: 's' });
+    await ctx.db
+      .insert(users)
+      .values({ email: 'a1@x.test', name: 'A', role: 'rep', idpSubject: 's' });
     await expect(
       ctx.db.insert(users).values({ email: 'a2@x.test', name: 'B', role: 'rep', idpSubject: 's' }),
     ).rejects.toThrow();
   });
 
   test('custom_field_defs (entity, key) is unique', async () => {
-    await ctx.db.insert(customFieldDefs).values({ entity: 'lead', key: 'k', label: 'K', type: 'text' });
+    await ctx.db
+      .insert(customFieldDefs)
+      .values({ entity: 'lead', key: 'k', label: 'K', type: 'text' });
     await expect(
-      ctx.db.insert(customFieldDefs).values({ entity: 'lead', key: 'k', label: 'K2', type: 'text' }),
+      ctx.db
+        .insert(customFieldDefs)
+        .values({ entity: 'lead', key: 'k', label: 'K2', type: 'text' }),
     ).rejects.toThrow();
     // Same key under a different entity is allowed.
     await expect(
-      ctx.db.insert(customFieldDefs).values({ entity: 'contact', key: 'k', label: 'K3', type: 'text' }),
+      ctx.db
+        .insert(customFieldDefs)
+        .values({ entity: 'contact', key: 'k', label: 'K3', type: 'text' }),
     ).resolves.toBeDefined();
   });
 
@@ -141,7 +149,9 @@ describe('C1 unique constraints (insert dup → error)', () => {
   });
 
   test('suppressions (kind, value) is unique and case-insensitive', async () => {
-    await ctx.db.insert(suppressions).values({ kind: 'email', value: 'Foo@X.test', source: 'manual' });
+    await ctx.db
+      .insert(suppressions)
+      .values({ kind: 'email', value: 'Foo@X.test', source: 'manual' });
     await expect(
       ctx.db.insert(suppressions).values({ kind: 'email', value: 'foo@x.test', source: 'bounce' }),
     ).rejects.toThrow();
@@ -154,7 +164,10 @@ describe('C1 unique constraints (insert dup → error)', () => {
   test('send_intents (enrollment_id, step_id) — never-sends-twice backstop', async () => {
     const leadId = await seedLead();
     const contactId = await seedContact(leadId);
-    const [seq] = await ctx.db.insert(sequences).values({ name: 'Seq' }).returning({ id: sequences.id });
+    const [seq] = await ctx.db
+      .insert(sequences)
+      .values({ name: 'Seq' })
+      .returning({ id: sequences.id });
     const [step] = await ctx.db
       .insert(sequenceSteps)
       .values({ sequenceId: seq!.id, type: 'email' })
@@ -163,20 +176,29 @@ describe('C1 unique constraints (insert dup → error)', () => {
       .insert(sequenceEnrollments)
       .values({ sequenceId: seq!.id, leadId, contactId })
       .returning({ id: sequenceEnrollments.id });
-    await ctx.db
-      .insert(sendIntents)
-      .values({ enrollmentId: enr!.id, stepId: step!.id, channel: 'email', dueAt: '2026-06-01T00:00:00Z' });
+    await ctx.db.insert(sendIntents).values({
+      enrollmentId: enr!.id,
+      stepId: step!.id,
+      channel: 'email',
+      dueAt: '2026-06-01T00:00:00Z',
+    });
     await expect(
-      ctx.db
-        .insert(sendIntents)
-        .values({ enrollmentId: enr!.id, stepId: step!.id, channel: 'email', dueAt: '2026-06-02T00:00:00Z' }),
+      ctx.db.insert(sendIntents).values({
+        enrollmentId: enr!.id,
+        stepId: step!.id,
+        channel: 'email',
+        dueAt: '2026-06-02T00:00:00Z',
+      }),
     ).rejects.toThrow();
   });
 
   test('sequence_enrollments partial unique — one live per (sequence, contact)', async () => {
     const leadId = await seedLead();
     const contactId = await seedContact(leadId);
-    const [seq] = await ctx.db.insert(sequences).values({ name: 'Seq' }).returning({ id: sequences.id });
+    const [seq] = await ctx.db
+      .insert(sequences)
+      .values({ name: 'Seq' })
+      .returning({ id: sequences.id });
     await ctx.db
       .insert(sequenceEnrollments)
       .values({ sequenceId: seq!.id, leadId, contactId, state: 'active' });
@@ -196,17 +218,31 @@ describe('C1 unique constraints (insert dup → error)', () => {
 
   test('calls.twilio_sid and sms_messages.provider_sid are unique', async () => {
     const leadId = await seedLead();
-    await ctx.db.insert(calls).values({ leadId, direction: 'outbound', status: 'completed', twilioSid: 'CA1' });
-    await expect(
-      ctx.db.insert(calls).values({ leadId, direction: 'outbound', status: 'completed', twilioSid: 'CA1' }),
-    ).rejects.toThrow();
     await ctx.db
-      .insert(smsMessages)
-      .values({ leadId, direction: 'outbound', fromNumber: '+1', toNumber: '+2', status: 'sent', providerSid: 'SM1' });
+      .insert(calls)
+      .values({ leadId, direction: 'outbound', status: 'completed', twilioSid: 'CA1' });
     await expect(
       ctx.db
-        .insert(smsMessages)
-        .values({ leadId, direction: 'outbound', fromNumber: '+1', toNumber: '+3', status: 'sent', providerSid: 'SM1' }),
+        .insert(calls)
+        .values({ leadId, direction: 'outbound', status: 'completed', twilioSid: 'CA1' }),
+    ).rejects.toThrow();
+    await ctx.db.insert(smsMessages).values({
+      leadId,
+      direction: 'outbound',
+      fromNumber: '+1',
+      toNumber: '+2',
+      status: 'sent',
+      providerSid: 'SM1',
+    });
+    await expect(
+      ctx.db.insert(smsMessages).values({
+        leadId,
+        direction: 'outbound',
+        fromNumber: '+1',
+        toNumber: '+3',
+        status: 'sent',
+        providerSid: 'SM1',
+      }),
     ).rejects.toThrow();
   });
 
@@ -225,7 +261,10 @@ describe('C1 unique constraints (insert dup → error)', () => {
 describe('soft delete behavior', () => {
   test('deleted_at marks a lead without removing the row', async () => {
     const leadId = await seedLead();
-    await ctx.db.update(leads).set({ deletedAt: '2026-05-01T00:00:00Z' }).where(eq(leads.id, leadId));
+    await ctx.db
+      .update(leads)
+      .set({ deletedAt: '2026-05-01T00:00:00Z' })
+      .where(eq(leads.id, leadId));
 
     // Row still physically present …
     const all = await ctx.db.select({ id: leads.id }).from(leads).where(eq(leads.id, leadId));

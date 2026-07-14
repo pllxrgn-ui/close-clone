@@ -1,6 +1,6 @@
 # CONTRACTS — Switchboard (normative; Opus may not amend — report friction upward)
 
-Version: 1.0.1. Changes only by Fable; every change bumps this version and is logged in DECISIONS.md.
+Version: 1.0.2. Changes only by Fable; every change bumps this version and is logged in DECISIONS.md.
 All types live in `packages/shared/src/` as zod schemas with inferred TS types. Zod schema = runtime contract; the TS type is derived, never hand-written separately.
 
 ---
@@ -131,7 +131,7 @@ activityType   := "call"|"email"|"inbound_email"|"sms"|"note"|"task_completed"
 textPred   := "matches" string                            -- global FTS clause
 ```
 
-Semantics (normative): case-insensitive keywords · strings double-quoted with `\"` escape · dates ISO-8601 · `custom.<key>` typed by `custom_field_defs.type` (lead-entity fields only), comparator/value type-checked at parse time (type error = parse error, position-carrying); parse-time custom-field typing implies the signature `parse(dsl, {fieldCatalog?})` · relative dates resolve at *execution* time in org timezone · `owner in (me)` binds at execution to the querying user · sequence membership surface syntax is `has in_sequence("name")` / `no in_sequence("name")` (and bare `has sequence` = enrolled in any), per the grammar as written · `opportunity.value` literals are **whole currency units** (dollars); the compiler converts to `value_cents` (×100) — a rep writes `opportunity.value > 5000` meaning $5,000 · the DSL-local field-catalog type is exported as `DslCustomFieldDef` (distinct from the DB-row `CustomFieldDef` in domain.ts).
+Semantics (normative): case-insensitive keywords · strings double-quoted with `\"` escape · dates ISO-8601 · `custom.<key>` typed by `custom_field_defs.type` (lead-entity fields only), comparator/value type-checked at parse time (type error = parse error, position-carrying); parse-time custom-field typing implies the signature `parse(dsl, {fieldCatalog?})` · relative dates resolve at *execution* time in org timezone · `owner in (me)` binds at execution to the querying user · sequence membership surface syntax is `has in_sequence("name")` / `no in_sequence("name")` (and bare `has sequence` = enrolled in any), per the grammar as written · `opportunity.value` literals are **whole currency units** (dollars); the compiler converts to `value_cents` (×100) — a rep writes `opportunity.value > 5000` meaning $5,000 · the DSL-local field-catalog type is exported as `DslCustomFieldDef` (distinct from the DB-row `CustomFieldDef` in domain.ts) · **timezone anchoring (normative):** every API/worker DB session runs `SET timezone='UTC'`; date-only DSL literals anchor at UTC midnight, and relative dates resolving against DATE columns compare on the resolved instant's UTC calendar date. (Org-local anchoring of date-only literals is a known v1 approximation — max skew is the org's UTC offset; revisit only with a documented rep-facing complaint.)
 
 Compiler: `parse(dsl) → AST (zod-typed)` · `compile(ast, ctx) → {sql, params[]}` — **parameters only; string-splicing any user value is a contract violation** · every compile emits `LIMIT/keyset` pagination · builder UI reads/writes the same AST (`astToDsl(ast)` round-trips: `parse(astToDsl(a)) ≡ a`).
 

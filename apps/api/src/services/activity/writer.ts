@@ -41,11 +41,7 @@ export class LeadNotFoundError extends ActivityWriterError {
 
 /** Denormalized last-touch columns on `leads` maintained by the writer. */
 type LeadTouchColumn =
-  | 'lastContactedAt'
-  | 'lastInboundAt'
-  | 'lastCallAt'
-  | 'lastEmailAt'
-  | 'lastSmsAt';
+  'lastContactedAt' | 'lastInboundAt' | 'lastCallAt' | 'lastEmailAt' | 'lastSmsAt';
 
 /**
  * Per-event last-touch mapping. Kept byte-consistent with the fixture

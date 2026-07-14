@@ -24,9 +24,9 @@
 | 0c scaffold, CI, fixtures, implementer agent | Opus | done (85c7ff1, 15 tests green, fixtures deterministic) |
 | 1a schema + activity stream + fixture loader | Opus | done (295cdd9 — on task-1b-dsl branch, reorg pending; 32 api + 8 shared tests) |
 | 1b Smart View DSL parser→AST→SQL | Opus | dispatched, in progress |
-| 1c indexes + pagination + latency gate | — | pending (needs 1a+1b) |
-| 1d DSL golden set (60+) | — | pending (needs 1b, fixtures) |
-| 1e global search (FTS+trigram) | — | pending (needs 1a) |
+| 1c indexes + pagination + latency gate | Opus | done (60316d6 — worst core p95 13.1ms @10k PGlite slice, NON-authoritative; CI perf gate live on first push) |
+| 1d DSL golden set (60+) | Opus | in progress (resumed; found+fixing inbound_email compiler bug) |
+| 1e global search (FTS+trigram) | — | pending (dispatches after 1d) |
 | GATE 1 | Fable | pending |
 | Phase 2 (2a–2f) + gate | — | pending |
 | Phase 2 (2a–2f) + gate | — | pending |

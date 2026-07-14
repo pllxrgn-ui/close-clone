@@ -51,7 +51,13 @@ async function count(table: PgTable): Promise<number> {
 describe('golden fixture loader', () => {
   test('loads the 5k golden set with counts matching the manifest', async () => {
     const manifest = JSON.parse(readFileSync(resolve(goldenDir, 'manifest.json'), 'utf8')) as {
-      counts: { leads: number; contacts: number; opportunities: number; tasks: number; activities: number };
+      counts: {
+        leads: number;
+        contacts: number;
+        opportunities: number;
+        tasks: number;
+        activities: number;
+      };
     };
 
     const result = await loadGoldenFixtures(ctx.db);

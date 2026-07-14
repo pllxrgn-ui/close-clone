@@ -59,7 +59,9 @@ describe('compile â€” shape & parameters', () => {
 
     // Nullable lead column comparison.
     const nullableCol = compileDsl('last_contacted < 30d ago');
-    expect(nullableCol.sql).toContain('(leads.last_contacted_at IS NOT NULL AND leads.last_contacted_at <');
+    expect(nullableCol.sql).toContain(
+      '(leads.last_contacted_at IS NOT NULL AND leads.last_contacted_at <',
+    );
 
     // NOT NULL columns stay unguarded (sargable, no noise).
     expect(compileDsl('created > 7d ago').sql).not.toContain('leads.created_at IS NOT NULL');

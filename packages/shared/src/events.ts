@@ -54,12 +54,7 @@ export type ActivityType = z.infer<typeof activityTypeSchema>;
 
 const uuid = z.string().uuid();
 /** Sequence pause causes (CONTRACTS §C4: sequence_paused reason set). */
-export const sequencePausedReasonValues = [
-  'reply',
-  'bounce',
-  'manual',
-  'unsubscribe',
-] as const;
+export const sequencePausedReasonValues = ['reply', 'bounce', 'manual', 'unsubscribe'] as const;
 export const sequencePausedReasonSchema = z.enum(sequencePausedReasonValues);
 
 const jsonValue: z.ZodType<unknown> = z.unknown();

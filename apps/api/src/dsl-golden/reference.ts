@@ -329,7 +329,11 @@ export class ReferenceEvaluator {
       return orderCompare(Number(raw), value.value, cmp as OrderCmp);
     }
     if (type === 'date') {
-      return orderCompare(Date.parse(String(raw)), resolveScalarInstant(value, this.ctx), cmp as OrderCmp);
+      return orderCompare(
+        Date.parse(String(raw)),
+        resolveScalarInstant(value, this.ctx),
+        cmp as OrderCmp,
+      );
     }
     // text / select / user → string comparison
     const s = value.kind === 'string' ? value.value : '';
@@ -341,13 +345,19 @@ export class ReferenceEvaluator {
       case 'name':
         return textCompare(lead.name, cmp, value.kind === 'string' ? value.value : '');
       case 'dnc':
-        return value.kind === 'bool' ? orderCompare(lead.dnc ? 1 : 0, value.value ? 1 : 0, cmp as OrderCmp) : false;
+        return value.kind === 'bool'
+          ? orderCompare(lead.dnc ? 1 : 0, value.value ? 1 : 0, cmp as OrderCmp)
+          : false;
       case 'owner':
         return textCompare(lead.ownerId, cmp, this.scalarText(value));
       case 'status':
         return textCompare(lead.status, cmp, value.kind === 'string' ? value.value : '');
       case 'created':
-        return orderCompare(Date.parse(lead.createdAt), resolveScalarInstant(value, this.ctx), cmp as OrderCmp);
+        return orderCompare(
+          Date.parse(lead.createdAt),
+          resolveScalarInstant(value, this.ctx),
+          cmp as OrderCmp,
+        );
       case 'updated':
         // updated_at is the DB load time (not a fixture column); only used with
         // is_set/is_not_set in the golden set, never a value comparison.
@@ -360,27 +370,44 @@ export class ReferenceEvaluator {
         return this.nullableDate(lead.nextTaskDueAt, cmp, value);
       case 'opportunity.value':
         return value.kind === 'number'
-          ? this.opps(lead).some((o) => orderCompare(o.valueCents, Math.round(value.value * 100), cmp as OrderCmp))
+          ? this.opps(lead).some((o) =>
+              orderCompare(o.valueCents, Math.round(value.value * 100), cmp as OrderCmp),
+            )
           : false;
       case 'opportunity.stage':
-        return this.opps(lead).some((o) => textCompare(o.stage, cmp, value.kind === 'string' ? value.value : ''));
+        return this.opps(lead).some((o) =>
+          textCompare(o.stage, cmp, value.kind === 'string' ? value.value : ''),
+        );
       case 'opportunity.close_date': {
         // `close_date` is a DATE column; Postgres casts the pushed text param
         // (a full ISO instant for reldates) to DATE, i.e. truncates to the UTC
         // calendar date of the ISO string. Mirror that truncation here.
         const day = Math.floor(resolveScalarInstant(value, this.ctx) / DAY) * DAY;
         return this.opps(lead).some(
-          (o) => o.closeDate !== null && orderCompare(Date.parse(o.closeDate), day, cmp as OrderCmp),
+          (o) =>
+            o.closeDate !== null && orderCompare(Date.parse(o.closeDate), day, cmp as OrderCmp),
         );
       }
       case 'contact.title':
         return this.contacts(lead).some(
-          (c) => c.title !== null && textCompare(c.title, cmp, value.kind === 'string' ? value.value : ''),
+          (c) =>
+            c.title !== null &&
+            textCompare(c.title, cmp, value.kind === 'string' ? value.value : ''),
         );
       case 'contact.email':
-        return this.contactArrayField(lead, 'email', cmp, value.kind === 'string' ? value.value : '');
+        return this.contactArrayField(
+          lead,
+          'email',
+          cmp,
+          value.kind === 'string' ? value.value : '',
+        );
       case 'contact.phone':
-        return this.contactArrayField(lead, 'phone', cmp, value.kind === 'string' ? value.value : '');
+        return this.contactArrayField(
+          lead,
+          'phone',
+          cmp,
+          value.kind === 'string' ? value.value : '',
+        );
       default:
         throw new Error(`reference: unsupported builtin field "${name}"`);
     }
@@ -400,8 +427,15 @@ export class ReferenceEvaluator {
    * match "some contact entry"; `!=` matches "no contact entry equals" (compiler
    * emits `NOT EXISTS(... @> ...)`).
    */
-  private contactArrayField(lead: RefLead, key: 'email' | 'phone', cmp: string, needle: string): boolean {
-    const entries = this.contacts(lead).flatMap((c) => (key === 'email' ? c.emails.map((e) => e.email) : c.phones.map((p) => p.phone)));
+  private contactArrayField(
+    lead: RefLead,
+    key: 'email' | 'phone',
+    cmp: string,
+    needle: string,
+  ): boolean {
+    const entries = this.contacts(lead).flatMap((c) =>
+      key === 'email' ? c.emails.map((e) => e.email) : c.phones.map((p) => p.phone),
+    );
     if (cmp === '!=') return !entries.some((v) => v === needle);
     return entries.some((v) => textCompare(v, cmp, needle));
   }
@@ -448,9 +482,11 @@ export class ReferenceEvaluator {
 
   private membership(lead: RefLead, field: FieldRef, values: MembershipValue[]): boolean {
     return values.some((v) => {
-      if (v.kind === 'me') return this.field(lead, field, '=', { kind: 'string', value: this.ctx.currentUserId });
+      if (v.kind === 'me')
+        return this.field(lead, field, '=', { kind: 'string', value: this.ctx.currentUserId });
       if (v.kind === 'bool') return this.field(lead, field, '=', { kind: 'bool', value: v.value });
-      if (v.kind === 'number') return this.field(lead, field, '=', { kind: 'number', value: v.value });
+      if (v.kind === 'number')
+        return this.field(lead, field, '=', { kind: 'number', value: v.value });
       return this.field(lead, field, '=', { kind: 'string', value: v.value });
     });
   }
@@ -465,11 +501,19 @@ export class ReferenceEvaluator {
     return node.op === 'has' ? present : !present;
   }
 
-  private hasActivity(lead: RefLead, activity: string, sequenceName: string | undefined, cutoff: number | null): boolean {
+  private hasActivity(
+    lead: RefLead,
+    activity: string,
+    sequenceName: string | undefined,
+    cutoff: number | null,
+  ): boolean {
     if (activity === 'in_sequence') {
       const name = sequenceName ?? '';
       return (this.enrollByLead.get(lead.id) ?? []).some(
-        (e) => e.sequenceName === name && (e.state === 'active' || e.state === 'paused') && (cutoff === null || Date.parse(e.createdAt) >= cutoff),
+        (e) =>
+          e.sequenceName === name &&
+          (e.state === 'active' || e.state === 'paused') &&
+          (cutoff === null || Date.parse(e.createdAt) >= cutoff),
       );
     }
     const types = ACTIVITY_TYPE_GROUPS[activity];
