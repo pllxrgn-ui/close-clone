@@ -150,6 +150,34 @@ export const leads = pgTable(
   (t) => [
     index('leads_owner_id_idx').on(t.ownerId),
     index('leads_status_id_idx').on(t.statusId),
+    // Denormalized hot-column indexes (Task 1c / ARCHITECTURE §9). Smart View
+    // date/activity predicates hit these first; every list read filters
+    // `deleted_at IS NULL`, so the indexes are partial on the live set (smaller,
+    // and the planner uses them whenever the query carries that predicate).
+    index('leads_last_contacted_at_idx')
+      .on(t.lastContactedAt)
+      .where(sql`${t.deletedAt} IS NULL`),
+    index('leads_last_inbound_at_idx')
+      .on(t.lastInboundAt)
+      .where(sql`${t.deletedAt} IS NULL`),
+    index('leads_next_task_due_at_idx')
+      .on(t.nextTaskDueAt)
+      .where(sql`${t.deletedAt} IS NULL`),
+    index('leads_last_call_at_idx')
+      .on(t.lastCallAt)
+      .where(sql`${t.deletedAt} IS NULL`),
+    index('leads_last_email_at_idx')
+      .on(t.lastEmailAt)
+      .where(sql`${t.deletedAt} IS NULL`),
+    index('leads_last_sms_at_idx')
+      .on(t.lastSmsAt)
+      .where(sql`${t.deletedAt} IS NULL`),
+    // Custom-field containment (GIN, jsonb_path_ops — compact, `@>`-optimized).
+    // Per-field expression indexes for select/date/number keys are added later by
+    // the field-definition service (ARCHITECTURE §9); this is the general index.
+    index('leads_custom_gin_idx').using('gin', t.custom.op('jsonb_path_ops')),
+    // Full-text search vector (global search 1e + DSL `matches` clause).
+    index('leads_search_tsv_gin_idx').using('gin', t.searchTsv),
   ],
 );
 
@@ -226,6 +254,10 @@ export const activities = pgTable(
   (t) => [
     // Timeline read path: (lead_id, occurred_at DESC, id) covering index.
     index('activities_lead_occurred_idx').on(t.leadId, t.occurredAt.desc(), t.id),
+    // Type-filtered EXISTS path (Task 1c): DSL activity predicates that fall back
+    // to the spine (note / task_completed / sequence) filter by (lead_id, type)
+    // then range on occurred_at.
+    index('activities_lead_type_occurred_idx').on(t.leadId, t.type, t.occurredAt.desc()),
   ],
 );
 
@@ -243,7 +275,14 @@ export const tasks = pgTable(
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'restrict' }),
     ...timestamps(),
   },
-  (t) => [index('tasks_lead_id_idx').on(t.leadId)],
+  (t) => [
+    index('tasks_lead_id_idx').on(t.leadId),
+    // Inbox read (Task 1c): open tasks due for a user. Partial on the open set
+    // keeps the index small (completed tasks dominate over time).
+    index('tasks_open_due_idx')
+      .on(t.assigneeId, t.dueAt)
+      .where(sql`${t.completedAt} IS NULL`),
+  ],
 );
 
 export const notes = pgTable('notes', {
@@ -276,15 +315,27 @@ export const emailAccounts = pgTable('email_accounts', {
   ...timestamps(),
 });
 
-export const emailThreads = pgTable('email_threads', {
-  id: id(),
-  leadId: uuid('lead_id').references(() => leads.id, { onDelete: 'restrict' }),
-  subjectNorm: text('subject_norm'),
-  participants: jsonb('participants').$type<unknown[]>().notNull().default([]),
-  triageStatus: text('triage_status', { enum: threadTriageValues }).notNull().default('ambiguous'),
-  providerThreadId: text('provider_thread_id'),
-  ...timestamps(),
-});
+export const emailThreads = pgTable(
+  'email_threads',
+  {
+    id: id(),
+    leadId: uuid('lead_id').references(() => leads.id, { onDelete: 'restrict' }),
+    subjectNorm: text('subject_norm'),
+    participants: jsonb('participants').$type<unknown[]>().notNull().default([]),
+    triageStatus: text('triage_status', { enum: threadTriageValues })
+      .notNull()
+      .default('ambiguous'),
+    providerThreadId: text('provider_thread_id'),
+    ...timestamps(),
+  },
+  (t) => [
+    // Triage queue (Task 1c): the actionable set is the ambiguous threads awaiting
+    // a match decision; partial keeps it tight as matched threads accumulate.
+    index('email_threads_triage_idx')
+      .on(t.triageStatus, t.leadId)
+      .where(sql`${t.triageStatus} = 'ambiguous'`),
+  ],
+);
 
 export const emailMessages = pgTable(
   'email_messages',
@@ -412,6 +463,9 @@ export const sendIntents = pgTable(
   (t) => [
     // Never-sends-twice backstop (CONTRACTS §C1/§C6 I-SEND-1).
     uniqueIndex('send_intents_enrollment_step_key').on(t.enrollmentId, t.stepId),
+    // Sweeper scan (Task 1c / ARCHITECTURE §4): find due intents by state+due_at
+    // (SCHEDULED to enqueue, CLAIMED to expire).
+    index('send_intents_state_due_idx').on(t.state, t.dueAt),
   ],
 );
 
@@ -431,7 +485,15 @@ export const suppressions = pgTable(
     releaseReason: text('release_reason'),
     ...timestamps(),
   },
-  (t) => [uniqueIndex('suppressions_kind_value_key').on(t.kind, t.value)],
+  (t) => [
+    uniqueIndex('suppressions_kind_value_key').on(t.kind, t.value),
+    // Compliance hot path (Task 1c / CONTRACTS §C6): the send/dial transaction
+    // checks for an *active* suppression by (kind, value); partial on the
+    // not-yet-released set keeps the probe index small.
+    index('suppressions_active_lookup_idx')
+      .on(t.kind, t.value)
+      .where(sql`${t.releasedAt} IS NULL`),
+  ],
 );
 
 // --- Telephony -------------------------------------------------------------

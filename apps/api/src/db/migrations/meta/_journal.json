@@ -15,6 +15,13 @@
       "when": 1784011521609,
       "tag": "0001_c1_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784017540918,
+      "tag": "0002_c1c_indexes",
+      "breakpoints": true
     }
   ]
 }

@@ -62,7 +62,7 @@ jobs:
         run: pnpm fixtures:generate --golden
 
   perf:
-    name: perf gate (stub until Task 1c)
+    name: perf gate (100k latency, authoritative on real PG)
     runs-on: ubuntu-latest
     needs: build-test
     services:
