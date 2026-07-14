@@ -1,0 +1,19 @@
+{
+  "name": "@switchboard/fixtures",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "node src/cli.ts",
+    "generate:golden": "node src/cli.ts --golden",
+    "generate:latency": "node src/cli.ts --latency",
+    "build": "tsc --noEmit",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "vitest": "^3.0.4"
+  }
+}

@@ -10,3 +10,4 @@ coverage/
 .turbo/
 .pglite/
 tmp/
+fixtures/out/

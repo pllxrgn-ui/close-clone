@@ -1,0 +1,14 @@
+node_modules/
+dist/
+build/
+coverage/
+fixtures/out/
+.pglite/
+pnpm-lock.yaml
+
+# Read-only planning docs (owned by Fable; not this task's to reformat)
+ARCHITECTURE.md
+CONTRACTS.md
+DECISIONS.md
+STATUS.md
+HUMAN_TODO.md

@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: typecheck · lint · test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: switchboard
+          POSTGRES_PASSWORD: switchboard
+          POSTGRES_DB: switchboard
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U switchboard"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      MOCK_MODE: '1'
+      NODE_ENV: test
+      DATABASE_URL: postgres://switchboard:switchboard@localhost:5432/switchboard
+      REDIS_URL: redis://localhost:6379
+      SESSION_SECRET: ci-insecure-secret
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.31.0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm test
+      - name: Generate golden fixtures (smoke)
+        run: pnpm fixtures:generate --golden
+
+  perf:
+    name: perf gate (stub until Task 1c)
+    runs-on: ubuntu-latest
+    needs: build-test
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: switchboard
+          POSTGRES_PASSWORD: switchboard
+          POSTGRES_DB: switchboard
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U switchboard"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      MOCK_MODE: '1'
+      NODE_ENV: test
+      DATABASE_URL: postgres://switchboard:switchboard@localhost:5432/switchboard
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.31.0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm perf
