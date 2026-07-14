@@ -141,6 +141,17 @@ function buildLeadBundle(r: Rng, index: number): LeadBundle {
     is_target: r.bool(0.25),
   };
 
+  // DSL golden coverage (Task 1d): optional `date` and `user` custom fields so
+  // the golden set exercises all five C1 custom types plus is_set/is_not_set with
+  // both populated and empty leads. Present on a deterministic ~60% / ~50% so
+  // neither is_set nor is_not_set is degenerate.
+  if (r.bool(0.6)) {
+    custom.renewal_date = iso(REFERENCE_MS + r.int(-90, 365) * DAY_MS).slice(0, 10);
+  }
+  if (r.bool(0.5)) {
+    custom.csm = r.pick(OWNER_IDS);
+  }
+
   // Contacts: 1..3
   const contactCount = r.int(1, 3);
   const contacts: ContactRecord[] = [];

@@ -86,6 +86,20 @@ const LEADS_COLUMN: Record<string, string> = {
   dnc: 'leads.dnc',
 };
 
+/**
+ * Nullable lead columns must compile to two-valued predicates (never SQL NULL):
+ * `NULL cmp x` is NULL and `NOT NULL` is still NULL, so an unguarded comparison
+ * under `not` silently drops NULL rows instead of matching them (golden-surfaced,
+ * Task 1d). Guarding with `col IS NOT NULL AND …` keeps `not P` the exact set
+ * complement of `P` while remaining index-sargable.
+ */
+const NULLABLE_LEADS_COLUMNS: ReadonlySet<string> = new Set([
+  'owner',
+  'last_contacted',
+  'last_inbound',
+  'next_task_due',
+]);
+
 const SORT_COLUMN: Record<SortField, string> = {
   created: 'leads.created_at',
   updated: 'leads.updated_at',
@@ -98,11 +112,15 @@ const SORT_COLUMN: Record<SortField, string> = {
 const ACTIVITY_DENORM: Record<string, string> = {
   call: 'leads.last_call_at',
   email: 'leads.last_email_at',
-  inbound_email: 'leads.last_inbound_at',
   sms: 'leads.last_sms_at',
 };
 
 const ACTIVITY_EVENT_TYPE: Record<string, string> = {
+  // `inbound_email` is inbound *email* specifically — the `last_inbound_at`
+  // denormalized column is cross-channel (email + SMS receipts, CONTRACTS §C1),
+  // so it cannot answer this predicate; resolve against the spine's
+  // `email_received` events instead (Task 1d golden-surfaced fix).
+  inbound_email: 'email_received',
   note: 'note_added',
   task_completed: 'task_completed',
   sequence: 'sequence_enrolled',
@@ -205,6 +223,19 @@ class Compiler {
     }
   }
 
+  /**
+   * Push an `opportunity.value` dollar literal as integer cents (×100). The
+   * parser types `opportunity.value` as `number`, so `value` is always a numeric
+   * literal here; the guard is defensive. `Math.round` keeps sub-dollar inputs
+   * (e.g. `5000.50`) exact against float drift.
+   */
+  private pushDollarsAsCents(value: ScalarValue | { kind: 'me' }): string {
+    if (value.kind !== 'number') {
+      throw new Error('opportunity.value expects a numeric literal');
+    }
+    return this.p.push(Math.round(value.value * 100));
+  }
+
   private comparison(field: FieldRef, cmp: ValueCmp, value: ScalarValue | { kind: 'me' }): string {
     const textLike = cmp === 'contains' || cmp === 'starts_with';
     const strVal = value.kind === 'string' ? value.value : '';
@@ -220,24 +251,37 @@ class Compiler {
           : field.type === 'date'
             ? `${base}::timestamptz`
             : base;
-      return textLike
+      const pred = textLike
         ? `${accessor} ILIKE ${this.p.push(pattern(cmp, strVal))}`
         : `${accessor} ${SQL_CMP[cmp]} ${this.pushValue(value)}`;
+      // Missing key → ->> yields NULL; guard so the predicate is two-valued
+      // (an unset custom field never matches, and matches every `not`).
+      return `(${base} IS NOT NULL AND ${pred})`;
     }
 
     const name = field.name;
     if (name in LEADS_COLUMN) {
       const col = LEADS_COLUMN[name] as string;
-      return textLike
+      const pred = textLike
         ? `${col} ILIKE ${this.p.push(pattern(cmp, strVal))}`
         : `${col} ${SQL_CMP[cmp]} ${this.pushValue(value)}`;
+      return NULLABLE_LEADS_COLUMNS.has(name) ? `(${col} IS NOT NULL AND ${pred})` : pred;
     }
 
     switch (name) {
-      case 'status':
-        return `leads.status_id ${SQL_CMP[cmp]} (SELECT id FROM lead_statuses WHERE label = ${this.pushValue(value)})`;
+      case 'status': {
+        // EXISTS form (not a scalar subquery comparison): two-valued even when
+        // the label does not exist or the lead has no status, so `not` /`!=`
+        // are exact complements (golden-surfaced NULL-semantics fix, Task 1d).
+        const exists = `EXISTS (SELECT 1 FROM lead_statuses ls WHERE ls.id = leads.status_id AND ls.label = ${this.pushValue(value)})`;
+        return cmp === '!=' ? `NOT ${exists}` : exists;
+      }
       case 'opportunity.value':
-        return `EXISTS (SELECT 1 FROM opportunities o WHERE o.lead_id = leads.id AND o.value_cents ${SQL_CMP[cmp]} ${this.pushValue(value)})`;
+        // CONTRACTS §C3 / D-007: `opportunity.value` DSL literals are whole
+        // currency units (dollars); convert to integer cents before comparing
+        // against `value_cents`. A rep writes `opportunity.value > 5000` meaning
+        // $5,000 → 500000 cents.
+        return `EXISTS (SELECT 1 FROM opportunities o WHERE o.lead_id = leads.id AND o.value_cents ${SQL_CMP[cmp]} ${this.pushDollarsAsCents(value)})`;
       case 'opportunity.close_date':
         return `EXISTS (SELECT 1 FROM opportunities o WHERE o.lead_id = leads.id AND o.close_date ${SQL_CMP[cmp]} ${this.pushValue(value)})`;
       case 'opportunity.stage':
@@ -320,8 +364,10 @@ class Compiler {
     if (node.activity in ACTIVITY_DENORM) {
       const col = ACTIVITY_DENORM[node.activity] as string;
       if (cutoff !== null) {
+        // NULL-guarded so `has X within N` is two-valued and `not (has …)`
+        // matches never-touched leads (golden-surfaced fix, Task 1d).
         return has
-          ? `${col} >= ${this.p.push(cutoff)}`
+          ? `(${col} IS NOT NULL AND ${col} >= ${this.p.push(cutoff)})`
           : `(${col} IS NULL OR ${col} < ${this.p.push(cutoff)})`;
       }
       return `${col} IS ${has ? 'NOT NULL' : 'NULL'}`;

@@ -51,6 +51,45 @@ describe('compile â€” shape & parameters', () => {
     expect(params).toContain('note_added');
   });
 
+  it('emits two-valued predicates so `not` is an exact set complement (golden-surfaced, Task 1d)', () => {
+    // Nullable denorm column under a windowed has: guard against SQL NULL
+    // (NULL >= x is NULL; NOT NULL is still NULL → rows silently dropped).
+    const hasWin = compileDsl('not (has call within 7 d)');
+    expect(hasWin.sql).toContain('(leads.last_call_at IS NOT NULL AND leads.last_call_at >=');
+
+    // Nullable lead column comparison.
+    const nullableCol = compileDsl('last_contacted < 30d ago');
+    expect(nullableCol.sql).toContain('(leads.last_contacted_at IS NOT NULL AND leads.last_contacted_at <');
+
+    // NOT NULL columns stay unguarded (sargable, no noise).
+    expect(compileDsl('created > 7d ago').sql).not.toContain('leads.created_at IS NOT NULL');
+
+    // Custom-field accessor: a missing key must not become NULL.
+    const custom = compileDsl('custom.employees >= 100');
+    expect(custom.sql).toContain('(leads.custom ->> $1) IS NOT NULL AND');
+
+    // status compiles to EXISTS (never a NULL-able scalar-subquery comparison),
+    // with != as its exact complement.
+    const eq = compileDsl('status = "Won"');
+    expect(eq.sql).toContain('EXISTS (SELECT 1 FROM lead_statuses ls');
+    const ne = compileDsl('status != "Won"');
+    expect(ne.sql).toContain('NOT EXISTS (SELECT 1 FROM lead_statuses ls');
+  });
+
+  it('maps inbound_email to email_received spine events, not last_inbound_at (golden-surfaced, Task 1d)', () => {
+    // `leads.last_inbound_at` is cross-channel (advances on sms_received too,
+    // CONTRACTS §C1), so it cannot answer the email-specific predicate.
+    const has = compileDsl('has inbound_email within 30d');
+    expect(has.sql).toContain('EXISTS (SELECT 1 FROM activities a');
+    expect(has.params).toContain('email_received');
+    expect(has.sql).not.toContain('last_inbound_at');
+
+    const no = compileDsl('no inbound_email');
+    expect(no.sql).toContain('NOT EXISTS');
+    expect(no.params).toContain('email_received');
+    expect(no.sql).not.toContain('last_inbound_at');
+  });
+
   it('maps in_sequence to sequence_enrollments joined by name', () => {
     const { sql, params } = compileDsl('has in_sequence("Onboarding")');
     expect(sql).toContain('FROM sequence_enrollments se JOIN sequences sq');
@@ -84,6 +123,33 @@ describe('compile â€” shape & parameters', () => {
     const { params } = compileDsl('created > 7d ago');
     const iso = params.find((p) => typeof p === 'string' && p.startsWith('2026-07-07'));
     expect(iso).toBeDefined();
+  });
+});
+
+describe('compile â€” opportunity.value dollar semantics (CONTRACTS C3 / D-007)', () => {
+  it('treats the literal as whole dollars and compares against value_cents (×100)', () => {
+    const { sql, params } = compileDsl('opportunity.value > 5000');
+    expect(sql).toContain('o.value_cents >');
+    expect(params).toContain(500000);
+    // The raw dollar literal must never reach the params — only cents.
+    expect(params).not.toContain(5000);
+  });
+
+  it('applies ×100 across comparators', () => {
+    expect(compileDsl('opportunity.value = 1000').params).toContain(100000);
+    expect(compileDsl('opportunity.value <= 250').params).toContain(25000);
+    expect(compileDsl('opportunity.value != 0').params).toContain(0);
+  });
+
+  it('applies ×100 inside membership lists', () => {
+    const { params } = compileDsl('opportunity.value in (1000, 2500)');
+    expect(params).toContain(100000);
+    expect(params).toContain(250000);
+  });
+
+  it('rounds sub-dollar literals to integer cents', () => {
+    // 5000.50 * 100 in IEEE754 is 500049.99999999994; Math.round → 500050.
+    expect(compileDsl('opportunity.value >= 5000.50').params).toContain(500050);
   });
 });
 

@@ -19,6 +19,13 @@ describe('fixture generator', () => {
     const dataset = generateDataset(GOLDEN.count, GOLDEN.seed);
     const counts = countDataset(dataset);
     expect(counts.leads).toBe(5000);
+    // Pinned content hash of the enriched golden set (Task 1d added the optional
+    // `renewal_date`/`csm` custom fields so the DSL goldens cover all five custom
+    // types + presence). Any generator change must consciously update this pin
+    // and regenerate `fixtures/out/golden`.
+    expect(datasetHash(dataset)).toBe(
+      '0b400aadd3506d4e8c6bce405c33c56466ef44d4d234a16fcf727155cff532d3',
+    );
     // Distributions suitable for DSL golden tests: every related entity present.
     expect(counts.contacts).toBeGreaterThan(counts.leads); // 1..3 per lead
     expect(counts.opportunities).toBeGreaterThan(0);
