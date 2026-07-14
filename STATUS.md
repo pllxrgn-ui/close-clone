@@ -18,10 +18,10 @@
 
 | Task | Owner | State |
 |---|---|---|
-| 0-kickoff: repo, run-state files | Fable | in progress |
-| 0a ARCHITECTURE.md | Fable | pending |
-| 0b CONTRACTS.md | Fable | pending |
-| 0c scaffold, CI, fixtures, implementer agent | Opus | pending |
+| 0-kickoff: repo, run-state files | Fable | done |
+| 0a ARCHITECTURE.md | Fable | done |
+| 0b CONTRACTS.md | Fable | done (v1.0.0) |
+| 0c scaffold, CI, fixtures, implementer agent | Opus | dispatched, in progress |
 | Phase 1 (1a–1e) + gate | — | pending |
 | Phase 2 (2a–2f) + gate | — | pending |
 | Phase 3 (3a–3g) | — | pending |
