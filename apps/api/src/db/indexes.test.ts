@@ -47,12 +47,13 @@ afterAll(async () => {
   await ctx.close();
 });
 
-describe('migration chain 0000→0002', () => {
-  test('all three migrations are journaled as applied', async () => {
+describe('migration chain 0000→0003', () => {
+  test('all four migrations are journaled as applied', async () => {
     const { rows } = await ctx.client.query<{ n: number }>(
       `SELECT count(*)::int AS n FROM drizzle.__drizzle_migrations`,
     );
-    expect(rows[0]?.n).toBe(3);
+    // Bumped 3 → 4 by Task 1e's migration 0003 (pg_trgm + global-search indexes).
+    expect(rows[0]?.n).toBe(4);
   });
 });
 

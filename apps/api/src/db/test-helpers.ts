@@ -1,5 +1,6 @@
 import { PGlite } from '@electric-sql/pglite';
 import { citext } from '@electric-sql/pglite/contrib/citext';
+import { pg_trgm } from '@electric-sql/pglite/contrib/pg_trgm';
 import { drizzle, type PgliteDatabase } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { dirname, resolve } from 'node:path';
@@ -21,9 +22,11 @@ export interface TestDb {
 }
 
 export async function createTestDb(): Promise<TestDb> {
-  // Register the citext contrib extension so the bootstrap migration's
-  // `CREATE EXTENSION citext` resolves (real Postgres ships it in contrib).
-  const client = new PGlite({ extensions: { citext } });
+  // Register the citext + pg_trgm contrib extensions so the migrations'
+  // `CREATE EXTENSION` statements resolve (real Postgres ships both in contrib;
+  // PGlite needs the module handed to the constructor — see the empirical note in
+  // migration 0003). citext → 0000 bootstrap; pg_trgm → 0003 global search.
+  const client = new PGlite({ extensions: { citext, pg_trgm } });
   const db = drizzle(client);
   await migrate(db, { migrationsFolder });
   return {

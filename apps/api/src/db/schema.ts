@@ -144,6 +144,12 @@ export const leads = pgTable(
     searchTsv: tsvector('search_tsv').generatedAlwaysAs(
       sql`to_tsvector('english', coalesce(name, '') || ' ' || coalesce(description, ''))`,
     ),
+    // Trigram source (global search 1e): lowercased name + url + description.
+    // Backs substring/typo matching the FTS vector can't (e.g. a fragment inside
+    // a URL, or the company slug embedded in a domain). GIN-trigram indexed below.
+    searchText: text('search_text').generatedAlwaysAs(
+      sql`lower(coalesce(name, '') || ' ' || coalesce(url, '') || ' ' || coalesce(description, ''))`,
+    ),
     deletedAt: tstz('deleted_at'),
     ...timestamps(),
   },
@@ -178,6 +184,10 @@ export const leads = pgTable(
     index('leads_custom_gin_idx').using('gin', t.custom.op('jsonb_path_ops')),
     // Full-text search vector (global search 1e + DSL `matches` clause).
     index('leads_search_tsv_gin_idx').using('gin', t.searchTsv),
+    // Trigram indexes (global search 1e): `name %` similarity/typo path and the
+    // substring (`search_text LIKE '%q%'`) path — both index-backed via pg_trgm.
+    index('leads_name_trgm_idx').using('gin', t.name.op('gin_trgm_ops')),
+    index('leads_search_text_trgm_idx').using('gin', t.searchText.op('gin_trgm_ops')),
   ],
 );
 
@@ -193,10 +203,30 @@ export const contacts = pgTable(
     emails: jsonb('emails').$type<{ email: string; type: string }[]>().notNull().default([]),
     phones: jsonb('phones').$type<{ phone: string; type: string }[]>().notNull().default([]),
     dnc: boolean('dnc').notNull().default(false),
+    // Search columns (global search 1e). Emails/phones are jsonb arrays of
+    // objects; a generated column can't use a subquery, so the address/number
+    // strings are pulled with the immutable `jsonb_path_query_array` and the
+    // JSON punctuation (`[`, `]`, `"`, `,`) is blanked with `translate` — leaving
+    // the raw values as space-separated tokens the FTS parser recognises (emails
+    // survive as single tokens) and the trigram index can substring-match.
+    searchTsv: tsvector('search_tsv').generatedAlwaysAs(
+      sql`to_tsvector('english', coalesce(name, '') || ' ' || coalesce(title, '') || ' ' || translate(coalesce(jsonb_path_query_array(emails, '$[*].email')::text, ''), '[]",', '    ') || ' ' || translate(coalesce(jsonb_path_query_array(phones, '$[*].phone')::text, ''), '[]",', '    '))`,
+    ),
+    searchText: text('search_text').generatedAlwaysAs(
+      sql`lower(coalesce(name, '') || ' ' || coalesce(title, '') || ' ' || translate(coalesce(jsonb_path_query_array(emails, '$[*].email')::text, ''), '[]",', '    ') || ' ' || translate(coalesce(jsonb_path_query_array(phones, '$[*].phone')::text, ''), '[]",', '    '))`,
+    ),
     deletedAt: tstz('deleted_at'),
     ...timestamps(),
   },
-  (t) => [index('contacts_lead_id_idx').on(t.leadId)],
+  (t) => [
+    index('contacts_lead_id_idx').on(t.leadId),
+    // Full-text over name/title/email/phone tokens (global search 1e).
+    index('contacts_search_tsv_gin_idx').using('gin', t.searchTsv),
+    // Trigram: `name %` similarity/typo path and `search_text LIKE '%q%'`
+    // substring path (email fragments, phone substrings).
+    index('contacts_name_trgm_idx').using('gin', t.name.op('gin_trgm_ops')),
+    index('contacts_search_text_trgm_idx').using('gin', t.searchText.op('gin_trgm_ops')),
+  ],
 );
 
 export const opportunities = pgTable('opportunities', {

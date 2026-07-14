@@ -19,6 +19,7 @@
  */
 import { PGlite } from '@electric-sql/pglite';
 import { citext } from '@electric-sql/pglite/contrib/citext';
+import { pg_trgm } from '@electric-sql/pglite/contrib/pg_trgm';
 import { drizzle as drizzlePglite } from 'drizzle-orm/pglite';
 import { migrate as migratePglite } from 'drizzle-orm/pglite/migrator';
 import { spawnSync } from 'node:child_process';
@@ -37,6 +38,7 @@ import {
 
 import type { Db } from '../db/index.ts';
 import { fixturesPresent, loadLatencyFixtures } from '../services/fixtures/loader.ts';
+import { SearchService } from '../services/search/index.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS = resolve(HERE, '../db/migrations');
@@ -88,7 +90,7 @@ async function makeBackend(): Promise<Backend> {
     };
   }
 
-  const client = new PGlite({ extensions: { citext } });
+  const client = new PGlite({ extensions: { citext, pg_trgm } });
   const db = drizzlePglite(client);
   await migratePglite(db, { migrationsFolder: MIGRATIONS });
   return {
@@ -237,11 +239,14 @@ function toIso(v: unknown): string {
 interface Bench {
   readonly name: string;
   readonly group: 'smart-view' | 'read-path';
-  readonly sql: string;
-  readonly params: readonly unknown[];
+  /** Raw SQL bench (most reads). Mutually exclusive with `run`. */
+  readonly sql?: string;
+  readonly params?: readonly unknown[];
+  /** Service-path bench: runs real application code, returns the row count. */
+  readonly run?: () => Promise<number>;
 }
 
-function buildBenches(a: Anchors, now: Date): Bench[] {
+function buildBenches(a: Anchors, now: Date, search: SearchService): Bench[] {
   const ctx: CompileContext = {
     currentUserId: a.meUserId,
     orgTimezone: 'UTC',
@@ -313,6 +318,13 @@ function buildBenches(a: Anchors, now: Date): Bench[] {
       params: [a.searchTerm],
     },
     {
+      // The real global-search path (Task 1e): FTS + trigram over leads+contacts
+      // through SearchService, exactly as the REST route calls it.
+      name: 'Search service: SearchService.search(term)',
+      group: 'read-path',
+      run: async () => (await search.search(a.searchTerm, { limit: 50 })).items.length,
+    },
+    {
       name: 'Lead detail: status + owner + child counts',
       group: 'read-path',
       sql: `SELECT l.id, l.name, s.label AS status_label, u.name AS owner_name,
@@ -345,18 +357,22 @@ function percentile(sorted: readonly number[], p: number): number {
   return sorted[idx] ?? 0;
 }
 
+async function runBenchOnce(q: RawQuery, b: Bench): Promise<number> {
+  if (b.run !== undefined) return b.run();
+  const r = await q(b.sql ?? '', b.params ?? []);
+  return r.rows.length;
+}
+
 async function timeBench(q: RawQuery, b: Bench): Promise<Timing> {
   let rows = 0;
   for (let i = 0; i < WARMUP; i++) {
-    const r = await q(b.sql, b.params);
-    rows = r.rows.length;
+    rows = await runBenchOnce(q, b);
   }
   const samples: number[] = [];
   for (let i = 0; i < ITERS; i++) {
     const t0 = performance.now();
-    const r = await q(b.sql, b.params);
+    rows = await runBenchOnce(q, b);
     samples.push(performance.now() - t0);
-    rows = r.rows.length;
   }
   samples.sort((x, y) => x - y);
   return {
@@ -451,7 +467,8 @@ async function main(): Promise<number> {
     }
 
     const anchors = await resolveAnchors(backend.query);
-    const benches = buildBenches(anchors, anchors.anchorNow);
+    const search = new SearchService(backend.db);
+    const benches = buildBenches(anchors, anchors.anchorNow, search);
     process.stdout.write(
       `[perf] timing ${benches.length} reads · ${WARMUP} warmup + ${ITERS} iters each\n\n`,
     );

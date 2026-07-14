@@ -16,4 +16,8 @@ test('createTestDb boots PGlite, runs (empty) migrations, and serves queries', a
   } finally {
     await close();
   }
-});
+}, 120_000);
+// 120s (not the 5s default): since migration 0003 the chain loads the pg_trgm
+// contrib extension and builds GIN trigram indexes, which under the full parallel
+// suite can exceed 5s from CPU contention (isolated cost is ~1s). Matches the
+// timeout the other DB-backed suites already use.
