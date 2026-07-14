@@ -1,0 +1,7 @@
+# DECISIONS — autonomous judgment calls, with rationale
+
+- **D-001 (kickoff):** Host is Windows 11, not the Linux container the guide assumes. Proceeding natively with Node 24 + pnpm; all scripts must be cross-platform (no bash-isms in package.json). Docker absent → compose file still ships (Phase 5) but local verification of it is a HUMAN_TODO.
+- **D-002 (kickoff):** No GitHub remote exists and `gh` is not installed. Local trunk-based git with squash-style discipline (small commits on green) now; CI workflow file committed so it activates the moment a human pushes to GitHub. Logged in HUMAN_TODO.
+- **D-003 (kickoff):** Test database strategy: unit + property tests that need SQL semantics run against **PGlite** (embedded real Postgres via WASM, `@electric-sql/pglite`) so no Docker is required in-container; it is real Postgres query semantics, unlike pg-mem. The **latency gate (1c) is only authoritative on real Postgres** — CI runs it against a Postgres service container; locally it runs on PGlite as a smoke check and is marked non-authoritative in output. Rationale: unblocks the build on this Docker-less host without letting a fake DB certify performance.
+- **D-004 (kickoff):** Guide's dispatch mechanism (`.claude/agents/implementer.md`, model `claude-opus-4-8`) adopted verbatim; dispatches go through the harness Agent tool with the §5.2 template inlined per task.
+- **D-005 (kickoff):** Product codename **Switchboard** kept, along with every §1 "Product decisions" default — no in-session overrides were given.
