@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { createProviderRegistry } from './registry.ts';
 import { MockEmailProvider } from './mock/mock-email-provider.ts';
+import { GmailEmailProvider } from './email/gmail-email-provider.ts';
 import { ManualClock } from './mock/clock.ts';
 
 describe('provider registry (composition root, CONTRACTS §C2)', () => {
@@ -18,7 +19,15 @@ describe('provider registry (composition root, CONTRACTS §C2)', () => {
     expect((registry.email as MockEmailProvider).address).toBe('ceo@mock.test');
   });
 
-  test('non-mock mode fails fast until the real adapter lands (task 2b)', () => {
-    expect(() => createProviderRegistry({ mockMode: false })).toThrow(/2b/);
+  test('non-mock mode without gmail config fails fast with a config error', () => {
+    expect(() => createProviderRegistry({ mockMode: false })).toThrow(/gmail/i);
+  });
+
+  test('non-mock mode binds the real GmailEmailProvider when configured', () => {
+    const registry = createProviderRegistry({
+      mockMode: false,
+      gmail: { clientId: 'cid', clientSecret: 'secret', address: 'rep@company.test' },
+    });
+    expect(registry.email).toBeInstanceOf(GmailEmailProvider);
   });
 });
