@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node --watch src/index.ts",
     "start": "node src/index.ts",
-    "admin": "node --experimental-strip-types src/cli/index.ts",
+    "admin": "node --experimental-transform-types src/cli/index.ts",
     "build": "tsc --noEmit",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",

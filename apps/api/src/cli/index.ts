@@ -18,9 +18,18 @@ import { userLookup } from './user-lookup.ts';
  * imported). Sessions are pinned to UTC per CONTRACTS §C3.
  *
  * Exit codes: 0 success; 1 any refusal (missing reason, open enrollments) or
- * error. Import-safe for direct `node` execution (no enums / namespaces /
- * parameter properties — the host type-stripping constraint). Run via
- * `node --experimental-strip-types src/cli/index.ts <command>`.
+ * error.
+ *
+ * Runtime: `pnpm --filter @switchboard/api admin <command>`, which runs
+ * `node --experimental-transform-types src/cli/index.ts`. The CLI's own modules
+ * hold to the host type-stripping constraint (no enums / namespaces / parameter
+ * properties), but the command modules transitively import `@switchboard/shared`,
+ * whose barrel pulls in the DSL compiler — and that module uses a TS parameter
+ * property, which strip-ONLY mode (`--experimental-strip-types`) rejects at load.
+ * `--experimental-transform-types` transforms rather than strips, so it runs the
+ * whole graph with zero added dependencies. (Reported as friction: the parameter
+ * property lives in `packages/shared/src/dsl/compile.ts`, outside this task's
+ * allowlist.)
  */
 
 type Out = (line: string) => void;
