@@ -30,6 +30,7 @@
 | GATE 1 | Fable | **PASSED 2026-07-15** — typecheck clean; 283 tests green (205 api incl. 118 goldens, 78 shared incl. hostile-input property suite, 2000 runs, params-only); worst core p95 54.77ms vs 150ms budget @10k PGlite (NON-authoritative per D-003; authoritative CI run pending GitHub push — HUMAN_TODO) |
 | Phase 2 (2a–2f) + gate | Opus / Fable | serial chain running (D-013); 2a done (1c0c73c); gate pending |
 | Web foundation W1–W4 (parallel stream, D-014) | Opus | running on branch `web-foundation` in isolated worktree; W1 shell/tokens/client → W2 palette/keyboard → W3 leads/views/search UI → W4 Smart View builder; merge at Gate 2 |
+| 3a telephony mock (pulled forward, D-015) | Opus | running on branch `telephony-provider` in isolated worktree; merge at Gate 2 |
 | Phase 3 (3a–3g) | — | pending |
 | Phase 4 (4a–4i) | — | pending |
 | Phase 5 (5a–5h) + final coherence pass | — | pending |
