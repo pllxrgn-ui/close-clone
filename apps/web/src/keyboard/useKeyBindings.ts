@@ -62,7 +62,7 @@ export function useKeyBindings(defs: readonly KeyBindingDef[]): void {
     return () => {
       for (const unregister of unregisters) unregister();
     };
-    // signature captures every field that affects registration; handlers stay live.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // `signature` captures every field that affects registration; handlers and
+    // `when` guards are read live from defsRef, so they intentionally stay out of deps.
   }, [register, signature]);
 }

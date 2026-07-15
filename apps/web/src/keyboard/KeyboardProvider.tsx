@@ -56,7 +56,6 @@ export function KeyboardProvider({
       if (detectConflicts) {
         for (const existing of registryRef.current.values()) {
           if (existing.combo === input.combo && existing.scope === input.scope) {
-            // eslint-disable-next-line no-console
             console.warn(
               `[keyboard] conflict: "${input.combo}" is bound twice in scope "${input.scope}" ` +
                 `(ids: ${existing.id}, ${input.id})`,
