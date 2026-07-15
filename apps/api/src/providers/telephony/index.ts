@@ -47,3 +47,13 @@ export type {
 
 export { OPT_OUT_KEYWORDS, matchOptOutKeyword } from './opt-out.ts';
 export type { OptOutKeyword } from './opt-out.ts';
+
+export {
+  buildTwilioFixtures,
+  buildTwilioFixtureFiles,
+  readTwilioFixtureFiles,
+  serializeFixture,
+  twilioFixturesDir,
+  writeTwilioFixtures,
+} from './twilio-fixtures.ts';
+export type { TwilioFixtureFile, TwilioFixtureStream } from './twilio-fixtures.ts';

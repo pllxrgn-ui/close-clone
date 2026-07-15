@@ -219,11 +219,20 @@ export interface TwilioWirePayload {
   params: Record<string, string>;
 }
 
-/** On-disk recorded fixture envelope (fixtures/webhooks/README.md shape + channel). */
+/**
+ * On-disk recorded fixture envelope. Follows the `fixtures/webhooks/README.md`
+ * (task 0c) envelope shape and augments it with the two fields a Twilio replay
+ * needs that the generic schema omits: `channel` (voice vs sms routing) and `url`
+ * — the signed request URL. Twilio signs URL + params, so `verifyWebhook(headers,
+ * rawBody, url)` cannot run without the exact URL; carrying it in the envelope
+ * makes each fixture self-sufficient for the verify-on-every-ingress rule (§C2).
+ */
 export interface TwilioFixtureEnvelope {
   provider: 'twilio';
   eventId: string;
   channel: 'voice' | 'sms';
+  /** The exact request URL the signature is computed over (Twilio signs URL+params). */
+  url: string;
   receivedAt: string;
   headers: Record<string, string>;
   rawBody: string;
@@ -276,6 +285,7 @@ export function toFixtureEnvelope(
     provider: 'twilio',
     eventId: wire.eventId,
     channel,
+    url: wire.url,
     receivedAt,
     headers: wire.headers,
     rawBody: wire.rawBody,

@@ -12,6 +12,7 @@ is task 3b); this is the adapter + its test instruments only.
 | `twilio-signature.ts`        | Twilio HMAC-SHA1 request-signature scheme (`signTwilioForm`/`verifyTwilioSignature`). Standalone; verified against Twilio's published test vector.                                                                     |
 | `twilio-wire.ts`             | Twilio-shaped form-encoding of lifecycle/inbound-SMS events + the pure lifecycle **step builders** `dial()` uses (`defaultOutboundSteps`, `inboundVoicemailSteps`).                                                    |
 | `opt-out.ts`                 | §I-QUIET opt-out keyword set + `matchOptOutKeyword` (single source of truth).                                                                                                                                          |
+| `twilio-fixtures.ts`         | Deterministic generator for the recorded `fixtures/twilio/**` webhook corpus (drives the mock, captures signed wire payloads). Regen: `UPDATE_TWILIO_FIXTURES=1 pnpm --filter @switchboard/api test`.                  |
 
 ## Determinism
 

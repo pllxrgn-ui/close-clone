@@ -1,0 +1,23 @@
+{
+  "provider": "twilio",
+  "eventId": "CA00000000000000000000000000000001-3-answered",
+  "channel": "voice",
+  "url": "https://switchboard.test/wh/twilio/status",
+  "receivedAt": "2026-07-15T12:00:00.000Z",
+  "headers": {
+    "Content-Type": "application/x-www-form-urlencoded",
+    "X-Twilio-Signature": "NiQW8xDZK7+bNu1kULORaM0wDg0="
+  },
+  "rawBody": "AccountSid=AC00000000000000000000000000000000&CallSid=CA00000000000000000000000000000001&From=%2B15617770123&To=%2B13055550147&Direction=outbound-api&ApiVersion=2010-04-01&Timestamp=Wed%2C+15+Jul+2026+12%3A00%3A00+GMT&SequenceNumber=3&CallStatus=in-progress",
+  "payload": {
+    "AccountSid": "AC00000000000000000000000000000000",
+    "CallSid": "CA00000000000000000000000000000001",
+    "From": "+15617770123",
+    "To": "+13055550147",
+    "Direction": "outbound-api",
+    "ApiVersion": "2010-04-01",
+    "Timestamp": "Wed, 15 Jul 2026 12:00:00 GMT",
+    "SequenceNumber": "3",
+    "CallStatus": "in-progress"
+  }
+}

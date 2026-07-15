@@ -1,0 +1,24 @@
+{
+  "provider": "twilio",
+  "eventId": "SM00000000000000000000000000000006",
+  "channel": "sms",
+  "url": "https://switchboard.test/wh/twilio/sms",
+  "receivedAt": "2026-07-15T12:03:00.000Z",
+  "headers": {
+    "Content-Type": "application/x-www-form-urlencoded",
+    "X-Twilio-Signature": "t5ceUC+n1YUWaDE0cX3sbzDoDSE="
+  },
+  "rawBody": "AccountSid=AC00000000000000000000000000000000&MessageSid=SM00000000000000000000000000000006&SmsSid=SM00000000000000000000000000000006&SmsMessageSid=SM00000000000000000000000000000006&From=%2B13055550147&To=%2B15617770123&Body=Sounds+great%2C+call+me+tomorrow.&NumMedia=0&NumSegments=1&ApiVersion=2010-04-01",
+  "payload": {
+    "AccountSid": "AC00000000000000000000000000000000",
+    "MessageSid": "SM00000000000000000000000000000006",
+    "SmsSid": "SM00000000000000000000000000000006",
+    "SmsMessageSid": "SM00000000000000000000000000000006",
+    "From": "+13055550147",
+    "To": "+15617770123",
+    "Body": "Sounds great, call me tomorrow.",
+    "NumMedia": "0",
+    "NumSegments": "1",
+    "ApiVersion": "2010-04-01"
+  }
+}
