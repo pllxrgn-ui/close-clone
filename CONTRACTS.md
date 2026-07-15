@@ -1,6 +1,6 @@
 # CONTRACTS — Switchboard (normative; Opus may not amend — report friction upward)
 
-Version: 1.1.0. Changes only by Fable; every change bumps this version and is logged in DECISIONS.md.
+Version: 1.2.0. Changes only by Fable; every change bumps this version and is logged in DECISIONS.md.
 All types live in `packages/shared/src/` as zod schemas with inferred TS types. Zod schema = runtime contract; the TS type is derived, never hand-written separately.
 
 ---
@@ -168,7 +168,7 @@ States: `UNLINKED → AUTHORIZING → BACKFILLING → LIVE ⇄ DEGRADED`, `LIVE 
 
 REST under `/api/v1`. JSON, camelCase. Auth: session cookie (web) or `Authorization: Bearer <token>` (internal API, scoped). Errors: `{error: {code, message, details?}}` with codes from C8. Pagination: `?cursor=&limit=` → `{items, nextCursor?}` (keyset).
 
-Resources (CRUD unless noted): `leads` (+ `GET /leads/:id/timeline`, `POST /leads/merge`) · `contacts` · `opportunities` · `tasks` · `notes` · `smart-views` (+ `POST /smart-views/preview` {dsl|ast} → first page + count-estimate) · `sequences` (+ `POST /sequences/:id/enroll` bulk) · `templates` · `snippets` · `emails` (`POST /emails/send`, threads read) · `calls` (`POST /calls/dial`, `PATCH /calls/:id` outcome/notes) · `sms` (`POST /sms/send`) · `imports` (`POST /imports` multipart CSV → `POST /imports/:id/dry-run` → `POST /imports/:id/commit`) · `reports/*` (read) · `admin/*` (users, custom-fields, org-settings, suppressions, audit-log — admin RBAC) · `bulk` (`POST /bulk` {smartViewId|ast, action, params} → job id) · `search?q=` (global FTS).
+Resources (CRUD unless noted): `leads` (+ `GET /leads/:id/timeline`, `POST /leads/merge`) · `contacts` · `opportunities` · `tasks` · `notes` · `smart-views` (+ `POST /smart-views/preview` {dsl|ast} → first page + count-estimate) · `sequences` (+ `POST /sequences/:id/enroll` bulk) · `templates` · `snippets` · `emails` (`POST /emails/send`, threads read) · `calls` (`POST /calls/dial`, `PATCH /calls/:id` outcome/notes) · `sms` (`POST /sms/send`) · `imports` (`POST /imports` multipart CSV → `POST /imports/:id/dry-run` → `POST /imports/:id/commit`) · `reports/*` (read) · `admin/*` (users, custom-fields, org-settings, suppressions, audit-log — admin RBAC) · `bulk` (`POST /bulk` {smartViewId|ast, action, params} → job id) · `search?q=` (global FTS) · **reference reads (rep-accessible, added v1.2.0/D-023):** `GET /users` (minimal shape: id, name, email, isActive — label resolution only, never tokens/idp fields), `GET /lead-statuses`, `GET /opportunity-stages`.
 Webhook ingress: `/wh/twilio/voice`, `/wh/twilio/sms`, `/wh/twilio/status`, `/wh/gmail` — signature-verified, persist-then-process, always fast-200 on verified.
 
 WS `/ws`: server→client frames `{topic, type, payload}`; topics `inbox:<userId>`, `lead:<leadId>`; types are cache-invalidation hints (`timeline.changed`, `inbox.changed`, `call.state`) — client refetches via REST. No client→server mutations over WS.
