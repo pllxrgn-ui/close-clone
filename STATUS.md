@@ -1,6 +1,6 @@
 # STATUS — Switchboard build
 
-**Phase:** 0 — Planning & foundation (in progress)
+**Phase:** 2 — Email engine (in progress; Gate 1 passed 2026-07-15)
 **Orchestrator:** Fable 5 · **Implementers:** Opus 4.8 subagents · **Mode:** MOCK_MODE-first (no external accounts present)
 
 ## The three constraints most likely to break this build, and the de-risk plan
@@ -22,14 +22,13 @@
 | 0a ARCHITECTURE.md | Fable | done |
 | 0b CONTRACTS.md | Fable | done (v1.0.0) |
 | 0c scaffold, CI, fixtures, implementer agent | Opus | done (85c7ff1, 15 tests green, fixtures deterministic) |
-| 1a schema + activity stream + fixture loader | Opus | done (295cdd9 — on task-1b-dsl branch, reorg pending; 32 api + 8 shared tests) |
-| 1b Smart View DSL parser→AST→SQL | Opus | dispatched, in progress |
-| 1c indexes + pagination + latency gate | Opus | done (60316d6 — worst core p95 13.1ms @10k PGlite slice, NON-authoritative; CI perf gate live on first push) |
-| 1d DSL golden set (60+) | Opus | in progress (resumed; found+fixing inbound_email compiler bug) |
-| 1e global search (FTS+trigram) | — | pending (dispatches after 1d) |
-| GATE 1 | Fable | pending |
-| Phase 2 (2a–2f) + gate | — | pending |
-| Phase 2 (2a–2f) + gate | — | pending |
+| 1a schema + activity stream + fixture loader | Opus | done (295cdd9; merged to main) |
+| 1b Smart View DSL parser→AST→SQL | Opus | done (75d093b) |
+| 1c indexes + pagination + latency gate | Opus | done (60316d6; CI perf gate live on first push) |
+| 1d DSL golden set (118 cases) | Opus | done (f0bc17d; surfaced+fixed 2 compiler bugs, D-011) |
+| 1e global search (FTS+trigram) | Opus | done (031c78e) |
+| GATE 1 | Fable | **PASSED 2026-07-15** — typecheck clean; 283 tests green (205 api incl. 118 goldens, 78 shared incl. hostile-input property suite, 2000 runs, params-only); worst core p95 54.77ms vs 150ms budget @10k PGlite (NON-authoritative per D-003; authoritative CI run pending GitHub push — HUMAN_TODO) |
+| Phase 2 (2a–2f) + gate | Opus / Fable | 2a–2f dispatched serially (D-013); gate pending |
 | Phase 3 (3a–3g) | — | pending |
 | Phase 4 (4a–4i) | — | pending |
 | Phase 5 (5a–5h) + final coherence pass | — | pending |
