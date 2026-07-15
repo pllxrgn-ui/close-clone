@@ -36,6 +36,25 @@ Scripts for session `fba7396e-b2e7-4e61-804f-d5c06e727c45` are the current ones 
 5. **New session** (cache gone): the scripts still exist on disk. For each stream where git shows partially-completed task lists, EDIT the script to delete the already-committed tasks (keep `meta`, keep the REPORT schema, keep later tasks verbatim) and launch fresh with `Workflow({scriptPath})`. Never re-run a task whose commit already exists.
 6. **Verify before declaring resumed**: `pnpm typecheck` at each active worktree root must be green (or the resumed agent's first job per its prompt). Update this file's Status column + STATUS.md, commit both.
 
+## Overnight autonomous protocol (user-directed 2026-07-16, ~01:50: "review test QA everything bone dry, plan then fix, prioritize skills, appropriate model")
+
+Runs unattended on every task-notification plus an hourly heartbeat cron (session job `80c9c07d`, hourly at :23). Never ask the user; decisions go to DECISIONS.md.
+
+**On every stream completion — the QA loop (Fable runs it):**
+1. **Verify with evidence, not reports** (verification-before-completion skill): in that stream's worktree run `pnpm typecheck` + the full affected package suites yourself; the agent's claim counts for nothing until the commands pass in front of you.
+2. **Review the branch diff bone-dry**: `git diff main...<branch>` reviewed against CONTRACTS.md clause by clause (and DESIGN.md for web work — invoke emil-design-eng + impeccable-taste for any UI/motion review; use the code-review skill's discipline: cite file, line, and the contract clause violated). Check the report's unsureAbout/contractFriction items explicitly — each one gets a verdict.
+3. **Problems found → plan → fix**: write the defect list, then dispatch ONE Opus fix task per coherent defect group into the same worktree/branch (implementer agent, allowlist scoped to the defective module, fix + regression test required). Two Opus strikes on the same defect → Fable fixes it directly. Re-run step 1 after fixes.
+4. **Close out**: mark the stream ✅ in the table above, update STATUS.md, commit run-state on main.
+
+**Pipeline advancement (in priority order):**
+1. Phase 2 chain (2c→2f) — the build's spine; on chain completion run **GATE 2** (I-SYNC replay/shuffle/dupe proofs + all I-SEND-* under adversarial interleavings + rail-bypass attempts), and only after the gate: the merge train.
+2. **Merge train** (after Gate 2): telephony → web → import → reporting → admin-ops into main; apply each report's routeWiring/registryWiring; regenerate lockfile; full monorepo suite green after EACH merge; contract friction adjudicated with CONTRACTS version bumps logged in DECISIONS.md.
+3. Post-merge: wire the **PGlite dev server** (real API + 5k fixture + MOCK_MODE, no Docker) so the product runs locally; then vision-review the web app + landing against DESIGN.md via the in-app browser with screenshots.
+4. Web chain: when the running workflow ends (old script ends after W4), resume immediately — W1–W4 replay cached, W5 (Operator Grid re-skin) + W6 (landing) run live.
+5. No new backfill streams overnight — everything left in the backlog depends on Phase 2 output or 5a auth (D-017).
+
+**Model routing overnight:** all implementation/fixes = Opus (implementer agent); review judgment, gates, merges, contract amendments = Fable (main loop). Skills in play: verification-before-completion (before any ✅), systematic-debugging (any non-obvious failure), code-review discipline (diff reviews), emil-design-eng + impeccable-taste (UI/motion QA), brainstorming HARD-GATE does not apply to fixes (design already approved).
+
 ## Standing orchestration rules (context for a fresh session)
 
 - Model routing per build guide §2: Opus implements, Fable (orchestrator) gates — Gate 2 = idempotency + never-events, then merge order: telephony → web → import → reporting → admin-ops into main, wiring route-plugin factories + provider registry per each stream's `routeWiring`/`registryWiring` report field, full suite + UI vision review after each merge.
