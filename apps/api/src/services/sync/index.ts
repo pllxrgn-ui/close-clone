@@ -32,7 +32,6 @@ export {
   threadParticipants,
   type IngestDeps,
   type IngestResult,
-  type MessageHook,
 } from './ingest.ts';
 export {
   loadAccount,

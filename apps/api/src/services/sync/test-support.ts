@@ -1,4 +1,4 @@
-import { asc, eq } from 'drizzle-orm';
+import { asc, eq, sql } from 'drizzle-orm';
 import type { EmailProvider } from '@switchboard/shared/providers';
 import {
   activities,
@@ -98,6 +98,14 @@ export interface CanonicalDump {
  * `rfc_message_id` with their thread referenced by its provider id, activities by
  * their stable content. Two runs that are I-SYNC-equivalent produce deep-equal
  * dumps.
+ *
+ * Threads carry no `account_id` column (CONTRACTS §C1); a thread belongs to an
+ * account through its messages. The threads query is therefore scoped to the
+ * account under test via an EXISTS on `email_messages` — exactly as the messages
+ * query filters by `account_id` — so a shared test DB holding several scenarios'
+ * accounts still yields a per-account dump. (Task 2b's global thread upsert made
+ * this scoping unnecessary by reusing one thread row per provider-thread-id across
+ * accounts; 2c threads per account, so the scope is now load-bearing.)
  */
 export async function canonicalDump(db: Db, accountId: string): Promise<CanonicalDump> {
   const threadRows = await db
@@ -109,6 +117,9 @@ export async function canonicalDump(db: Db, accountId: string): Promise<Canonica
       leadId: emailThreads.leadId,
     })
     .from(emailThreads)
+    .where(
+      sql`exists (select 1 from ${emailMessages} where ${emailMessages.threadId} = ${emailThreads.id} and ${emailMessages.accountId} = ${accountId})`,
+    )
     .orderBy(asc(emailThreads.providerThreadId));
 
   const messageRows = await db

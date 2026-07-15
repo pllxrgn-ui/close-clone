@@ -5,7 +5,6 @@ import { emailProviderValues } from '@switchboard/shared';
 
 import type { Db } from '../db/index.ts';
 import {
-  AmbiguousLeadMatcher,
   SyncStateService,
   completeLinking,
   parseGmailPush,
@@ -20,6 +19,7 @@ import {
   type LeadMatcher,
   type SyncEngineDeps,
 } from '../services/sync/index.ts';
+import { ParticipantLeadMatcher } from '../services/email/index.ts';
 import { TokenCipher } from '../services/sync/token-cipher.ts';
 import { sendError } from './http.ts';
 
@@ -48,7 +48,11 @@ export interface EmailRouteDeps {
   redirectUri: string;
   /** Which provider the linked accounts record (default 'gmail'). */
   providerName?: EmailProviderName;
-  /** Lead matcher for ingest (default: ambiguous; 2c swaps the real one). */
+  /**
+   * Lead matcher for ingest. Defaults to the real participant→contact matcher
+   * (2c) so a linked mailbox threads and matches for real; injectable so suites
+   * can substitute a stub.
+   */
   matcher?: LeadMatcher;
 }
 
@@ -81,7 +85,7 @@ function mapSyncError(reply: FastifyReply, err: unknown): FastifyReply | null {
 
 export function registerEmailSyncRoutes(app: FastifyInstance, deps: EmailRouteDeps): void {
   const state = new SyncStateService(deps.db);
-  const matcher = deps.matcher ?? new AmbiguousLeadMatcher();
+  const matcher = deps.matcher ?? new ParticipantLeadMatcher();
   const providerName: EmailProviderName = deps.providerName ?? 'gmail';
   const engine: SyncEngineDeps = {
     db: deps.db,

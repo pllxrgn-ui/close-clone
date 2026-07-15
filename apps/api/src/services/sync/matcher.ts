@@ -1,25 +1,31 @@
-import type { RawEmail } from '@switchboard/shared/providers';
 import { threadTriageValues } from '@switchboard/shared';
+import type { Db } from '../../db/index.ts';
 
 /** C1 thread triage states (derived from the shared enum values). */
 export type ThreadTriage = (typeof threadTriageValues)[number];
 
 /**
- * Thread → lead matching seam (CONTRACTS §C5 note: "Thread/lead matching may be a
- * stub that leaves triage_status='ambiguous' — 2c owns matching"). The sync
- * engine consumes this interface; 2c ships the real address/participant matcher.
+ * Thread → lead matching seam. The ingest path (via 2c's threading service) asks
+ * the injected matcher for a decision on a thread's participant set; 2c ships the
+ * real address/participant matcher (`ParticipantLeadMatcher`, in
+ * `services/email/matching.ts`). Keeping this a small interface lets the base sync
+ * suites run with the null-object `AmbiguousLeadMatcher` (no contacts ⇒ nothing to
+ * match) while production wires the real one.
+ *
+ * `match` takes the transaction executor because matching reads `contacts`; it
+ * runs inside the same ingest transaction as the message write so the decision and
+ * the thread row commit atomically (I-SYNC).
  *
  * A decision is `(triageStatus, leadId)`: `matched` carries a `leadId`, `ambiguous`
- * / `ignored` carry `null`. Keeping it a pure function of the message + existing
- * thread keeps the ingest path deterministic (I-SYNC).
+ * carries `null`. The matcher NEVER guesses — zero or multiple candidate leads are
+ * reported as `ambiguous` for human triage (CONTRACTS §C5 / task 2c).
+ *
+ * No enums / namespaces / parameter properties (host type-stripping constraint).
  */
 
 export interface MatchInput {
   accountId: string;
-  raw: RawEmail;
-  /** Subject with Re:/Fwd: prefixes stripped, lowercased (thread grouping key). */
-  subjectNorm: string;
-  /** Deduped, sorted participant addresses for the thread. */
+  /** Deduped participant email addresses for the thread. */
   participants: string[];
 }
 
@@ -29,15 +35,16 @@ export interface MatchDecision {
 }
 
 export interface LeadMatcher {
-  match(input: MatchInput): MatchDecision;
+  match(exec: Db, input: MatchInput): Promise<MatchDecision>;
 }
 
 /**
- * Default matcher for 2b: never guesses a lead. Every thread lands in the triage
- * queue as `ambiguous` with no lead — the honest state until 2c's matcher runs.
+ * Default matcher: never guesses a lead. Every thread it is asked about is
+ * `ambiguous` with no lead — the honest state for the base sync suites, which seed
+ * no contacts. Production ingest injects `ParticipantLeadMatcher` instead.
  */
 export class AmbiguousLeadMatcher implements LeadMatcher {
-  match(_input: MatchInput): MatchDecision {
+  async match(_exec: Db, _input: MatchInput): Promise<MatchDecision> {
     return { triageStatus: 'ambiguous', leadId: null };
   }
 }
