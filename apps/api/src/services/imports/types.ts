@@ -90,7 +90,10 @@ export interface PlannedLead {
 }
 
 export interface PlannedContact {
-  name: string | null;
+  /** Pre-assigned uuid so a resumed/replayed commit never duplicates the row. */
+  id: string;
+  /** Resolved non-null contact name (falls back to email/phone/title). */
+  name: string;
   title: string | null;
   email: string | null;
   phone: string | null;
