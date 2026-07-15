@@ -1,6 +1,6 @@
 # CONTRACTS — Switchboard (normative; Opus may not amend — report friction upward)
 
-Version: 1.0.2. Changes only by Fable; every change bumps this version and is logged in DECISIONS.md.
+Version: 1.1.0. Changes only by Fable; every change bumps this version and is logged in DECISIONS.md.
 All types live in `packages/shared/src/` as zod schemas with inferred TS types. Zod schema = runtime contract; the TS type is derived, never hand-written separately.
 
 ---
@@ -77,6 +77,10 @@ org_settings     singleton row: recording_enabled bool default false, recording_
                  recording_legal_signoff_ref?, quiet_hours jsonb, sending_window jsonb,
                  daily_send_cap int default 200, company_timezone text
 sync_events      id, account_id, from_state, to_state, cause, at
+imports          id, created_by → users, filename, file_ref, row_count int?,
+                 status ('uploaded'|'mapped'|'dry_run'|'committing'|'committed'|'failed'),
+                 mapping jsonb?, dedupe_config jsonb?, dry_run_result jsonb?,
+                 result jsonb?, error text?          -- added v1.1.0 (D-018); migration 0010
 ```
 
 ## C2. Provider interfaces (all in `packages/shared/src/providers.ts`)
