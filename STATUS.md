@@ -31,6 +31,11 @@
 | Phase 2 (2a–2f) + gate | Opus / Fable | serial chain running (D-013); 2a done (1c0c73c); gate pending |
 | Web foundation W1–W4 (parallel stream, D-014) | Opus | running on branch `web-foundation` in isolated worktree; W1 shell/tokens/client → W2 palette/keyboard → W3 leads/views/search UI → W4 Smart View builder; merge at Gate 2 |
 | 3a telephony mock (pulled forward, D-015) | Opus | running on branch `telephony-provider` in isolated worktree; merge at Gate 2 |
+| 4f CSV import engine (D-017) | Opus | running on branch `csv-import`; migration 0010; merge at Gate 2 |
+| 4g reporting (D-017) | Opus | running on branch `reporting`; read-only; merge at Gate 2 |
+| 5b audit log → 5g export + admin CLI (D-017) | Opus | running on branch `admin-ops`; migration 0011; merge at Gate 2 |
+
+**Recovery:** RECOVERY.md (committed) is the resume playbook — keep its stream table current.
 | Phase 3 (3a–3g) | — | pending |
 | Phase 4 (4a–4i) | — | pending |
 | Phase 5 (5a–5h) + final coherence pass | — | pending |
