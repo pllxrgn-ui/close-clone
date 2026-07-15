@@ -79,10 +79,18 @@ export class ImportStorage {
         yield chunk;
       }
     };
+    const dst = createWriteStream(dest);
+    // Attach the close listener before the first await so the event is never
+    // missed (pipeline destroys `dst` on error, which fires 'close').
+    const closed = new Promise<void>((res) => dst.once('close', () => res()));
     try {
-      await pipeline(meter(), createWriteStream(dest));
+      await pipeline(meter(), dst);
     } catch (err) {
-      await rm(dest, { force: true });
+      // Windows: unlinking while the write fd is still open leaves the file in a
+      // "delete pending" state that `stat` still sees. Wait for the stream to
+      // release the handle, THEN remove — so no partial file survives the throw.
+      await closed;
+      await rm(dest, { force: true, maxRetries: 3, retryDelay: 25 });
       throw err;
     }
     return { fileRef, bytes };
