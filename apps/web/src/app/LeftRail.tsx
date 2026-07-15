@@ -1,11 +1,12 @@
 import type { JSX } from 'react';
 import { NavLink } from 'react-router-dom';
 import { cx } from '../lib/cx.ts';
-import { Kbd } from '../ui/index.ts';
+import { KbdCombo } from '../keyboard/index.ts';
 import { NAV_ITEMS } from './nav.ts';
 
 /** Primary navigation. Links are natively keyboardable; active state via
- *  aria-current (NavLink). Shortcut chords shown inline until muscle memory. */
+ *  aria-current (NavLink). Shortcut chords are rendered from the same combo
+ *  strings the keyboard registry binds (single source of truth for hints). */
 export function LeftRail(): JSX.Element {
   return (
     <nav className="sb-rail" aria-label="Primary">
@@ -20,7 +21,7 @@ export function LeftRail(): JSX.Element {
               >
                 <Icon size={16} className="sb-rail__icon" />
                 <span className="sb-rail__label">{item.label}</span>
-                <Kbd className="sb-rail__kbd">{`g ${item.key}`}</Kbd>
+                <KbdCombo combo={`g ${item.key}`} className="sb-rail__kbd" />
               </NavLink>
             </li>
           );

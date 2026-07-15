@@ -86,6 +86,38 @@
   margin-left: auto;
 }
 
+/* Command-palette trigger — mouse-discoverable entry to the ⌘K palette. */
+.sb-topbar__cmdk {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--control-h);
+  padding: 0 var(--space-2) 0 var(--space-3);
+  border: 1px solid var(--border-0);
+  border-radius: var(--radius-1);
+  background: var(--surface-inset);
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
+}
+.sb-topbar__cmdk:hover {
+  background: var(--surface-2);
+  border-color: var(--border-1);
+  color: var(--ink-1);
+}
+.sb-topbar__cmdk-icon {
+  color: var(--ink-3);
+}
+@media (max-width: 720px) {
+  .sb-topbar__cmdk-label {
+    display: none;
+  }
+}
+
 /* User menu (native disclosure — keyboard accessible). */
 .sb-usermenu {
   position: relative;
@@ -289,6 +321,82 @@
   align-items: center;
   gap: var(--space-3);
   flex: none;
+}
+
+/* ── useListNav demo list (Views placeholder) ────────────────────────────── */
+.sb-demo {
+  margin-top: var(--space-6);
+}
+.sb-demo__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
+}
+.sb-demo__title {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+}
+.sb-demo__hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink-3);
+  font-size: var(--fs-micro);
+}
+.sb-demo__loading {
+  display: grid;
+  place-items: center;
+  padding: var(--space-8);
+}
+.sb-demo__list {
+  max-width: 720px;
+  border: 1px solid var(--border-0);
+  border-radius: var(--radius-2);
+  overflow: hidden;
+}
+.sb-demo__opt {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--row-h);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--border-0);
+  border-left: 2px solid transparent;
+  background: var(--surface-0);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+.sb-demo__opt:last-child {
+  border-bottom: none;
+}
+.sb-demo__opt:hover {
+  background: var(--surface-1);
+}
+.sb-demo__opt.is-active {
+  background: var(--accent-weak-bg);
+  border-left-color: var(--accent);
+}
+.sb-demo__opt-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+.sb-demo__opt-name {
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sb-demo__opt-meta {
+  color: var(--ink-2);
+  font-size: var(--fs-micro);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── Login screen ────────────────────────────────────────────────────────── */

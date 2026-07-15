@@ -4,15 +4,17 @@ import { useNavigate } from 'react-router-dom';
 import type { User } from '@switchboard/shared';
 import { initials } from '../lib/format.ts';
 import { Kbd } from '../ui/index.ts';
-import { BoltIcon, SearchIcon } from '../ui/icons.tsx';
+import { BoltIcon, CommandIcon, SearchIcon } from '../ui/icons.tsx';
+import { KbdCombo } from '../keyboard/index.ts';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import { ThemeToggle } from './ThemeToggle.tsx';
 
 interface TopBarProps {
   searchRef: RefObject<HTMLInputElement | null>;
+  onOpenPalette: () => void;
 }
 
-export function TopBar({ searchRef }: TopBarProps): JSX.Element {
+export function TopBar({ searchRef, onOpenPalette }: TopBarProps): JSX.Element {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
@@ -46,6 +48,16 @@ export function TopBar({ searchRef }: TopBarProps): JSX.Element {
       </form>
 
       <div className="sb-topbar__right">
+        <button
+          type="button"
+          className="sb-topbar__cmdk"
+          aria-label="Open command palette"
+          onClick={onOpenPalette}
+        >
+          <CommandIcon size={14} className="sb-topbar__cmdk-icon" />
+          <span className="sb-topbar__cmdk-label">Command</span>
+          <KbdCombo combo="mod+k" />
+        </button>
         <ThemeToggle />
         {user ? (
           <UserMenu
