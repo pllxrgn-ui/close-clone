@@ -19,6 +19,7 @@ import {
   leadStatuses,
   suppressions,
   users,
+  webhookSubscriptions,
 } from '../../db/index.ts';
 import { createTestDb, type TestDb } from '../../db/test-helpers.ts';
 import { AuditWriter } from '../audit/index.ts';
@@ -36,6 +37,7 @@ import { runExport, type ExportManifest, type EntityExportResult } from './expor
 const OWNER = '00000000-0000-4000-8000-00000000e001';
 const SECRET_TOKEN = 'ya29.SUPER_SECRET_OAUTH_MATERIAL';
 const SECRET_HASH = 'sha256:deadbeefcafef00dSECRETHASH';
+const SECRET_WEBHOOK = 'whsec_DEADBEEF_HMAC_SIGNING_KEY';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../../../..');
@@ -139,6 +141,12 @@ describe('runExport — seeded small dataset', () => {
       scopes: ['read'],
       createdBy: OWNER,
     });
+    // Outbound webhook subscription — the row is exported, its HMAC secret is not.
+    await ctx.db.insert(webhookSubscriptions).values({
+      url: 'https://hooks.acme.test/switchboard',
+      secret: SECRET_WEBHOOK,
+      events: ['lead.created'],
+    });
     // Compliance record — must be INCLUDED.
     await ctx.db.insert(suppressions).values({
       kind: 'email',
@@ -184,6 +192,20 @@ describe('runExport — seeded small dataset', () => {
     expect(rows).toHaveLength(1);
     expect(Object.keys(rows[0] ?? {})).not.toContain('hash');
     expect(readFileSync(join(dir, 'api_tokens.jsonl'), 'utf8')).not.toContain(SECRET_HASH);
+  });
+
+  test('webhook signing secret is excluded and its value never appears on disk', () => {
+    const rows = readJsonl(join(dir, 'webhook_subscriptions.jsonl'));
+    expect(rows).toHaveLength(1);
+    // The row is exported (data ownership) — url survives, secret does not.
+    expect(rows[0]?.['url']).toBe('https://hooks.acme.test/switchboard');
+    expect(Object.keys(rows[0] ?? {})).not.toContain('secret');
+    expect(readFileSync(join(dir, 'webhook_subscriptions.jsonl'), 'utf8')).not.toContain(
+      SECRET_WEBHOOK,
+    );
+    const rawCsv = readFileSync(join(dir, 'webhook_subscriptions.csv'), 'utf8');
+    expect(rawCsv).not.toContain(SECRET_WEBHOOK);
+    expect(rawCsv.split('\n')[0]).not.toContain('secret');
   });
 
   test('suppressions and audit_log are included (data ownership)', () => {

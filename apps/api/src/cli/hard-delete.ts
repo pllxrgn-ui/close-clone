@@ -158,6 +158,14 @@ export async function hardDeleteLead(db: Db, input: HardDeleteInput): Promise<Ha
       unenrolled = openEnrollments.length;
     }
 
+    // send_intents have no lead_id — count them via their enrollment so the
+    // before-snapshot is accurate (and matches the completed deleted count).
+    const [siBefore] = await tx
+      .select({ n: sql<number>`count(*)::int` })
+      .from(sendIntents)
+      .innerJoin(sequenceEnrollments, eq(sendIntents.enrollmentId, sequenceEnrollments.id))
+      .where(eq(sequenceEnrollments.leadId, input.leadId));
+
     // BEFORE snapshot: the lead row + child counts.
     const beforeCounts: HardDeleteCounts = {
       contacts: await countBy(tx, contacts, contacts.leadId, input.leadId),
@@ -168,7 +176,7 @@ export async function hardDeleteLead(db: Db, input: HardDeleteInput): Promise<Ha
       calls: await countBy(tx, calls, calls.leadId, input.leadId),
       sms: await countBy(tx, smsMessages, smsMessages.leadId, input.leadId),
       enrollments: await countBy(tx, sequenceEnrollments, sequenceEnrollments.leadId, input.leadId),
-      sendIntents: 0,
+      sendIntents: siBefore?.n ?? 0,
     };
 
     const requested = await writeAudit(tx, {

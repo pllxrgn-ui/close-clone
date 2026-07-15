@@ -353,9 +353,16 @@ describe('hard-delete-lead', () => {
       .where(eq(auditLog.action, 'delete.hard_completed'));
     expect(requested).toHaveLength(1);
     expect(completed).toHaveLength(1);
-    const before = requested[0]?.before as { lead?: { id?: string }; counts?: { contacts?: number } };
+    const before = requested[0]?.before as {
+      lead?: { id?: string };
+      counts?: { contacts?: number; sendIntents?: number };
+    };
     expect(before.lead?.id).toBe(leadId);
     expect(before.counts?.contacts).toBe(2);
+    // The before-snapshot's send_intent count (joined via enrollment) is accurate
+    // and matches what was deleted (send_intents have no lead_id of their own).
+    expect(before.counts?.sendIntents).toBe(1);
+    expect(before.counts?.sendIntents).toBe(result.deleted.sendIntents);
   });
 
   test('refuses without a --reason', async () => {

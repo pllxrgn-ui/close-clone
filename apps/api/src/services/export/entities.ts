@@ -41,10 +41,15 @@ import {
  *   - `exclude`: Drizzle JS property names never written to the export. Two
  *     reasons appear here — GENERATED columns (`search_tsv`/`search_text`, derived
  *     and non-importable) and SECRETS. The secret exclusions are the load-bearing
- *     ones: `email_accounts.oauth_tokens` and `api_tokens.hash` must never leave
- *     the DB (build guide §5g / §1 data-ownership: the org owns its data, but
- *     credential material is not exported). Suppressions and `audit_log` ARE
- *     exported (the org owns its compliance record).
+ *     ones: `email_accounts.oauth_tokens`, `api_tokens.hash`, and
+ *     `webhook_subscriptions.secret` (the HMAC signing key for outbound
+ *     deliveries) must never leave the DB (build guide §5g / §1 data-ownership:
+ *     the org owns its data, but credential material is not exported). The set is
+ *     kept consistent with the audit layer's own credential definition
+ *     (`redaction.ts` treats `secret`/`token`/`hash` as always-sensitive), so a
+ *     signing key cannot leak through an export when it would be redacted in the
+ *     audit trail. Suppressions and `audit_log` ARE exported (the org owns its
+ *     compliance record).
  *   - `customEntity`: when set, `custom_field_defs` rows for that entity flatten
  *     into `custom.<key>` columns appended after the base columns (leads only —
  *     it is the only C1 table with a `custom` jsonb column). The raw `custom`
@@ -104,7 +109,7 @@ export const EXPORT_ENTITIES: readonly ExportEntity[] = [
   // Views / webhooks / tokens / audit.
   { table: smartViews },
   { table: webhookInbox },
-  { table: webhookSubscriptions },
+  { table: webhookSubscriptions, exclude: ['secret'] },
   { table: webhookDeliveries },
   { table: apiTokens, exclude: ['hash'] },
   { table: auditLog },
