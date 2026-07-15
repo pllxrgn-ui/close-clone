@@ -1,0 +1,339 @@
+/*
+ * Switchboard design tokens (CSS custom properties).
+ *
+ * Identity: SPEED MADE VISIBLE — a dense, high-contrast working surface closer to
+ * an IDE than a marketing SaaS. Color is spent almost entirely on STATE so any
+ * list reads like a status board at a glance.
+ *
+ * Theming: light is the :root default; dark applies via BOTH
+ *   @media (prefers-color-scheme: dark)   — follows the OS, and
+ *   :root[data-theme="dark"] / [data-theme="light"]   — manual override (persisted
+ *   to localStorage by the theme module; wins over the media query in both
+ *   directions because the attribute selector out-specifies bare :root).
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * WCAG AA CONTRAST TABLE (verified — see scripts/contrast, sRGB relative luminance)
+ * Text pairs target >= 4.5:1; non-text/UI pairs (ink-3, borders) target >= 3:1.
+ *
+ *   LIGHT                               ratio   | DARK                                ratio
+ *   ink-0  on surface-0   17.10:1  AAA         | ink-0  on surface-0   16.81:1  AAA
+ *   ink-1  on surface-0    8.67:1  AAA         | ink-1  on surface-0   10.06:1  AAA
+ *   ink-2  on surface-0    5.81:1  AA          | ink-2  on surface-0    6.05:1  AA
+ *   ink-2  on surface-1    5.42:1  AA          | ink-2  on surface-1    5.66:1  AA
+ *   ink-2  on surface-2    5.00:1  AA          | ink-2  on surface-2    5.20:1  AA
+ *   ink-3  on surface-0    3.35:1  AA-large/UI | ink-3  on surface-0    3.85:1  AA-large/UI
+ *   accent-ink on accent   4.63:1  AA          | accent-ink on accent   5.86:1  AA
+ *   accent-strong (link)   6.50:1  AA          | accent-strong (link)   7.77:1  AA
+ *   newReply   fg/bg       6.31:1  AA          | newReply   fg/bg        9.06:1  AAA
+ *   overdue    fg/bg       5.75:1  AA          | overdue    fg/bg        9.92:1  AAA
+ *   inSequence fg/bg       6.94:1  AA          | inSequence fg/bg        9.06:1  AAA
+ *   dnc        fg/bg       6.90:1  AA          | dnc        fg/bg        8.24:1  AAA
+ *   won        fg/bg       5.97:1  AA          | won        fg/bg        8.78:1  AAA
+ *   lost       fg/bg       5.92:1  AA          | lost       fg/bg        6.11:1  AA
+ *   draft      fg/bg       5.88:1  AA          | draft      fg/bg        9.40:1  AAA
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* ── Typography ──────────────────────────────────────────────────────────
+   * Body: a system UI stack tuned for density. Display: a distinct system
+   * stack for the few large numbers (paired with tabular-nums + tight tracking
+   * at the usage site). Mono: keycaps, DSL, ids. No runtime CDN fetches. */
+  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'SF Pro Display', 'Segoe UI', system-ui, 'Helvetica Neue', sans-serif;
+  --font-mono:
+    ui-monospace, 'SF Mono', 'Cascadia Code', 'Segoe UI Mono', Menlo, Consolas, monospace;
+
+  --fs-micro: 11px;
+  --fs-sm: 12px;
+  --fs-base: 13px; /* body default — dense but legible */
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --fs-display-sm: 24px;
+  --fs-display: 32px;
+  --fs-display-lg: 44px;
+
+  --lh-tight: 1.2;
+  --lh-base: 1.45;
+  --lh-loose: 1.6;
+
+  --fw-normal: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-display: 680;
+
+  /* ── Spacing / density (4px base, with a 2px micro step) ─────────────────── */
+  --space-0: 0;
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 8px;
+  --space-4: 12px;
+  --space-5: 16px;
+  --space-6: 20px;
+  --space-7: 24px;
+  --space-8: 32px;
+  --space-9: 40px;
+  --space-10: 48px;
+
+  /* Control + row heights — the density scale. Default is dense; a comfortable
+   * override is available via [data-density="comfortable"] on <html>. */
+  --control-h-sm: 24px;
+  --control-h: 28px;
+  --control-h-lg: 34px;
+  --row-h: 32px;
+  --topbar-h: 44px;
+  --rail-w: 208px;
+
+  /* ── Radius ──────────────────────────────────────────────────────────────── */
+  --radius-1: 4px;
+  --radius-2: 6px;
+  --radius-3: 10px;
+  --radius-pill: 999px;
+
+  /* ── Focus ring (single source of truth; used everywhere via :focus-visible) */
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring: var(--accent);
+
+  /* ── Motion ──────────────────────────────────────────────────────────────── */
+  --dur-fast: 90ms;
+  --dur: 140ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* ── Elevation — restrained; not the drop-shadow-card look ─────────────────── */
+  --shadow-1: 0 1px 2px rgba(16, 20, 26, 0.08);
+  --shadow-2: 0 6px 20px -6px rgba(16, 20, 26, 0.22);
+
+  /* ── z-index scale ─────────────────────────────────────────────────────────── */
+  --z-rail: 10;
+  --z-topbar: 20;
+  --z-overlay: 100;
+  --z-toast: 200;
+
+  /* ── Color — LIGHT (default) ─────────────────────────────────────────────── */
+  --surface-0: #ffffff; /* app canvas          */
+  --surface-1: #f6f7f9; /* panels, rail, topbar */
+  --surface-2: #eceef1; /* raised / headers     */
+  --surface-3: #e3e6ea; /* hover / active       */
+  --surface-inset: #f0f2f4; /* wells, inputs    */
+  --surface-sunken: #eef0f3;
+
+  --ink-0: #191c20; /* primary text          */
+  --ink-1: #464c54; /* secondary text        */
+  --ink-2: #5f666f; /* muted / meta (AA)     */
+  --ink-3: #868d96; /* faint — UI/large only */
+
+  --border-0: #dfe3e8; /* hairlines           */
+  --border-1: #c6ccd4; /* strong dividers     */
+
+  --accent: #1f6feb; /* primary action bg     */
+  --accent-ink: #ffffff; /* text on accent    */
+  --accent-strong: #1257c9; /* links/text on surface */
+  --accent-weak-bg: #e6f0ff;
+  --accent-hover: #1a63d6;
+
+  --selection-bg: #cfe0fe;
+
+  /* State colors — the whole point. fg = text/icon, bg = pill wash, solid = dot/bar */
+  --state-new-reply-fg: #0b4fc0;
+  --state-new-reply-bg: #e6f0ff;
+  --state-new-reply-solid: #1f6feb;
+
+  --state-overdue-fg: #b42318;
+  --state-overdue-bg: #fdeceb;
+  --state-overdue-solid: #d92d20;
+
+  --state-in-sequence-fg: #6127c4;
+  --state-in-sequence-bg: #f0ebfe;
+  --state-in-sequence-solid: #7c4dff;
+
+  --state-dnc-fg: #a01313;
+  --state-dnc-bg: #fbe9e9;
+  --state-dnc-solid: #c01919;
+
+  --state-won-fg: #066a40;
+  --state-won-bg: #e6f6ec;
+  --state-won-solid: #099250;
+
+  --state-lost-fg: #545c67;
+  --state-lost-bg: #eef0f2;
+  --state-lost-solid: #7a828c;
+
+  --state-draft-fg: #845408;
+  --state-draft-bg: #fdf3e4;
+  --state-draft-solid: #c9820a;
+}
+
+/* ── Color — DARK via OS preference ───────────────────────────────────────────
+ * Only color tokens change; the geometry/typography tokens above are shared. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --shadow-2: 0 8px 24px -8px rgba(0, 0, 0, 0.6);
+
+    --surface-0: #0e1013;
+    --surface-1: #15181c;
+    --surface-2: #1c2026;
+    --surface-3: #262b32;
+    --surface-inset: #101317;
+    --surface-sunken: #0b0d10;
+
+    --ink-0: #eef1f4;
+    --ink-1: #b6bdc6;
+    --ink-2: #8a929c;
+    --ink-3: #69717b;
+
+    --border-0: #2a2f37;
+    --border-1: #3a414a;
+
+    --accent: #4f8ff7;
+    --accent-ink: #06122a;
+    --accent-strong: #6ea6ff;
+    --accent-weak-bg: #16233a;
+    --accent-hover: #6ea6ff;
+
+    --selection-bg: #1e365e;
+
+    --state-new-reply-fg: #9cc4ff;
+    --state-new-reply-bg: #132135;
+    --state-new-reply-solid: #4f8ff7;
+
+    --state-overdue-fg: #ffb4ab;
+    --state-overdue-bg: #341311;
+    --state-overdue-solid: #ff5a4d;
+
+    --state-in-sequence-fg: #c9b0ff;
+    --state-in-sequence-bg: #20153a;
+    --state-in-sequence-solid: #a884ff;
+
+    --state-dnc-fg: #ff9d94;
+    --state-dnc-bg: #3a1210;
+    --state-dnc-solid: #ff6a5e;
+
+    --state-won-fg: #5fd39a;
+    --state-won-bg: #0d2419;
+    --state-won-solid: #2fbd7e;
+
+    --state-lost-fg: #9aa3ad;
+    --state-lost-bg: #1f242b;
+    --state-lost-solid: #7f8792;
+
+    --state-draft-fg: #f0c07a;
+    --state-draft-bg: #2c2110;
+    --state-draft-solid: #e0a445;
+  }
+}
+
+/* ── Manual overrides — win over the media query in BOTH directions ─────────── */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --shadow-1: 0 1px 2px rgba(16, 20, 26, 0.08);
+  --shadow-2: 0 6px 20px -6px rgba(16, 20, 26, 0.22);
+
+  --surface-0: #ffffff;
+  --surface-1: #f6f7f9;
+  --surface-2: #eceef1;
+  --surface-3: #e3e6ea;
+  --surface-inset: #f0f2f4;
+  --surface-sunken: #eef0f3;
+
+  --ink-0: #191c20;
+  --ink-1: #464c54;
+  --ink-2: #5f666f;
+  --ink-3: #868d96;
+
+  --border-0: #dfe3e8;
+  --border-1: #c6ccd4;
+
+  --accent: #1f6feb;
+  --accent-ink: #ffffff;
+  --accent-strong: #1257c9;
+  --accent-weak-bg: #e6f0ff;
+  --accent-hover: #1a63d6;
+
+  --selection-bg: #cfe0fe;
+
+  --state-new-reply-fg: #0b4fc0;
+  --state-new-reply-bg: #e6f0ff;
+  --state-new-reply-solid: #1f6feb;
+  --state-overdue-fg: #b42318;
+  --state-overdue-bg: #fdeceb;
+  --state-overdue-solid: #d92d20;
+  --state-in-sequence-fg: #6127c4;
+  --state-in-sequence-bg: #f0ebfe;
+  --state-in-sequence-solid: #7c4dff;
+  --state-dnc-fg: #a01313;
+  --state-dnc-bg: #fbe9e9;
+  --state-dnc-solid: #c01919;
+  --state-won-fg: #066a40;
+  --state-won-bg: #e6f6ec;
+  --state-won-solid: #099250;
+  --state-lost-fg: #545c67;
+  --state-lost-bg: #eef0f2;
+  --state-lost-solid: #7a828c;
+  --state-draft-fg: #845408;
+  --state-draft-bg: #fdf3e4;
+  --state-draft-solid: #c9820a;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-2: 0 8px 24px -8px rgba(0, 0, 0, 0.6);
+
+  --surface-0: #0e1013;
+  --surface-1: #15181c;
+  --surface-2: #1c2026;
+  --surface-3: #262b32;
+  --surface-inset: #101317;
+  --surface-sunken: #0b0d10;
+
+  --ink-0: #eef1f4;
+  --ink-1: #b6bdc6;
+  --ink-2: #8a929c;
+  --ink-3: #69717b;
+
+  --border-0: #2a2f37;
+  --border-1: #3a414a;
+
+  --accent: #4f8ff7;
+  --accent-ink: #06122a;
+  --accent-strong: #6ea6ff;
+  --accent-weak-bg: #16233a;
+  --accent-hover: #6ea6ff;
+
+  --selection-bg: #1e365e;
+
+  --state-new-reply-fg: #9cc4ff;
+  --state-new-reply-bg: #132135;
+  --state-new-reply-solid: #4f8ff7;
+  --state-overdue-fg: #ffb4ab;
+  --state-overdue-bg: #341311;
+  --state-overdue-solid: #ff5a4d;
+  --state-in-sequence-fg: #c9b0ff;
+  --state-in-sequence-bg: #20153a;
+  --state-in-sequence-solid: #a884ff;
+  --state-dnc-fg: #ff9d94;
+  --state-dnc-bg: #3a1210;
+  --state-dnc-solid: #ff6a5e;
+  --state-won-fg: #5fd39a;
+  --state-won-bg: #0d2419;
+  --state-won-solid: #2fbd7e;
+  --state-lost-fg: #9aa3ad;
+  --state-lost-bg: #1f242b;
+  --state-lost-solid: #7f8792;
+  --state-draft-fg: #f0c07a;
+  --state-draft-bg: #2c2110;
+  --state-draft-solid: #e0a445;
+}
+
+/* Comfortable density override — opt-in, loosens the dense defaults. */
+:root[data-density='comfortable'] {
+  --control-h-sm: 28px;
+  --control-h: 32px;
+  --control-h-lg: 38px;
+  --row-h: 40px;
+}
