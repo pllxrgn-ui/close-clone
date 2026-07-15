@@ -137,3 +137,28 @@ export function BoltIcon(props: IconProps): JSX.Element {
     </Svg>
   );
 }
+
+export function CloseIcon(props: IconProps): JSX.Element {
+  return (
+    <Svg {...props}>
+      <path d="M6 6l12 12M18 6 6 18" />
+    </Svg>
+  );
+}
+
+export function CommandIcon(props: IconProps): JSX.Element {
+  return (
+    <Svg {...props}>
+      <path d="M9 6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3Z" />
+    </Svg>
+  );
+}
+
+export function CornerDownLeftIcon(props: IconProps): JSX.Element {
+  return (
+    <Svg {...props}>
+      <path d="M9 10 5 14l4 4" />
+      <path d="M5 14h10a4 4 0 0 0 4-4V6" />
+    </Svg>
+  );
+}
