@@ -165,7 +165,7 @@ export async function buildExistingIndex(db: Db): Promise<ExistingIndex> {
       return suppressed.has(email.toLowerCase());
     },
     async matchByFuzzyName(db2, name, threshold) {
-      const nameLower = name.trim().toLowerCase();
+      const nameLower = normalizeName(name);
       if (nameLower === '') return null;
       const result = await db2.execute(sql`
         SELECT id
@@ -180,4 +180,58 @@ export async function buildExistingIndex(db: Db): Promise<ExistingIndex> {
       return first === undefined ? null : String(first['id']);
     },
   };
+}
+
+// --- Batched fuzzy name matching -------------------------------------------
+
+/** Canonical fuzzy-match key for a company name (trim + lowercase). */
+export function normalizeName(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+/**
+ * Resolve the best existing-lead trigram match for MANY candidate names in one
+ * round-trip (used by the dry-run planner so a 10k-row import is a single fuzzy
+ * query, not one-per-row). Returns `normalizeName(candidate) -> existing leadId`
+ * for candidates scoring `>= threshold`. Only the pre-import snapshot is
+ * consulted (deleted_at IS NULL); in-file near-duplicates are intentionally not
+ * fuzzy-matched (that would be O(n²) and non-deterministic) — in-file dedupe is
+ * exact-key only (see plan.ts).
+ *
+ * `similarity() >= threshold` is index-independent (the GIN trgm index backs the
+ * `%` operator, not this) so cost is a seq scan of `leads` per distinct
+ * candidate — fine against the bounded existing set an admin import dedupes
+ * against; a persisted normalized-name index is the scale fix (see the snapshot
+ * note above).
+ */
+export async function batchFuzzyMatch(
+  db: Db,
+  names: readonly string[],
+  threshold: number,
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const distinct = [...new Set(names.map(normalizeName).filter((n) => n !== ''))];
+  if (distinct.length === 0) return out;
+
+  // Candidates ride as a single JSON param (drizzle expands a JS array into
+  // comma-separated params, not a `text[]`); JSON is escaping-safe for names
+  // containing commas/quotes/braces.
+  const result = await db.execute(sql`
+    SELECT c.n AS candidate, m.id AS lead_id
+    FROM json_array_elements_text(${JSON.stringify(distinct)}::json) AS c(n)
+    CROSS JOIN LATERAL (
+      SELECT ${leads.id} AS id
+      FROM ${leads}
+      WHERE ${leads.deletedAt} IS NULL
+        AND similarity(lower(${leads.name}), c.n) >= ${threshold}
+      ORDER BY similarity(lower(${leads.name}), c.n) DESC, ${leads.id} ASC
+      LIMIT 1
+    ) AS m
+  `);
+  for (const row of rowsOf(result)) {
+    const candidate = row['candidate'];
+    const leadId = row['lead_id'];
+    if (typeof candidate === 'string' && typeof leadId === 'string') out.set(candidate, leadId);
+  }
+  return out;
 }

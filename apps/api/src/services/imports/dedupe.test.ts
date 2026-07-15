@@ -3,10 +3,12 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestDb, type TestDb } from '../../db/test-helpers.ts';
 import { contacts, leads, suppressions, users, type Db } from '../../db/index.ts';
 import {
+  batchFuzzyMatch,
   buildExistingIndex,
   deriveDomains,
   domainFromEmail,
   domainFromUrl,
+  normalizeName,
   type ExistingIndex,
 } from './dedupe.ts';
 
@@ -124,5 +126,33 @@ describe('buildExistingIndex — fuzzy name (pg_trgm)', () => {
   test('threshold gates the match', async () => {
     // "Acme" alone is only a partial trigram overlap with "Acme Corporation".
     expect(await index.matchByFuzzyName(ctx.db, 'Acme', 0.9)).toBeNull();
+  });
+});
+
+describe('batchFuzzyMatch (single round-trip for many candidates)', () => {
+  test('resolves each candidate to its best existing-lead match', async () => {
+    const map = await batchFuzzyMatch(
+      ctx.db,
+      ['Acme Corp', 'ACME CORPORATION', 'Globex', 'Umbrella Industries', ''],
+      0.4,
+    );
+    expect(map.get(normalizeName('Acme Corp'))).toBe(L_ACME);
+    expect(map.get(normalizeName('ACME CORPORATION'))).toBe(L_ACME);
+    expect(map.get(normalizeName('Globex'))).toBe(L_GLOBEX);
+    // Unrelated name and the empty candidate have no entry.
+    expect(map.has(normalizeName('Umbrella Industries'))).toBe(false);
+    expect(map.has('')).toBe(false);
+  });
+
+  test('empty candidate list yields an empty map (no query)', async () => {
+    const map = await batchFuzzyMatch(ctx.db, [], 0.4);
+    expect(map.size).toBe(0);
+  });
+
+  test('threshold gates batch matches identically to the per-row path', async () => {
+    const loose = await batchFuzzyMatch(ctx.db, ['Acme'], 0.2);
+    const strict = await batchFuzzyMatch(ctx.db, ['Acme'], 0.9);
+    expect(loose.get('acme')).toBe(L_ACME);
+    expect(strict.has('acme')).toBe(false);
   });
 });
