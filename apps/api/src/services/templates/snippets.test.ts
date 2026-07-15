@@ -40,7 +40,11 @@ test('creates and reads an owned snippet', async () => {
 
 test('rejects an unknown actor', async () => {
   await expect(
-    createSnippet(ctx.db, { actorId: '00000000-0000-4000-8000-0000000000ff', shortcut: ';x', body: 'b' }),
+    createSnippet(ctx.db, {
+      actorId: '00000000-0000-4000-8000-0000000000ff',
+      shortcut: ';x',
+      body: 'b',
+    }),
   ).rejects.toBeInstanceOf(InvalidActorError);
 });
 

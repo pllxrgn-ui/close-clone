@@ -66,7 +66,12 @@ function encToken(): string {
   });
 }
 
-async function seedAccount(db: Db, userId: string, address: string, withTokens = true): Promise<string> {
+async function seedAccount(
+  db: Db,
+  userId: string,
+  address: string,
+  withTokens = true,
+): Promise<string> {
   const rows = await db
     .insert(emailAccounts)
     .values({
@@ -153,7 +158,8 @@ describe('happy path', () => {
 
     const provider = providerFor({ address: 'rep@mock.test', provider: 'mock' });
     const tokens = cipher.decrypt(
-      (await ctx.db.select().from(emailAccounts).where(eq(emailAccounts.id, accountId)))[0]!.oauthTokens!,
+      (await ctx.db.select().from(emailAccounts).where(eq(emailAccounts.id, accountId)))[0]!
+        .oauthTokens!,
     );
     const sent = await provider.getMessage(tokens, res.providerMessageId);
     expect(sent.subject).toBe('For Dana');
@@ -166,8 +172,16 @@ describe('happy path', () => {
     const cid = await seedContact(ctx.db, lead, ['primary@acme.test'], { name: 'Dana' });
     const accountId = await seedAccount(ctx.db, rep, 'rep@mock.test');
 
-    const res = await sendOneOff(deps, { actorId: rep, accountId, leadId: lead, contactId: cid, body: 'Hi' });
-    const msg = (await ctx.db.select().from(emailMessages).where(eq(emailMessages.id, res.messageId)))[0]!;
+    const res = await sendOneOff(deps, {
+      actorId: rep,
+      accountId,
+      leadId: lead,
+      contactId: cid,
+      body: 'Hi',
+    });
+    const msg = (
+      await ctx.db.select().from(emailMessages).where(eq(emailMessages.id, res.messageId))
+    )[0]!;
     expect(msg.toAddrs).toEqual(['primary@acme.test']);
   });
 });
@@ -180,11 +194,20 @@ describe('compliance rails — I-DNC (execution-time, engine layer)', () => {
     await addSuppression(ctx.db, 'blocked@acme.test');
 
     await expect(
-      sendOneOff(deps, { actorId: rep, accountId, leadId: lead, to: ['blocked@acme.test'], body: 'Hi' }),
+      sendOneOff(deps, {
+        actorId: rep,
+        accountId,
+        leadId: lead,
+        to: ['blocked@acme.test'],
+        body: 'Hi',
+      }),
     ).rejects.toBeInstanceOf(SuppressedError);
 
     expect(providerFor({ address: 'rep@mock.test', provider: 'mock' }).sendCallCount).toBe(0);
-    const msgs = await ctx.db.select().from(emailMessages).where(eq(emailMessages.accountId, accountId));
+    const msgs = await ctx.db
+      .select()
+      .from(emailMessages)
+      .where(eq(emailMessages.accountId, accountId));
     expect(msgs).toHaveLength(0);
     expect(await activitiesFor(ctx.db, lead)).toHaveLength(0);
   });
@@ -194,7 +217,13 @@ describe('compliance rails — I-DNC (execution-time, engine layer)', () => {
     const accountId = await seedAccount(ctx.db, rep, 'rep@mock.test');
     await addSuppression(ctx.db, 'Blocked@Acme.test');
     await expect(
-      sendOneOff(deps, { actorId: rep, accountId, leadId: lead, to: ['blocked@acme.TEST'], body: 'Hi' }),
+      sendOneOff(deps, {
+        actorId: rep,
+        accountId,
+        leadId: lead,
+        to: ['blocked@acme.TEST'],
+        body: 'Hi',
+      }),
     ).rejects.toBeInstanceOf(SuppressedError);
   });
 
@@ -208,7 +237,13 @@ describe('compliance rails — I-DNC (execution-time, engine layer)', () => {
     await seedContact(ctx.db, lead, ['dana@acme.test'], { name: 'Dana' });
     const accountId = await seedAccount(ctx.db, rep, 'rep@mock.test');
     await expect(
-      sendOneOff(deps, { actorId: rep, accountId, leadId: lead, to: ['dana@acme.test'], body: 'Hi' }),
+      sendOneOff(deps, {
+        actorId: rep,
+        accountId,
+        leadId: lead,
+        to: ['dana@acme.test'],
+        body: 'Hi',
+      }),
     ).rejects.toBeInstanceOf(SuppressedError);
     expect(providerFor({ address: 'rep@mock.test', provider: 'mock' }).sendCallCount).toBe(0);
   });
@@ -242,9 +277,9 @@ describe('merge-tag failure', () => {
       }),
     ).rejects.toBeInstanceOf(MergeRenderError);
     expect(providerFor({ address: 'rep@mock.test', provider: 'mock' }).sendCallCount).toBe(0);
-    expect(await ctx.db.select().from(emailMessages).where(eq(emailMessages.accountId, accountId))).toHaveLength(
-      0,
-    );
+    expect(
+      await ctx.db.select().from(emailMessages).where(eq(emailMessages.accountId, accountId)),
+    ).toHaveLength(0);
   });
 });
 
@@ -272,9 +307,14 @@ describe('idempotency', () => {
     expect(second.rfcMessageId).toBe(first.rfcMessageId);
 
     expect(providerFor({ address: 'rep@mock.test', provider: 'mock' }).sendCallCount).toBe(1);
-    const msgs = await ctx.db.select().from(emailMessages).where(eq(emailMessages.accountId, accountId));
+    const msgs = await ctx.db
+      .select()
+      .from(emailMessages)
+      .where(eq(emailMessages.accountId, accountId));
     expect(msgs).toHaveLength(1);
-    expect((await activitiesFor(ctx.db, lead)).filter((a) => a.type === 'email_sent')).toHaveLength(1);
+    expect((await activitiesFor(ctx.db, lead)).filter((a) => a.type === 'email_sent')).toHaveLength(
+      1,
+    );
   });
 });
 
@@ -287,18 +327,28 @@ describe('thread continuity — reply from CRM', () => {
     // Inbound from the contact → threaded + matched to the lead (2c), one email_received.
     // (Explicit providerMessageId so the seeded inbound cannot collide with the
     // send mailbox's own 'msg-N' id sequence — real mailboxes never share one.)
-    const inbound = await ingest(ctx.db, { matcher: new ParticipantLeadMatcher() }, accountId, makeRaw({
-      providerMessageId: 'inbound-pm-1',
-      rfcMessageId: '<inbound-1@ext.test>',
-      from: 'dana@acme.test',
-      to: ['rep@mock.test'],
-      subject: 'Question',
-    }));
+    const inbound = await ingest(
+      ctx.db,
+      { matcher: new ParticipantLeadMatcher() },
+      accountId,
+      makeRaw({
+        providerMessageId: 'inbound-pm-1',
+        rfcMessageId: '<inbound-1@ext.test>',
+        from: 'dana@acme.test',
+        to: ['rep@mock.test'],
+        subject: 'Question',
+      }),
+    );
     const inboundMsg = (
       await ctx.db
         .select({ id: emailMessages.id })
         .from(emailMessages)
-        .where(and(eq(emailMessages.accountId, accountId), eq(emailMessages.rfcMessageId, '<inbound-1@ext.test>')))
+        .where(
+          and(
+            eq(emailMessages.accountId, accountId),
+            eq(emailMessages.rfcMessageId, '<inbound-1@ext.test>'),
+          ),
+        )
     )[0]!;
 
     const res = await sendOneOff(deps, {
@@ -341,7 +391,9 @@ describe('per-account send-from', () => {
       to: ['dana@acme.test'],
       body: 'Hi',
     });
-    const msg = (await ctx.db.select().from(emailMessages).where(eq(emailMessages.id, res.messageId)))[0]!;
+    const msg = (
+      await ctx.db.select().from(emailMessages).where(eq(emailMessages.id, res.messageId))
+    )[0]!;
     expect(msg.fromAddr).toBe('b@mock.test');
     expect(providerFor({ address: 'b@mock.test', provider: 'mock' }).sendCallCount).toBe(1);
     expect(providerFor({ address: 'a@mock.test', provider: 'mock' }).sendCallCount).toBe(0);
@@ -371,7 +423,8 @@ describe('template-based send', () => {
     });
     const provider = providerFor({ address: 'rep@mock.test', provider: 'mock' });
     const tokens = cipher.decrypt(
-      (await ctx.db.select().from(emailAccounts).where(eq(emailAccounts.id, accountId)))[0]!.oauthTokens!,
+      (await ctx.db.select().from(emailAccounts).where(eq(emailAccounts.id, accountId)))[0]!
+        .oauthTokens!,
     );
     const sent = await provider.getMessage(tokens, res.providerMessageId);
     expect(sent.subject).toBe('Hi Dana');
@@ -381,9 +434,20 @@ describe('template-based send', () => {
   test('rejects an SMS template on the email send path', async () => {
     const lead = await seedLead(ctx.db, 'Acme');
     const accountId = await seedAccount(ctx.db, rep, 'rep@mock.test');
-    const tpl = await createTemplate(ctx.db, { actorId: rep, name: 'Sms', channel: 'sms', body: 'x' });
+    const tpl = await createTemplate(ctx.db, {
+      actorId: rep,
+      name: 'Sms',
+      channel: 'sms',
+      body: 'x',
+    });
     await expect(
-      sendOneOff(deps, { actorId: rep, accountId, leadId: lead, to: ['x@y.z'], templateId: tpl.id }),
+      sendOneOff(deps, {
+        actorId: rep,
+        accountId,
+        leadId: lead,
+        to: ['x@y.z'],
+        templateId: tpl.id,
+      }),
     ).rejects.toBeInstanceOf(SendValidationError);
   });
 });

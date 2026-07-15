@@ -61,7 +61,8 @@ export function decodeCursor(cursor: string): Cursor {
   if (sep < 0) throw new InvalidCursorError(cursor);
   const createdAt = decoded.slice(0, sep);
   const id = decoded.slice(sep + 1);
-  if (!UUID_RE.test(id) || Number.isNaN(Date.parse(createdAt))) throw new InvalidCursorError(cursor);
+  if (!UUID_RE.test(id) || Number.isNaN(Date.parse(createdAt)))
+    throw new InvalidCursorError(cursor);
   return { createdAt, id };
 }
 

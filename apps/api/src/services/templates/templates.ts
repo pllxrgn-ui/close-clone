@@ -1,12 +1,7 @@
 import { and, asc, eq, or, sql, type SQL } from 'drizzle-orm';
 import { templateChannelValues } from '@switchboard/shared';
 import { templates, type Db } from '../../db/index.ts';
-import {
-  assertActiveUser,
-  clampLimit,
-  decodeCursor,
-  encodeCursor,
-} from './access.ts';
+import { assertActiveUser, clampLimit, decodeCursor, encodeCursor } from './access.ts';
 
 /**
  * Templates CRUD (task 2d, CONTRACTS §C1 templates: `channel`, `shared`/`owner`).

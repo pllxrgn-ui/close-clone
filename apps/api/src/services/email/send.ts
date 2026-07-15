@@ -121,7 +121,9 @@ export class SendContactNotFoundError extends SendError {
 /** A reply's thread is already matched to a DIFFERENT lead → 409. */
 export class SendThreadConflictError extends SendError {
   constructor(threadId: string, existing: string | null, requested: string) {
-    super(`thread ${threadId} is matched to lead ${existing}; cannot log a send under ${requested}`);
+    super(
+      `thread ${threadId} is matched to lead ${existing}; cannot log a send under ${requested}`,
+    );
     this.name = 'SendThreadConflictError';
   }
 }
@@ -299,7 +301,8 @@ async function loadParentMessage(db: Db, messageId: string): Promise<ParentMessa
     .where(eq(emailMessages.id, messageId))
     .limit(1);
   const row = rows[0];
-  if (row === undefined) throw new SendValidationError(`reply target message ${messageId} not found`);
+  if (row === undefined)
+    throw new SendValidationError(`reply target message ${messageId} not found`);
   return {
     rfcMessageId: row.rfcMessageId,
     refs: (row.refs as unknown[]).filter((r): r is string => typeof r === 'string'),
@@ -338,7 +341,10 @@ function textArray(values: string[]): ReturnType<typeof sql> {
 function deterministicMessageId(accountId: string, key: string, address: string): string {
   const at = address.lastIndexOf('@');
   const domain = at >= 0 ? address.slice(at + 1) : 'switchboard.local';
-  const hash = createHash('sha256').update(`${accountId}|${key}`, 'utf8').digest('hex').slice(0, 32);
+  const hash = createHash('sha256')
+    .update(`${accountId}|${key}`, 'utf8')
+    .digest('hex')
+    .slice(0, 32);
   return `<sb-${hash}@${domain}>`;
 }
 
@@ -382,7 +388,12 @@ async function findByRfc(exec: Db, accountId: string, rfc: string): Promise<Exis
     .limit(1);
   const row = rows[0];
   if (row === undefined) return null;
-  return { id: row.id, threadId: row.threadId, leadId: row.leadId, providerMessageId: row.providerMessageId };
+  return {
+    id: row.id,
+    threadId: row.threadId,
+    leadId: row.leadId,
+    providerMessageId: row.providerMessageId,
+  };
 }
 
 /** Attach the thread to the explicitly-chosen lead (matched); conflict if it is
@@ -541,11 +552,9 @@ export async function sendOneOff(
         : { name: contact.name, title: contact.title, email: contact.email, phone: contact.phone },
     user: { name: user.name, email: user.email },
   };
-  const rendered = renderTemplate(
-    { subject: subjectTemplate, body: bodyTemplate },
-    mergeContext,
-    { format: 'text' },
-  );
+  const rendered = renderTemplate({ subject: subjectTemplate, body: bodyTemplate }, mergeContext, {
+    format: 'text',
+  });
 
   const to = normalizeRecipients(input.to ?? (contact?.email ? [contact.email] : []));
   if (to.length === 0) throw new SendValidationError('at least one recipient is required');

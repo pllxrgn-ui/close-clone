@@ -63,7 +63,12 @@ describe('createTemplate', () => {
 
 describe('visibility', () => {
   test('owner reads own private template; other rep gets NOT_FOUND', async () => {
-    const t = await createTemplate(ctx.db, { actorId: owner, name: 'Priv', channel: 'email', body: 'b' });
+    const t = await createTemplate(ctx.db, {
+      actorId: owner,
+      name: 'Priv',
+      channel: 'email',
+      body: 'b',
+    });
     expect((await getTemplate(ctx.db, t.id, owner)).id).toBe(t.id);
     await expect(getTemplate(ctx.db, t.id, other)).rejects.toBeInstanceOf(TemplateNotFoundError);
   });
@@ -80,10 +85,26 @@ describe('visibility', () => {
   });
 
   test('list returns own + shared, filtered by channel', async () => {
-    await createTemplate(ctx.db, { actorId: owner, name: 'MineEmail', channel: 'email', body: 'b' });
+    await createTemplate(ctx.db, {
+      actorId: owner,
+      name: 'MineEmail',
+      channel: 'email',
+      body: 'b',
+    });
     await createTemplate(ctx.db, { actorId: owner, name: 'MineSms', channel: 'sms', body: 'b' });
-    await createTemplate(ctx.db, { actorId: other, name: 'OtherShared', channel: 'email', body: 'b', shared: true });
-    await createTemplate(ctx.db, { actorId: other, name: 'OtherPriv', channel: 'email', body: 'b' });
+    await createTemplate(ctx.db, {
+      actorId: other,
+      name: 'OtherShared',
+      channel: 'email',
+      body: 'b',
+      shared: true,
+    });
+    await createTemplate(ctx.db, {
+      actorId: other,
+      name: 'OtherPriv',
+      channel: 'email',
+      body: 'b',
+    });
 
     const emails = await listTemplates(ctx.db, { actorId: owner, channel: 'email' });
     const names = emails.items.map((t) => t.name).sort();
@@ -114,20 +135,30 @@ describe('mutation ownership', () => {
     });
     const upd = await updateTemplate(ctx.db, t.id, { actorId: owner, name: 'S2' });
     expect(upd.name).toBe('S2');
-    await expect(updateTemplate(ctx.db, t.id, { actorId: other, name: 'hax' })).rejects.toBeInstanceOf(
-      TemplateForbiddenError,
-    );
+    await expect(
+      updateTemplate(ctx.db, t.id, { actorId: other, name: 'hax' }),
+    ).rejects.toBeInstanceOf(TemplateForbiddenError);
   });
 
   test('non-owner cannot see a private template to update it (NOT_FOUND)', async () => {
-    const t = await createTemplate(ctx.db, { actorId: owner, name: 'P', channel: 'email', body: 'b' });
-    await expect(updateTemplate(ctx.db, t.id, { actorId: other, name: 'x' })).rejects.toBeInstanceOf(
-      TemplateNotFoundError,
-    );
+    const t = await createTemplate(ctx.db, {
+      actorId: owner,
+      name: 'P',
+      channel: 'email',
+      body: 'b',
+    });
+    await expect(
+      updateTemplate(ctx.db, t.id, { actorId: other, name: 'x' }),
+    ).rejects.toBeInstanceOf(TemplateNotFoundError);
   });
 
   test('owner deletes; then it is gone', async () => {
-    const t = await createTemplate(ctx.db, { actorId: owner, name: 'D', channel: 'email', body: 'b' });
+    const t = await createTemplate(ctx.db, {
+      actorId: owner,
+      name: 'D',
+      channel: 'email',
+      body: 'b',
+    });
     await deleteTemplate(ctx.db, t.id, owner);
     await expect(getTemplate(ctx.db, t.id, owner)).rejects.toBeInstanceOf(TemplateNotFoundError);
   });
@@ -140,6 +171,8 @@ describe('mutation ownership', () => {
       body: 'b',
       shared: true,
     });
-    await expect(deleteTemplate(ctx.db, t.id, other)).rejects.toBeInstanceOf(TemplateForbiddenError);
+    await expect(deleteTemplate(ctx.db, t.id, other)).rejects.toBeInstanceOf(
+      TemplateForbiddenError,
+    );
   });
 });

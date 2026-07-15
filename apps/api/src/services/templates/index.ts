@@ -6,10 +6,7 @@
  * these services store bodies verbatim.
  */
 
-export {
-  InvalidActorError,
-  InvalidCursorError,
-} from './access.ts';
+export { InvalidActorError, InvalidCursorError } from './access.ts';
 export {
   TemplateNotFoundError,
   TemplateForbiddenError,

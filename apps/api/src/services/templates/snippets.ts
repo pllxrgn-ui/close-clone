@@ -1,11 +1,6 @@
 import { and, asc, eq, sql, type SQL } from 'drizzle-orm';
 import { snippets, type Db } from '../../db/index.ts';
-import {
-  assertActiveUser,
-  clampLimit,
-  decodeCursor,
-  encodeCursor,
-} from './access.ts';
+import { assertActiveUser, clampLimit, decodeCursor, encodeCursor } from './access.ts';
 
 /**
  * Snippets CRUD (task 2d, CONTRACTS §C1 snippets: `shortcut`, `body`, `owner_id`).

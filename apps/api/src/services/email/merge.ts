@@ -184,7 +184,9 @@ export function renderTemplate(
   const unresolved: string[] = [];
 
   const hasSubject = input.subject !== null && input.subject !== undefined;
-  const subject = hasSubject ? renderOne(input.subject as string, ctx, format, unresolved) : undefined;
+  const subject = hasSubject
+    ? renderOne(input.subject as string, ctx, format, unresolved)
+    : undefined;
   const body = renderOne(input.body, ctx, format, unresolved);
 
   if (unresolved.length > 0) throw new MergeRenderError(unresolved);

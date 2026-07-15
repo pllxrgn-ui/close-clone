@@ -51,6 +51,16 @@ export {
   type SendOneOffResult,
 } from './send.ts';
 export {
+  listThreads,
+  getThread,
+  InvalidThreadCursorError,
+  type ThreadSummary,
+  type ThreadMessage,
+  type ThreadDetail,
+  type ListThreadsOptions,
+  type ListThreadsResult,
+} from './thread-reads.ts';
+export {
   listAmbiguousThreads,
   resolveThreadToLead,
   ignoreThread,
