@@ -3,7 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
     <title>Switchboard</title>
+    <script>
+      // Stamp the persisted theme before first paint to avoid a flash. Mirrors
+      // THEME_STORAGE_KEY ('sb-theme') in src/theme/theme.ts; 'system' stores
+      // nothing and falls through to the prefers-color-scheme media query.
+      (function () {
+        try {
+          var t = localStorage.getItem('sb-theme');
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {
+          /* localStorage unavailable — fall back to the media query */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
