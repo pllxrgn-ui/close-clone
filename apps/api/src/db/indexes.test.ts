@@ -53,7 +53,8 @@ describe('migration chain 0000→0003', () => {
       `SELECT count(*)::int AS n FROM drizzle.__drizzle_migrations`,
     );
     // Bumped 3 → 4 by Task 1e's migration 0003 (pg_trgm + global-search indexes).
-    expect(rows[0]?.n).toBe(4);
+    // Bumped 4 → 5 by Task 5b's migration 0011 (audit_log append-only trigger).
+    expect(rows[0]?.n).toBe(5);
   });
 });
 

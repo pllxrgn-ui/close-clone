@@ -29,6 +29,13 @@
       "when": 1784053126579,
       "tag": "0003_c1e_search",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1784900000000,
+      "tag": "0011_audit_log_append_only",
+      "breakpoints": true
     }
   ]
 }
