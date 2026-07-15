@@ -138,8 +138,13 @@ class ParamBuilder {
 class Compiler {
   private readonly p = new ParamBuilder();
   private readonly customKeys: Set<string>;
+  // Plain field assignment, not a TS parameter property: the shared barrel must
+  // stay loadable under `node --experimental-strip-types`, which rejects
+  // parameter properties (ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX).
+  private readonly ctx: CompileContext;
 
-  constructor(private readonly ctx: CompileContext) {
+  constructor(ctx: CompileContext) {
+    this.ctx = ctx;
     this.customKeys = new Set(
       ctx.fieldCatalog.filter((d) => d.entity === 'lead').map((d) => d.key),
     );
