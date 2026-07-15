@@ -69,3 +69,65 @@ export function createProviderRegistry(
     }),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Per-account send-from (task 2d)
+// ---------------------------------------------------------------------------
+
+/**
+ * Per-account send-from (task 2d, resolving the 2b note). OAuth linking, backfill,
+ * and history sync are mailbox-agnostic — one shared provider keyed by per-account
+ * tokens serves them all. SEND is different: the From header and Message-ID domain
+ * MUST be the *sending rep's own* mailbox address, not one shared configured
+ * identity. This factory returns an `EmailProvider` bound to a specific mailbox
+ * address, one cached instance per address (so the mock's idempotency ledger — and
+ * any real per-mailbox state — persists across that mailbox's sends).
+ *
+ * The mock/real choice stays on THIS adapter line: it branches on `mockMode`,
+ * never above (ARCHITECTURE §1). The account's own tokens are supplied separately
+ * by the caller (decrypted from `email_accounts.oauth_tokens`).
+ */
+export type EmailProviderName = 'gmail' | 'mock';
+
+export interface AccountIdentity {
+  address: string;
+  provider: EmailProviderName;
+}
+
+export interface EmailSenderRegistry {
+  providerFor(identity: AccountIdentity): EmailProvider;
+}
+
+export function createEmailSenderRegistry(
+  config: RegistryConfig,
+  mockOverrides: MockRegistryOverrides = {},
+): EmailSenderRegistry {
+  const cache = new Map<string, EmailProvider>();
+  return {
+    providerFor(identity: AccountIdentity): EmailProvider {
+      const key = `${identity.provider}:${identity.address.toLowerCase()}`;
+      const cached = cache.get(key);
+      if (cached !== undefined) return cached;
+      const created = config.mockMode
+        ? new MockEmailProvider({ ...mockOverrides, address: identity.address })
+        : buildGmailForAddress(config, identity.address);
+      cache.set(key, created);
+      return created;
+    },
+  };
+}
+
+function buildGmailForAddress(config: RegistryConfig, address: string): EmailProvider {
+  if (config.gmail === undefined) {
+    throw new Error(
+      'real email provider requires gmail OAuth config (clientId/clientSecret); ' +
+        'set MOCK_MODE=1 to use the in-memory provider',
+    );
+  }
+  return new GmailEmailProvider({
+    clientId: config.gmail.clientId,
+    clientSecret: config.gmail.clientSecret,
+    address,
+    ...(config.gmail.scopes !== undefined ? { scopes: config.gmail.scopes } : {}),
+  });
+}

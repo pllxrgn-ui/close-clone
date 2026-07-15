@@ -23,6 +23,34 @@ export {
 } from './matching.ts';
 export { materializeThreadActivities } from './activities.ts';
 export {
+  renderTemplate,
+  MergeRenderError,
+  type MergeContext,
+  type MergeLead,
+  type MergeContact,
+  type MergeUser,
+  type RenderFormat,
+  type RenderInput,
+  type RenderOptions,
+  type RenderedTemplate,
+} from './merge.ts';
+export {
+  sendOneOff,
+  SendError,
+  SuppressedError,
+  SendValidationError,
+  SendAccountNotFoundError,
+  SendAccountNotLinkedError,
+  SendLeadNotFoundError,
+  SendContactNotFoundError,
+  SendThreadConflictError,
+  SendProviderError,
+  type ProviderForAccount,
+  type SendServiceDeps,
+  type SendOneOffInput,
+  type SendOneOffResult,
+} from './send.ts';
+export {
   listAmbiguousThreads,
   resolveThreadToLead,
   ignoreThread,
