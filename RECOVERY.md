@@ -18,7 +18,7 @@ Scripts for session `fba7396e-b2e7-4e61-804f-d5c06e727c45` are the current ones 
 | 2 | Web foundation | `D:\CODE\NEW\close-clone-web` | `web-foundation` | W1→W2→W3→W4 | `wf_f5c002e0-3b2` | `web-foundation-wf_f5c002e0-3b2.js` | W1 running, 2nd attempt (deps salvaged) |
 | 3 | Telephony mock 3a | `D:\CODE\NEW\close-clone-telephony` | `telephony-provider` | 3a | `wf_76086abe-24e` | `telephony-provider-3a-wf_76086abe-24e.js` | 3a running, 3rd attempt (DTOs salvaged) |
 | 4 | CSV import 4f | `D:\CODE\NEW\close-clone-import` | `csv-import` | 4f | `wf_d7e0453f-638` | `csv-import-4f-wf_d7e0453f-638.js` | 4f running (alive @22:23) |
-| 5 | Reporting 4g | `D:\CODE\NEW\close-clone-reports` | `reporting` | 4g | `wf_1134d3ca-1bd` | `reporting-4g-wf_1134d3ca-1bd.js` | 4g running, 2nd attempt (cursor.ts salvaged) |
+| 5 | Reporting 4g | `D:\CODE\NEW\close-clone-reports` | `reporting` | 4g ✅ | `wf_1134d3ca-1bd` | `reporting-4g-wf_1134d3ca-1bd.js` | **COMPLETE** (8 commits, 82 tests; friction parked in STATUS.md) — stream idle, awaiting Gate-2 merge |
 | 6 | Admin ops 5b+5g | `D:\CODE\NEW\close-clone-admin` | `admin-ops` | 5b→5g | `wf_911cb476-226` | `admin-ops-5b-5g-wf_911cb476-226.js` | 5b running (alive @22:21) |
 
 **Known failure mode:** this host's connection drops roughly hourly (ECONNRESET/ENOTFOUND kill in-flight agents; observed ~20:30, ~22:10, ~23:55 on 2026-07-15 — 7 agent deaths total; every stream is on attempt 2–4 but no committed work has ever been lost). All re-dispatched prompts now carry an incremental-commit rule (commit every green milestone, never >30 min uncommitted). Some deaths are SILENT (the workflow task vanishes without a completion notification — happened to web W1): detect them with the liveness probe below.

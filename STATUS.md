@@ -32,7 +32,7 @@
 | Web foundation W1–W4 (parallel stream, D-014) | Opus | running on branch `web-foundation` in isolated worktree; W1 shell/tokens/client → W2 palette/keyboard → W3 leads/views/search UI → W4 Smart View builder; merge at Gate 2 |
 | 3a telephony mock (pulled forward, D-015) | Opus | running on branch `telephony-provider` in isolated worktree; merge at Gate 2 |
 | 4f CSV import engine (D-017) | Opus | running on branch `csv-import`; migration 0010; merge at Gate 2 |
-| 4g reporting (D-017) | Opus | running on branch `reporting`; read-only; merge at Gate 2 |
+| 4g reporting (D-017) | Opus | **DONE** — 8 commits on `reporting` (c9d5b00..5d73ec8), 82 new tests, all exact-number DB-backed; perf ~12–125ms vs 500ms budget (PGlite). Friction parked for Gate-2 adjudication: email_bounced payload lacks enrollmentId (C4), opportunity_stage_changed from/to must be pinned as stage IDs (C4), report schemas to promote into packages/shared at merge, cross-lead reporting index proposal (measure on 100k), funnel range semantics documented in funnel.ts |
 | 5b audit log → 5g export + admin CLI (D-017) | Opus | running on branch `admin-ops`; migration 0011; merge at Gate 2 |
 
 **Recovery:** RECOVERY.md (committed) is the resume playbook — keep its stream table current.
