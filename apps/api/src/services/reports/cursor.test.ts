@@ -74,12 +74,16 @@ describe('decodeCursorTuple — arity + per-position typing', () => {
 
   test('rejects an arity mismatch', () => {
     const raw = encodeCursor(['USD', 2]);
-    expect(() => decodeCursorTuple(raw, ['string', 'number', 'string'])).toThrow(InvalidCursorError);
+    expect(() => decodeCursorTuple(raw, ['string', 'number', 'string'])).toThrow(
+      InvalidCursorError,
+    );
   });
 
   test('rejects a per-position type mismatch', () => {
     const raw = encodeCursor(['USD', 'two', 'stage']);
-    expect(() => decodeCursorTuple(raw, ['string', 'number', 'string'])).toThrow(InvalidCursorError);
+    expect(() => decodeCursorTuple(raw, ['string', 'number', 'string'])).toThrow(
+      InvalidCursorError,
+    );
   });
 
   test('a wholly malformed cursor still throws (not a crash)', () => {

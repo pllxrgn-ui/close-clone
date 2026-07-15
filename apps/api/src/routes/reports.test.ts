@@ -43,13 +43,25 @@ beforeAll(async () => {
 
   await ctx.db
     .insert(users)
-    .values([{ id: USER, email: 'a@example.com', name: 'Rep A', role: 'rep', idpSubject: 'idp|a' }]);
+    .values([
+      { id: USER, email: 'a@example.com', name: 'Rep A', role: 'rep', idpSubject: 'idp|a' },
+    ]);
   await ctx.db.insert(leads).values([{ id: LEAD, name: 'Acme', ownerId: USER }]);
   await ctx.db.insert(contacts).values([{ id: CONTACT, leadId: LEAD, name: 'Contact' }]);
   await ctx.db.insert(opportunityStages).values([{ id: STAGE, label: 'Discovery', sortOrder: 0 }]);
-  await ctx.db.insert(opportunities).values([
-    { id: OPP, leadId: LEAD, currency: 'USD', stageId: STAGE, status: 'active', valueCents: 100000, confidence: 50 },
-  ]);
+  await ctx.db
+    .insert(opportunities)
+    .values([
+      {
+        id: OPP,
+        leadId: LEAD,
+        currency: 'USD',
+        stageId: STAGE,
+        status: 'active',
+        valueCents: 100000,
+        confidence: 50,
+      },
+    ]);
   await ctx.db.insert(sequences).values([
     { id: SEQ1, name: 'Onboarding', status: 'active' },
     { id: SEQ2, name: 'Renewal', status: 'active' },
@@ -59,11 +71,46 @@ beforeAll(async () => {
     .values([{ id: ENR, sequenceId: SEQ1, leadId: LEAD, contactId: CONTACT, state: 'active' }]);
 
   await ctx.db.insert(activities).values([
-    { id: randomUUID(), leadId: LEAD, userId: USER, type: 'call_logged', occurredAt: WHEN, payload: { direction: 'inbound', outcome: 'connected' } },
-    { id: randomUUID(), leadId: LEAD, userId: USER, type: 'call_logged', occurredAt: WHEN, payload: { direction: 'outbound', outcome: 'voicemail' } },
-    { id: randomUUID(), leadId: LEAD, userId: USER, type: 'email_sent', occurredAt: WHEN, payload: {} },
-    { id: randomUUID(), leadId: LEAD, userId: USER, type: 'opportunity_stage_changed', occurredAt: WHEN, payload: { opportunityId: OPP, to: STAGE } },
-    { id: randomUUID(), leadId: LEAD, userId: USER, type: 'sequence_step_sent', occurredAt: WHEN, payload: { enrollmentId: ENR } },
+    {
+      id: randomUUID(),
+      leadId: LEAD,
+      userId: USER,
+      type: 'call_logged',
+      occurredAt: WHEN,
+      payload: { direction: 'inbound', outcome: 'connected' },
+    },
+    {
+      id: randomUUID(),
+      leadId: LEAD,
+      userId: USER,
+      type: 'call_logged',
+      occurredAt: WHEN,
+      payload: { direction: 'outbound', outcome: 'voicemail' },
+    },
+    {
+      id: randomUUID(),
+      leadId: LEAD,
+      userId: USER,
+      type: 'email_sent',
+      occurredAt: WHEN,
+      payload: {},
+    },
+    {
+      id: randomUUID(),
+      leadId: LEAD,
+      userId: USER,
+      type: 'opportunity_stage_changed',
+      occurredAt: WHEN,
+      payload: { opportunityId: OPP, to: STAGE },
+    },
+    {
+      id: randomUUID(),
+      leadId: LEAD,
+      userId: USER,
+      type: 'sequence_step_sent',
+      occurredAt: WHEN,
+      payload: { enrollmentId: ENR },
+    },
   ]);
 
   app = Fastify({ logger: false });
@@ -80,7 +127,10 @@ const RANGE = 'from=2026-03-01&to=2026-03-31';
 
 describe('GET /api/v1/reports/activity', () => {
   test('returns the { items } envelope with per-rep counts', async () => {
-    const res = await app.inject({ method: 'GET', url: `/api/v1/reports/activity?${RANGE}&groupBy=user` });
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/v1/reports/activity?${RANGE}&groupBy=user`,
+    });
     expect(res.statusCode).toBe(200);
     const body = res.json<{ items: { bucket: string; callsLogged: number }[] }>();
     expect(body.items).toHaveLength(1);
@@ -89,34 +139,52 @@ describe('GET /api/v1/reports/activity', () => {
   });
 
   test('missing `to` → 400 VALIDATION_FAILED', async () => {
-    const res = await app.inject({ method: 'GET', url: '/api/v1/reports/activity?from=2026-03-01' });
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/reports/activity?from=2026-03-01',
+    });
     expect(res.statusCode).toBe(400);
     expect(res.json<{ error: { code: string } }>().error.code).toBe('VALIDATION_FAILED');
   });
 
   test('unknown groupBy → 400', async () => {
-    const res = await app.inject({ method: 'GET', url: `/api/v1/reports/activity?${RANGE}&groupBy=week` });
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/v1/reports/activity?${RANGE}&groupBy=week`,
+    });
     expect(res.statusCode).toBe(400);
   });
 
   test('a non-calendar date → 400 (ReportRangeError mapped)', async () => {
-    const res = await app.inject({ method: 'GET', url: '/api/v1/reports/activity?from=2026-02-30&to=2026-03-01' });
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/reports/activity?from=2026-02-30&to=2026-03-01',
+    });
     expect(res.statusCode).toBe(400);
     expect(res.json<{ error: { code: string } }>().error.code).toBe('VALIDATION_FAILED');
   });
 
   test('an over-366-day range → 400', async () => {
-    const res = await app.inject({ method: 'GET', url: '/api/v1/reports/activity?from=2020-01-01&to=2026-01-01' });
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/reports/activity?from=2020-01-01&to=2026-01-01',
+    });
     expect(res.statusCode).toBe(400);
   });
 
   test('an inverted range → 400', async () => {
-    const res = await app.inject({ method: 'GET', url: '/api/v1/reports/activity?from=2026-03-31&to=2026-03-01' });
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/reports/activity?from=2026-03-31&to=2026-03-01',
+    });
     expect(res.statusCode).toBe(400);
   });
 
   test('a malformed cursor → 400 (InvalidCursorError mapped)', async () => {
-    const res = await app.inject({ method: 'GET', url: `/api/v1/reports/activity?${RANGE}&cursor=not-a-cursor!!` });
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/v1/reports/activity?${RANGE}&cursor=not-a-cursor!!`,
+    });
     expect(res.statusCode).toBe(400);
     expect(res.json<{ error: { code: string } }>().error.code).toBe('VALIDATION_FAILED');
   });
@@ -151,7 +219,10 @@ describe('GET /api/v1/reports/sequences', () => {
   });
 
   test('paginates via limit + nextCursor (cursor flows through HTTP)', async () => {
-    const p1 = await app.inject({ method: 'GET', url: `/api/v1/reports/sequences?${RANGE}&limit=1` });
+    const p1 = await app.inject({
+      method: 'GET',
+      url: `/api/v1/reports/sequences?${RANGE}&limit=1`,
+    });
     expect(p1.statusCode).toBe(200);
     const b1 = p1.json<{ items: { sequenceName: string }[]; nextCursor?: string }>();
     expect(b1.items).toHaveLength(1);
@@ -169,7 +240,10 @@ describe('GET /api/v1/reports/sequences', () => {
   });
 
   test('a bogus sequenceId (non-uuid) → 400', async () => {
-    const res = await app.inject({ method: 'GET', url: '/api/v1/reports/sequences?sequenceId=nope' });
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/reports/sequences?sequenceId=nope',
+    });
     expect(res.statusCode).toBe(400);
   });
 });

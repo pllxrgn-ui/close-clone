@@ -66,7 +66,9 @@ beforeAll(async () => {
 
   await ctx.db
     .insert(users)
-    .values([{ id: USER, email: 'a@example.com', name: 'Rep A', role: 'rep', idpSubject: 'idp|a' }]);
+    .values([
+      { id: USER, email: 'a@example.com', name: 'Rep A', role: 'rep', idpSubject: 'idp|a' },
+    ]);
   await ctx.db.insert(leads).values([{ id: LEAD, name: 'Acme', ownerId: USER }]);
   await ctx.db.insert(opportunityStages).values([
     { id: S_DISC, label: 'Discovery', sortOrder: 0 },
@@ -76,7 +78,14 @@ beforeAll(async () => {
 
   await ctx.db.insert(opportunities).values([
     // USD — Discovery (all active; U_REOPEN was lost then reopened → active now).
-    opp({ id: U_D1, currency: 'USD', stageId: S_DISC, status: 'active', valueCents: 100000, confidence: 50 }),
+    opp({
+      id: U_D1,
+      currency: 'USD',
+      stageId: S_DISC,
+      status: 'active',
+      valueCents: 100000,
+      confidence: 50,
+    }),
     opp({ currency: 'USD', stageId: S_DISC, status: 'active', valueCents: 200000, confidence: 25 }),
     opp({
       currency: 'USD',
@@ -88,14 +97,56 @@ beforeAll(async () => {
     }),
     // USD — Proposal.
     opp({ currency: 'USD', stageId: S_PROP, status: 'active', valueCents: 500000, confidence: 40 }),
-    opp({ currency: 'USD', stageId: S_PROP, status: 'won', valueCents: 300000, confidence: 100, closeDate: '2026-03-10' }),
-    opp({ currency: 'USD', stageId: S_PROP, status: 'lost', valueCents: 150000, confidence: 0, closeDate: '2026-03-12' }),
-    opp({ currency: 'USD', stageId: S_PROP, status: 'won', valueCents: 700000, confidence: 100, closeDate: '2026-05-01' }), // out of range
+    opp({
+      currency: 'USD',
+      stageId: S_PROP,
+      status: 'won',
+      valueCents: 300000,
+      confidence: 100,
+      closeDate: '2026-03-10',
+    }),
+    opp({
+      currency: 'USD',
+      stageId: S_PROP,
+      status: 'lost',
+      valueCents: 150000,
+      confidence: 0,
+      closeDate: '2026-03-12',
+    }),
+    opp({
+      currency: 'USD',
+      stageId: S_PROP,
+      status: 'won',
+      valueCents: 700000,
+      confidence: 100,
+      closeDate: '2026-05-01',
+    }), // out of range
     // USD — Closed.
-    opp({ currency: 'USD', stageId: S_CLOSED, status: 'won', valueCents: 400000, confidence: 100, closeDate: '2026-03-20' }),
+    opp({
+      currency: 'USD',
+      stageId: S_CLOSED,
+      status: 'won',
+      valueCents: 400000,
+      confidence: 100,
+      closeDate: '2026-03-20',
+    }),
     // EUR — separate currency universe.
-    opp({ id: E_D1, currency: 'EUR', stageId: S_DISC, status: 'active', valueCents: 900000, confidence: 10 }),
-    opp({ currency: 'EUR', stageId: S_PROP, status: 'lost', valueCents: 250000, confidence: 0, closeDate: '2026-03-15' }),
+    opp({
+      id: E_D1,
+      currency: 'EUR',
+      stageId: S_DISC,
+      status: 'active',
+      valueCents: 900000,
+      confidence: 10,
+    }),
+    opp({
+      currency: 'EUR',
+      stageId: S_PROP,
+      status: 'lost',
+      valueCents: 250000,
+      confidence: 0,
+      closeDate: '2026-03-15',
+    }),
   ]);
 
   await ctx.db.insert(activities).values([

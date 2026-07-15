@@ -112,12 +112,20 @@ describe('activityQuerySchema', () => {
   });
 
   test('rejects an unknown groupBy', () => {
-    const r = activityQuerySchema.safeParse({ from: '2026-01-01', to: '2026-01-02', groupBy: 'week' });
+    const r = activityQuerySchema.safeParse({
+      from: '2026-01-01',
+      to: '2026-01-02',
+      groupBy: 'week',
+    });
     expect(r.success).toBe(false);
   });
 
   test('rejects a non-uuid userId', () => {
-    const r = activityQuerySchema.safeParse({ from: '2026-01-01', to: '2026-01-02', userId: 'nope' });
+    const r = activityQuerySchema.safeParse({
+      from: '2026-01-01',
+      to: '2026-01-02',
+      userId: 'nope',
+    });
     expect(r.success).toBe(false);
   });
 

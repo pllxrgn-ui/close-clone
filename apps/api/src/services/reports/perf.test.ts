@@ -46,8 +46,9 @@ async function timed(label: string, fn: () => Promise<unknown>): Promise<number>
     samples.push(performance.now() - start);
   }
   const med = median(samples);
-  // eslint-disable-next-line no-console
-  console.log(`[perf] ${label}: median ${med.toFixed(1)}ms  max ${Math.max(...samples).toFixed(1)}ms`);
+  console.log(
+    `[perf] ${label}: median ${med.toFixed(1)}ms  max ${Math.max(...samples).toFixed(1)}ms`,
+  );
   return med;
 }
 
@@ -94,13 +95,37 @@ async function seedOverlay(db: TestDb): Promise<void> {
   enrollmentIds.forEach((eid, i) => {
     const leadId = leadOfEnrollment.get(eid);
     if (leadId === undefined) return;
-    events.push({ id: randomUUID(), leadId, type: 'sequence_step_sent', occurredAt: OVERLAY_WHEN, payload: { enrollmentId: eid } });
-    events.push({ id: randomUUID(), leadId, type: 'sequence_step_sent', occurredAt: OVERLAY_WHEN, payload: { enrollmentId: eid } });
+    events.push({
+      id: randomUUID(),
+      leadId,
+      type: 'sequence_step_sent',
+      occurredAt: OVERLAY_WHEN,
+      payload: { enrollmentId: eid },
+    });
+    events.push({
+      id: randomUUID(),
+      leadId,
+      type: 'sequence_step_sent',
+      occurredAt: OVERLAY_WHEN,
+      payload: { enrollmentId: eid },
+    });
     if (i % 4 === 0) {
-      events.push({ id: randomUUID(), leadId, type: 'sequence_paused', occurredAt: OVERLAY_WHEN, payload: { enrollmentId: eid, reason: 'reply' } });
+      events.push({
+        id: randomUUID(),
+        leadId,
+        type: 'sequence_paused',
+        occurredAt: OVERLAY_WHEN,
+        payload: { enrollmentId: eid, reason: 'reply' },
+      });
     }
     if (i % 9 === 0) {
-      events.push({ id: randomUUID(), leadId, type: 'sequence_finished', occurredAt: OVERLAY_WHEN, payload: { enrollmentId: eid } });
+      events.push({
+        id: randomUUID(),
+        leadId,
+        type: 'sequence_finished',
+        occurredAt: OVERLAY_WHEN,
+        payload: { enrollmentId: eid },
+      });
     }
   });
   // Stage-change events referencing fixture opportunities.
@@ -160,7 +185,9 @@ describe('report perf on the 5k golden fixture (NON-AUTHORITATIVE, < 500ms bound
 
   test('sequences is under budget', async () => {
     if (!seeded) return;
-    const med = await timed('sequences', () => runSequencesReport(ctx.db, { ...RANGE, limit: 500 }));
+    const med = await timed('sequences', () =>
+      runSequencesReport(ctx.db, { ...RANGE, limit: 500 }),
+    );
     expect(med).toBeLessThan(BUDGET_MS);
   });
 });

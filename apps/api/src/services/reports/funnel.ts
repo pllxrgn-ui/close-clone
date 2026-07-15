@@ -184,7 +184,5 @@ export async function runFunnelReport(
 
   const result = await db.execute(queryText);
   const rows = (result as { rows: RawRow[] }).rows.map(mapRow);
-  return buildPage(rows, limit, (r) =>
-    encodeCursor([r.currency, r.stageSortOrder, r.stageId]),
-  );
+  return buildPage(rows, limit, (r) => encodeCursor([r.currency, r.stageSortOrder, r.stageId]));
 }

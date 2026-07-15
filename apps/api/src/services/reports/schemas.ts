@@ -66,11 +66,7 @@ function parseUtcDateMs(value: string): number {
   const d = new Date(ms);
   // Round-trip check: Date.UTC normalises overflow (Feb 30 → Mar 2), so a
   // mismatch means the input was not a real calendar date.
-  if (
-    d.getUTCFullYear() !== year ||
-    d.getUTCMonth() !== month - 1 ||
-    d.getUTCDate() !== day
-  ) {
+  if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) {
     throw new ReportRangeError(`invalid date: ${value}`);
   }
   return ms;

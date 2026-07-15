@@ -50,7 +50,12 @@ export function registerReportsRoutes(app: FastifyInstance, deps: ReportsRouteDe
   app.get('/api/v1/reports/activity', async (request: FastifyRequest, reply: FastifyReply) => {
     const parsed = activityQuerySchema.safeParse(request.query);
     if (!parsed.success) {
-      return sendError(reply, 'VALIDATION_FAILED', 'invalid activity report query', parsed.error.flatten());
+      return sendError(
+        reply,
+        'VALIDATION_FAILED',
+        'invalid activity report query',
+        parsed.error.flatten(),
+      );
     }
     try {
       return reply.send(await runActivityReport(db, parsed.data));
@@ -62,7 +67,12 @@ export function registerReportsRoutes(app: FastifyInstance, deps: ReportsRouteDe
   app.get('/api/v1/reports/funnel', async (request: FastifyRequest, reply: FastifyReply) => {
     const parsed = funnelQuerySchema.safeParse(request.query);
     if (!parsed.success) {
-      return sendError(reply, 'VALIDATION_FAILED', 'invalid funnel report query', parsed.error.flatten());
+      return sendError(
+        reply,
+        'VALIDATION_FAILED',
+        'invalid funnel report query',
+        parsed.error.flatten(),
+      );
     }
     try {
       return reply.send(await runFunnelReport(db, parsed.data));
@@ -74,7 +84,12 @@ export function registerReportsRoutes(app: FastifyInstance, deps: ReportsRouteDe
   app.get('/api/v1/reports/sequences', async (request: FastifyRequest, reply: FastifyReply) => {
     const parsed = sequencesQuerySchema.safeParse(request.query);
     if (!parsed.success) {
-      return sendError(reply, 'VALIDATION_FAILED', 'invalid sequences report query', parsed.error.flatten());
+      return sendError(
+        reply,
+        'VALIDATION_FAILED',
+        'invalid sequences report query',
+        parsed.error.flatten(),
+      );
     }
     try {
       return reply.send(await runSequencesReport(db, parsed.data));

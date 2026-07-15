@@ -215,7 +215,10 @@ describe('groupBy=day', () => {
 
 describe('edge cases', () => {
   test('an empty range returns an empty page', async () => {
-    const page = await runActivityReport(ctx.db, baseQuery({ from: '2026-01-01', to: '2026-01-31' }));
+    const page = await runActivityReport(
+      ctx.db,
+      baseQuery({ from: '2026-01-01', to: '2026-01-31' }),
+    );
     expect(page.items).toEqual([]);
   });
 });

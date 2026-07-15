@@ -43,7 +43,12 @@ type EnrRow = InferInsertModel<typeof sequenceEnrollments>;
 
 let ctx: TestDb;
 
-function seqEvent(type: 'sequence_step_sent' | 'sequence_paused' | 'sequence_finished', enrollmentId: string | null, occurredAt: string, reason?: string) {
+function seqEvent(
+  type: 'sequence_step_sent' | 'sequence_paused' | 'sequence_finished',
+  enrollmentId: string | null,
+  occurredAt: string,
+  reason?: string,
+) {
   const payload: Record<string, unknown> = {};
   if (enrollmentId !== null) payload['enrollmentId'] = enrollmentId;
   if (reason !== undefined) payload['reason'] = reason;
@@ -64,7 +69,9 @@ beforeAll(async () => {
 
   await ctx.db
     .insert(users)
-    .values([{ id: USER, email: 'a@example.com', name: 'Rep A', role: 'rep', idpSubject: 'idp|a' }]);
+    .values([
+      { id: USER, email: 'a@example.com', name: 'Rep A', role: 'rep', idpSubject: 'idp|a' },
+    ]);
   await ctx.db.insert(leads).values([{ id: LEAD, name: 'Acme', ownerId: USER }]);
   await ctx.db.insert(contacts).values([
     { id: C1, leadId: LEAD, name: 'Contact 1' },
@@ -118,7 +125,11 @@ afterAll(async () => {
 describe('sequences — ranged', () => {
   test('per-sequence exact counts, anchored on sequences (zero rows included)', async () => {
     const page = await runSequencesReport(ctx.db, rangedQuery());
-    expect(page.items.map((r) => r.sequenceName)).toEqual(['Archived Camp', 'Onboarding', 'Renewal']);
+    expect(page.items.map((r) => r.sequenceName)).toEqual([
+      'Archived Camp',
+      'Onboarding',
+      'Renewal',
+    ]);
 
     const onb = page.items.find((r) => r.sequenceId === SEQ_ONB);
     if (onb === undefined) throw new Error('expected Onboarding row');

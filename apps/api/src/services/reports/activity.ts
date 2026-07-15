@@ -120,7 +120,8 @@ export async function runActivityReport(
   const limit = clampLimit(query.limit);
   const mode = query.groupBy;
   const uid = query.userId ?? null;
-  const cursorBucket = query.cursor !== undefined ? decodeCursorTuple(query.cursor, ['string'])[0] : null;
+  const cursorBucket =
+    query.cursor !== undefined ? decodeCursorTuple(query.cursor, ['string'])[0] : null;
 
   const from = range.fromTs;
   const to = range.toExclusiveTs;
