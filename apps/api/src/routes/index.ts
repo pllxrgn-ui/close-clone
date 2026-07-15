@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import type { Db } from '../db/index.ts';
 import { registerSearchRoutes } from './search.ts';
 import { registerEmailSyncRoutes, type EmailRouteDeps } from './email-sync.ts';
+import { registerEmailTriageRoutes } from './email-triage.ts';
 
 /**
  * REST route registration (CONTRACTS §C7). This is the repo's single entry point
@@ -22,8 +23,10 @@ export interface RouteDeps {
 
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   registerSearchRoutes(app, deps);
+  registerEmailTriageRoutes(app, { db: deps.db });
   if (deps.email !== undefined) registerEmailSyncRoutes(app, deps.email);
 }
 
 export { registerEmailSyncRoutes, type EmailRouteDeps } from './email-sync.ts';
+export { registerEmailTriageRoutes, type EmailTriageRouteDeps } from './email-triage.ts';
 export { sendError, ERROR_STATUS, type ErrorCode, type ErrorEnvelope } from './http.ts';
