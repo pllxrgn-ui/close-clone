@@ -49,19 +49,17 @@ beforeAll(async () => {
   await ctx.db.insert(leads).values([{ id: LEAD, name: 'Acme', ownerId: USER }]);
   await ctx.db.insert(contacts).values([{ id: CONTACT, leadId: LEAD, name: 'Contact' }]);
   await ctx.db.insert(opportunityStages).values([{ id: STAGE, label: 'Discovery', sortOrder: 0 }]);
-  await ctx.db
-    .insert(opportunities)
-    .values([
-      {
-        id: OPP,
-        leadId: LEAD,
-        currency: 'USD',
-        stageId: STAGE,
-        status: 'active',
-        valueCents: 100000,
-        confidence: 50,
-      },
-    ]);
+  await ctx.db.insert(opportunities).values([
+    {
+      id: OPP,
+      leadId: LEAD,
+      currency: 'USD',
+      stageId: STAGE,
+      status: 'active',
+      valueCents: 100000,
+      confidence: 50,
+    },
+  ]);
   await ctx.db.insert(sequences).values([
     { id: SEQ1, name: 'Onboarding', status: 'active' },
     { id: SEQ2, name: 'Renewal', status: 'active' },
