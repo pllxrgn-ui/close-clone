@@ -28,7 +28,7 @@
 | 1d DSL golden set (118 cases) | Opus | done (f0bc17d; surfaced+fixed 2 compiler bugs, D-011) |
 | 1e global search (FTS+trigram) | Opus | done (031c78e) |
 | GATE 1 | Fable | **PASSED 2026-07-15** — typecheck clean; 283 tests green (205 api incl. 118 goldens, 78 shared incl. hostile-input property suite, 2000 runs, params-only); worst core p95 54.77ms vs 150ms budget @10k PGlite (NON-authoritative per D-003; authoritative CI run pending GitHub push — HUMAN_TODO) |
-| Phase 2 (2a–2f) + gate | Opus / Fable | serial chain running (D-013); 2a done (1c0c73c); gate pending |
+| Phase 2 (2a–2f) + gate | Opus / Fable | serial chain running (D-013); 2a done (1c0c73c), 2b done (gmail+sync engine, incremental commits), 2c threading in progress; gate pending |
 | Web foundation W1–W4 (parallel stream, D-014) | Opus | running on branch `web-foundation` in isolated worktree; W1 shell/tokens/client → W2 palette/keyboard → W3 leads/views/search UI → W4 Smart View builder; merge at Gate 2 |
 | 3a telephony mock (pulled forward, D-015) | Opus | running on branch `telephony-provider` in isolated worktree; merge at Gate 2 |
 | 4f CSV import engine (D-017) | Opus | running on branch `csv-import`; migration 0010; merge at Gate 2 |
@@ -36,6 +36,8 @@
 | 5b audit log → 5g export + admin CLI (D-017) | Opus | running on branch `admin-ops`; migration 0011; merge at Gate 2 |
 
 **Recovery:** RECOVERY.md (committed) is the resume playbook — keep its stream table current.
+
+**Design:** DESIGN.md (committed 549880f) — "Operator Grid" (A×C) locked by user; spec at docs/superpowers/specs/2026-07-16-switchboard-frontend-design-design.md; W5 re-skin + W6 landing queued after W4; emil-design-eng + impeccable-taste installed as user-level skills.
 | Phase 3 (3a–3g) | — | pending |
 | Phase 4 (4a–4i) | — | pending |
 | Phase 5 (5a–5h) + final coherence pass | — | pending |
