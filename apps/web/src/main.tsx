@@ -4,6 +4,7 @@ import './styles/tokens.css';
 import './styles/base.css';
 import './ui/primitives.css';
 import './app/shell.css';
+import './styles/overlays.css';
 import App from './App.tsx';
 
 /*

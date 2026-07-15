@@ -1,0 +1,280 @@
+/*
+ * Overlay + feedback layer: command palette, cheat sheet, shared modal, toasts,
+ * and the Kbd-combo hint renderer. All color comes from tokens.css so both
+ * themes and the AA guarantees hold. Entrance motion is subtle and collapses to
+ * instant under prefers-reduced-motion (also enforced globally in base.css).
+ */
+
+/* ── Backdrop + modal shell ──────────────────────────────────────────────── */
+.sb-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  display: flex;
+  justify-content: center;
+  padding: var(--space-5);
+  background: color-mix(in srgb, var(--surface-sunken) 62%, transparent);
+  backdrop-filter: blur(2px);
+  animation: sb-overlay-in var(--dur-fast) var(--ease);
+}
+.sb-overlay--center {
+  align-items: center;
+}
+.sb-overlay--top {
+  align-items: flex-start;
+  padding-top: 12vh;
+}
+
+.sb-modal {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--surface-0);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-3);
+  box-shadow: var(--shadow-2);
+  animation: sb-modal-in var(--dur) var(--ease);
+}
+.sb-modal:focus {
+  outline: none;
+}
+
+@keyframes sb-overlay-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes sb-modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.985);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sb-overlay,
+  .sb-modal {
+    animation: none;
+  }
+}
+
+/* ── Kbd combo (shared hint renderer) ────────────────────────────────────── */
+.sb-kbdcombo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.sb-kbdcombo__step {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.sb-kbdcombo__then {
+  color: var(--ink-3);
+  font-size: var(--fs-micro);
+  margin: 0 2px;
+}
+
+/* ── Command palette ─────────────────────────────────────────────────────── */
+.sb-palette {
+  width: min(640px, 94vw);
+  max-height: min(66vh, 560px);
+}
+.sb-palette__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border-0);
+}
+.sb-palette__search-icon {
+  position: absolute;
+  left: var(--space-5);
+  color: var(--ink-3);
+  pointer-events: none;
+}
+.sb-palette__input {
+  width: 100%;
+  height: var(--control-h-lg);
+  padding: 0 var(--space-5) 0 calc(var(--space-5) * 2 + 6px);
+  border: none;
+  background: transparent;
+  color: var(--ink-0);
+  font-size: var(--fs-md);
+}
+.sb-palette__input::placeholder {
+  color: var(--ink-3);
+}
+.sb-palette__input:focus {
+  outline: none;
+}
+.sb-palette__list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-2);
+}
+.sb-palette__empty {
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--ink-2);
+}
+.sb-palette__section-title {
+  padding: var(--space-3) var(--space-3) var(--space-1);
+  color: var(--ink-3);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.sb-palette__opt {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--control-h-lg);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
+  border-left: 2px solid transparent;
+  cursor: pointer;
+  scroll-margin: var(--space-3);
+}
+.sb-palette__opt.is-active {
+  background: var(--accent-weak-bg);
+  border-left-color: var(--accent);
+}
+.sb-palette__opt-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+.sb-palette__opt-title {
+  color: var(--ink-0);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sb-palette__match {
+  background: transparent;
+  color: var(--accent-strong);
+  font-weight: var(--fw-semibold);
+}
+.sb-palette__opt-sub {
+  color: var(--ink-2);
+  font-size: var(--fs-micro);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sb-palette__opt-kbd {
+  flex: none;
+}
+.sb-palette__footer {
+  display: flex;
+  gap: var(--space-5);
+  padding: var(--space-2) var(--space-5);
+  border-top: 1px solid var(--border-0);
+  background: var(--surface-1);
+  color: var(--ink-3);
+  font-size: var(--fs-micro);
+}
+.sb-palette__hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ── Cheat sheet ─────────────────────────────────────────────────────────── */
+.sb-cheatsheet {
+  width: min(760px, 94vw);
+  max-height: 82vh;
+  overflow-y: auto;
+  padding: var(--space-6);
+}
+.sb-cheatsheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+}
+.sb-cheatsheet__title {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
+}
+.sb-cheatsheet__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-6) var(--space-8);
+}
+.sb-cheatsheet__group-title {
+  margin-bottom: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-0);
+  color: var(--ink-2);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.sb-cheatsheet__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: var(--row-h);
+}
+.sb-cheatsheet__label {
+  color: var(--ink-1);
+  font-size: var(--fs-sm);
+}
+.sb-cheatsheet__keys {
+  flex: none;
+}
+.sb-cheatsheet__empty {
+  color: var(--ink-2);
+}
+
+/* ── Toasts ──────────────────────────────────────────────────────────────── */
+.sb-toasts {
+  position: fixed;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  pointer-events: none;
+}
+.sb-toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: 360px;
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  background: var(--surface-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-2);
+  box-shadow: var(--shadow-2);
+  color: var(--ink-0);
+  font-size: var(--fs-sm);
+  pointer-events: auto;
+  animation: sb-toast-in var(--dur) var(--ease);
+}
+.sb-toast__msg {
+  flex: 1;
+}
+.sb-toast__close {
+  flex: none;
+}
+@keyframes sb-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sb-toast {
+    animation: none;
+  }
+}
