@@ -1,0 +1,20 @@
+{
+  "provider": "gmail",
+  "eventId": "pubsub-msg-0001",
+  "receivedAt": "2026-01-02T09:00:00.000Z",
+  "headers": {
+    "content-type": "application/json",
+    "x-goog-channel-token": "mock-channel-token",
+    "authorization": "Bearer mock-pubsub-jwt"
+  },
+  "rawBody": "{\"message\":{\"data\":\"eyJlbWFpbEFkZHJlc3MiOiJyZXBAbW9jay50ZXN0IiwiaGlzdG9yeUlkIjoiMTAwMSJ9\",\"messageId\":\"pubsub-msg-0001\",\"publishTime\":\"2026-01-02T09:00:00.000Z\"},\"subscription\":\"projects/switchboard/subscriptions/gmail-push\"}",
+  "payload": {
+    "message": {
+      "data": "eyJlbWFpbEFkZHJlc3MiOiJyZXBAbW9jay50ZXN0IiwiaGlzdG9yeUlkIjoiMTAwMSJ9",
+      "messageId": "pubsub-msg-0001",
+      "publishTime": "2026-01-02T09:00:00.000Z"
+    },
+    "subscription": "projects/switchboard/subscriptions/gmail-push",
+    "decoded": { "emailAddress": "rep@mock.test", "historyId": "1001" }
+  }
+}
