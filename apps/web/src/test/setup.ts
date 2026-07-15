@@ -1,4 +1,6 @@
 import '@testing-library/jest-dom/vitest';
+import { afterAll, afterEach, beforeAll } from 'vitest';
+import { server } from '../mocks/server.ts';
 
 /*
  * jsdom does not implement matchMedia; the theme + reduced-motion code paths
@@ -17,3 +19,9 @@ if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
     dispatchEvent: () => false,
   });
 }
+
+// One MSW node server shared by every test; the handler set is the same one the
+// browser worker uses. Unhandled requests fail loudly so gaps surface as errors.
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
