@@ -1,0 +1,6 @@
+﻿Company,Website,Email,Employees,Signed,Notes,Company
+Acme,https://acme.com,alice@acme.com,250,2025-01-31,"Hello, world",DUP
+"Globex, Inc.",globex.io,bob@globex.io,bad,2025-13-40,"line one
+line two",X
+
+Initech,,not-an-email,42,2025-06-15,plain,Y

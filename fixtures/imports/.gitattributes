@@ -1,0 +1,4 @@
+# CSV import fixtures carry intentional byte layouts (UTF-8 BOM, mixed CRLF/LF).
+# Disable git's text/EOL normalisation so the committed bytes are exactly what
+# the streaming parser + import-engine tests assert against.
+*.csv -text
