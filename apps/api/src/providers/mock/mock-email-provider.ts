@@ -89,8 +89,16 @@ export interface MockEmailProviderOptions {
 }
 
 /** Injected exactly when `send()` is entered — lets a test land a reply mid-send
- *  (2e/2f pause-race scripting). Receives the idempotency key and the draft. */
-export type SendInterceptor = (idempotencyKey: string, draft: OutboundEmail) => void;
+ *  (2e/2f pause-race scripting). Receives the idempotency key and the draft. May
+ *  return a promise, which `send()` awaits BEFORE it produces its result — so a
+ *  test can commit a competing pause/suppression/unsubscribe transaction that is
+ *  guaranteed to land inside the provider network window (the gap between the
+ *  claim commit and the SENT commit), the precise seam I-SEND-2 defends. Throwing
+ *  (or rejecting) simulates a dead mailbox / provider rejection. */
+export type SendInterceptor = (
+  idempotencyKey: string,
+  draft: OutboundEmail,
+) => void | Promise<void>;
 
 export class MockEmailProvider implements EmailProvider {
   readonly address: string;
@@ -219,8 +227,10 @@ export class MockEmailProvider implements EmailProvider {
     this.sendCallsByKey.set(idempotencyKey, (this.sendCallsByKey.get(idempotencyKey) ?? 0) + 1);
 
     // Scripting hook fires on every entry, before the idempotency short-circuit,
-    // so a reply can be scripted to land during the send/claim window.
-    this.sendInterceptor?.(idempotencyKey, parsedDraft);
+    // so a reply can be scripted to land during the send/claim window. Awaited so
+    // an async competing transaction (pause/suppress/unsubscribe) is guaranteed to
+    // commit before this send resolves (2f I-SEND-2 during-send seam).
+    await this.sendInterceptor?.(idempotencyKey, parsedDraft);
 
     const prior = this.sendLedger.get(idempotencyKey);
     if (prior !== undefined) {
