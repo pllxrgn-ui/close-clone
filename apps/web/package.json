@@ -13,9 +13,13 @@
     "msw:init": "msw init public --save"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource/ibm-plex-sans-condensed": "^5.2.8",
+    "@fontsource/jetbrains-mono": "^5.2.8",
     "@switchboard/shared": "workspace:*",
     "@tanstack/react-query": "^5.66.0",
     "@tanstack/react-virtual": "^3.11.2",
+    "lucide-react": "^1.24.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^6.28.1"

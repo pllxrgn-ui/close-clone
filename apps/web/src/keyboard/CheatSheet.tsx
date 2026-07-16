@@ -2,6 +2,7 @@ import { useMemo, useRef } from 'react';
 import type { JSX } from 'react';
 import { Modal } from '../ui/Modal.tsx';
 import { VisuallyHidden } from '../ui/VisuallyHidden.tsx';
+import { StateLegend } from '../ui/StateLegend.tsx';
 import { CloseIcon } from '../ui/icons.tsx';
 import { readableCombo } from './combo.ts';
 import { KbdCombo } from './KbdCombo.tsx';
@@ -98,6 +99,9 @@ export function CheatSheet({ open, onClose }: { open: boolean; onClose: () => vo
           ))}
         </div>
       )}
+
+      <hr className="sb-cheatsheet__divider" />
+      <StateLegend />
     </Modal>
   );
 }

@@ -1,50 +1,70 @@
+@import './fonts.css';
+
 /*
- * Switchboard design tokens (CSS custom properties).
+ * Switchboard design tokens — the "OPERATOR GRID" identity (locked).
  *
- * Identity: SPEED MADE VISIBLE — a dense, high-contrast working surface closer to
- * an IDE than a marketing SaaS. Color is spent almost entirely on STATE so any
- * list reads like a status board at a glance.
+ * A dark-default operator console: achromatic chrome (bg / panel / line / ink),
+ * with COLOR SPENT ENTIRELY ON STATE (reply · overdue · seq · dnc · live · idle)
+ * so any list reads like a status board. Square panels + rows (0 radius), 2px
+ * radius on controls, dense 36px rows, condensed display numerals, a monospace
+ * data face, and a single cyan that doubles as focus + the "live" lamp.
  *
- * Theming: light is the :root default; dark applies via BOTH
- *   @media (prefers-color-scheme: dark)   — follows the OS, and
- *   :root[data-theme="dark"] / [data-theme="light"]   — manual override (persisted
- *   to localStorage by the theme module; wins over the media query in both
- *   directions because the attribute selector out-specifies bare :root).
+ * ── Token architecture ───────────────────────────────────────────────────────
+ * The LAW tokens (--bg, --panel, --panel-raised, --line, --ink, --ink-dim,
+ * --focus, and the six --state-*) are defined per THEME block below at the exact
+ * law hex values. A theme-independent ALIAS layer maps the names the primitives
+ * were built against (--surface-*, --ink-0..3, --border-*, --accent*, the pill
+ * triples) onto those law tokens via var(), so the whole component surface
+ * re-skins without touching a single .tsx — and both themes + the AA guarantees
+ * flow from one source of truth.
+ *
+ * ── Theming ──────────────────────────────────────────────────────────────────
+ * DARK is the default (bare :root). Light applies via @media
+ * (prefers-color-scheme: light). A manual [data-theme='dark'|'light'] on <html>
+ * re-asserts either palette and, being more specific than a bare :root, WINS
+ * over the media query in both directions (persisted by the theme module;
+ * mirrored by the pre-paint bootstrap in index.html).
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * WCAG AA CONTRAST TABLE (verified — see scripts/contrast, sRGB relative luminance)
- * Text pairs target >= 4.5:1; non-text/UI pairs (ink-3, borders) target >= 3:1.
+ * WCAG AA CONTRAST (verified — scripts/contrast, sRGB relative luminance).
+ * Text pairs target >= 4.5:1; non-text/UI (lamps, borders, faint ink) >= 3:1.
+ * "idle" is the dim OFF lamp by design (>= 2:1, never carries text).
  *
- *   LIGHT                               ratio   | DARK                                ratio
- *   ink-0  on surface-0   17.10:1  AAA         | ink-0  on surface-0   16.81:1  AAA
- *   ink-1  on surface-0    8.67:1  AAA         | ink-1  on surface-0   10.06:1  AAA
- *   ink-2  on surface-0    5.81:1  AA          | ink-2  on surface-0    6.05:1  AA
- *   ink-2  on surface-1    5.42:1  AA          | ink-2  on surface-1    5.66:1  AA
- *   ink-2  on surface-2    5.00:1  AA          | ink-2  on surface-2    5.20:1  AA
- *   ink-3  on surface-0    3.35:1  AA-large/UI | ink-3  on surface-0    3.85:1  AA-large/UI
- *   accent-ink on accent   4.63:1  AA          | accent-ink on accent   5.86:1  AA
- *   accent-strong (link)   6.50:1  AA          | accent-strong (link)   7.77:1  AA
- *   newReply   fg/bg       6.31:1  AA          | newReply   fg/bg        9.06:1  AAA
- *   overdue    fg/bg       5.75:1  AA          | overdue    fg/bg        9.92:1  AAA
- *   inSequence fg/bg       6.94:1  AA          | inSequence fg/bg        9.06:1  AAA
- *   dnc        fg/bg       6.90:1  AA          | dnc        fg/bg        8.24:1  AAA
- *   won        fg/bg       5.97:1  AA          | won        fg/bg        8.78:1  AAA
- *   lost       fg/bg       5.92:1  AA          | lost       fg/bg        6.11:1  AA
- *   draft      fg/bg       5.88:1  AA          | draft      fg/bg        9.40:1  AAA
+ *   PAIR                        DARK              | LIGHT
+ *   ink / bg (primary text)     15.03  AAA        | 14.27  AAA
+ *   ink / panel                 13.83  AAA        | 15.62  AAA
+ *   ink-1 (mid) / bg            10.67  AAA        |  8.70  AAA
+ *   ink-2 (dim) / bg             5.86  AA         |  5.43  AA
+ *   ink-2 (dim) / panel-raised   4.90  AA         |  6.37  AA
+ *   ink-3 (faint) / bg  (UI)     4.13  AA-UI      |  3.79  AA-UI
+ *   focus / bg          (UI)     9.52  AA-UI      |  3.69  AA-UI
+ *   link (accent-strong) / bg    9.52  AA         |  4.93  AA
+ *   reply  lamp / panel (UI)    10.26             |  4.97
+ *   overdue lamp / panel (UI)    9.19             |  5.34
+ *   seq    lamp / panel (UI)     6.37             |  7.32
+ *   dnc    lamp / panel (UI)     5.18             |  6.36
+ *   live   lamp / panel (UI)     8.76             |  4.04
+ *   idle   lamp / panel (dim)    2.08             |  2.47
+ *   reply  pill text / wash      9.50  AA         |  4.58  AA
+ *   overdue pill text / wash     8.46  AA         |  4.88  AA
+ *   seq    pill text / wash      6.34  AA         |  6.46  AA
+ *   dnc    pill text / wash      5.26  AA         |  5.64  AA
+ *   won    pill text / wash      9.50  AA         |  4.58  AA
+ *   lost   pill text / wash      4.97  AA         |  5.43  AA
+ *   draft  pill text / wash      8.46  AA         |  4.88  AA
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
 :root {
-  color-scheme: light dark;
-
-  /* ── Typography ──────────────────────────────────────────────────────────
-   * Body: a system UI stack tuned for density. Display: a distinct system
-   * stack for the few large numbers (paired with tabular-nums + tight tracking
-   * at the usage site). Mono: keycaps, DSL, ids. No runtime CDN fetches. */
-  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-display: 'SF Pro Display', 'Segoe UI', system-ui, 'Helvetica Neue', sans-serif;
+  /* ── Typography ────────────────────────────────────────────────────────────
+   * display: IBM Plex Sans Condensed 600/700 — titles + large numerals.
+   * body:    Inter (variable) — UI/body text.
+   * data:    JetBrains Mono — ids, DSL, keycaps, aligned metrics.
+   * All self-hosted (fonts.css); tabular-nums applied at usage sites. */
+  --font-display: 'IBM Plex Sans Condensed', 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono:
-    ui-monospace, 'SF Mono', 'Cascadia Code', 'Segoe UI Mono', Menlo, Consolas, monospace;
+    'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Segoe UI Mono', Menlo, Consolas, monospace;
 
   --fs-micro: 11px;
   --fs-sm: 12px;
@@ -56,16 +76,21 @@
   --fs-display: 32px;
   --fs-display-lg: 44px;
 
-  --lh-tight: 1.2;
+  --lh-tight: 1.15;
   --lh-base: 1.45;
   --lh-loose: 1.6;
 
   --fw-normal: 400;
   --fw-medium: 500;
   --fw-semibold: 600;
-  --fw-display: 680;
+  --fw-display: 600; /* display face carries weight through condensed forms */
+  --fw-display-strong: 700;
 
-  /* ── Spacing / density (4px base, with a 2px micro step) ─────────────────── */
+  /* Wide-tracked uppercase — section labels + state WORDS only. */
+  --tracking-label: 0.16em;
+  --tracking-label-wide: 0.24em;
+
+  /* ── Spacing (4 / 8 / 12 / 16 / 24 / 32, plus a 2px micro step) ───────────── */
   --space-0: 0;
   --space-1: 2px;
   --space-2: 4px;
@@ -78,262 +103,263 @@
   --space-9: 40px;
   --space-10: 48px;
 
-  /* Control + row heights — the density scale. Default is dense; a comfortable
-   * override is available via [data-density="comfortable"] on <html>. */
+  /* ── Density — dense operator defaults; 36px rows ────────────────────────── */
   --control-h-sm: 24px;
-  --control-h: 28px;
-  --control-h-lg: 34px;
-  --row-h: 32px;
+  --control-h: 30px;
+  --control-h-lg: 36px;
+  --row-h: 36px; /* law: dense 36px rows */
   --topbar-h: 44px;
   --rail-w: 208px;
 
-  /* ── Radius ──────────────────────────────────────────────────────────────── */
-  --radius-1: 4px;
-  --radius-2: 6px;
-  --radius-3: 10px;
-  --radius-pill: 999px;
+  /* ── Radius — 2px controls / 0 panels + rows ─────────────────────────────── */
+  --radius-1: 2px; /* controls: buttons, inputs, chips, keycaps */
+  --radius-2: 0; /* panels */
+  --radius-3: 0; /* panels (large) */
+  --radius-pill: 999px; /* lamp dots + spinner only */
 
-  /* ── Focus ring (single source of truth; used everywhere via :focus-visible) */
+  /* ── Focus ring — 2px, 2px offset, the cyan (single source of truth) ─────── */
   --focus-ring-width: 2px;
   --focus-ring-offset: 2px;
-  --focus-ring: var(--accent);
+  --focus-ring: var(--focus);
 
-  /* ── Motion ──────────────────────────────────────────────────────────────── */
-  --dur-fast: 90ms;
-  --dur: 140ms;
-  --ease: cubic-bezier(0.2, 0, 0, 1);
+  /* ── Motion — law curves; transitions over keyframes; ALL UI < 300ms ─────── */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease: var(--ease-out); /* default enter curve (alias for legacy refs) */
+  --dur-fast: 120ms; /* tooltips / hovers */
+  --dur: 180ms; /* dropdowns / popovers */
+  --dur-press: 130ms; /* press affordance (scale 0.97) */
+  --lamp-pulse-dur: 2.2s; /* the only ambient motion */
 
-  /* ── Elevation — restrained; not the drop-shadow-card look ─────────────────── */
-  --shadow-1: 0 1px 2px rgba(16, 20, 26, 0.08);
-  --shadow-2: 0 6px 20px -6px rgba(16, 20, 26, 0.22);
+  /* ── Etched grid texture — landing hero + board headers ONLY (44px cell) ─── */
+  --etch-size: 44px;
 
-  /* ── z-index scale ─────────────────────────────────────────────────────────── */
+  /* ── z-index scale ───────────────────────────────────────────────────────── */
   --z-rail: 10;
   --z-topbar: 20;
   --z-overlay: 100;
   --z-toast: 200;
 
-  /* ── Color — LIGHT (default) ─────────────────────────────────────────────── */
-  --surface-0: #ffffff; /* app canvas          */
-  --surface-1: #f6f7f9; /* panels, rail, topbar */
-  --surface-2: #eceef1; /* raised / headers     */
-  --surface-3: #e3e6ea; /* hover / active       */
-  --surface-inset: #f0f2f4; /* wells, inputs    */
-  --surface-sunken: #eef0f3;
+  /* ══ DARK palette (default) ═══════════════════════════════════════════════ */
+  color-scheme: dark;
 
-  --ink-0: #191c20; /* primary text          */
-  --ink-1: #464c54; /* secondary text        */
-  --ink-2: #5f666f; /* muted / meta (AA)     */
-  --ink-3: #868d96; /* faint — UI/large only */
+  --bg: #141719;
+  --panel: #1b1f23;
+  --panel-raised: #22272c;
+  --panel-hover: #2a3037;
+  --panel-inset: #101315;
+  --line: #30363c;
+  --line-strong: #414852;
 
-  --border-0: #dfe3e8; /* hairlines           */
-  --border-1: #c6ccd4; /* strong dividers     */
+  --ink: #e8ebec;
+  --ink-mid: #c2c8ce;
+  --ink-dim: #8c949c;
+  --ink-faint: #727a82;
 
-  --accent: #1f6feb; /* primary action bg     */
-  --accent-ink: #ffffff; /* text on accent    */
-  --accent-strong: #1257c9; /* links/text on surface */
-  --accent-weak-bg: #e6f0ff;
-  --accent-hover: #1a63d6;
+  --focus: #56c8ff;
+  --link: #56c8ff;
+  --sel-bg: #16242e; /* current/active row wash (focus-tinted, near-achromatic) */
+  --selection: #1e3a4a; /* ::selection */
 
-  --selection-bg: #cfe0fe;
+  /* State — the entire color budget (dark law values) */
+  --state-reply: #2ee6a8;
+  --state-overdue: #ffb224;
+  --state-seq: #b18cff;
+  --state-dnc: #ff4f66;
+  --state-live: #56c8ff;
+  --state-idle: #4a5258;
 
-  /* State colors — the whole point. fg = text/icon, bg = pill wash, solid = dot/bar */
-  --state-new-reply-fg: #0b4fc0;
-  --state-new-reply-bg: #e6f0ff;
-  --state-new-reply-solid: #1f6feb;
+  /* Pill washes (desaturated dark tints; text = the state token) */
+  --state-new-reply-bg: #0c2a21;
+  --state-overdue-bg: #2e2410;
+  --state-in-sequence-bg: #221a38;
+  --state-dnc-bg: #331319;
+  --state-won-bg: #0c2a21;
+  --state-lost-bg: #20262c;
+  --state-draft-bg: #2e2410;
 
-  --state-overdue-fg: #b42318;
-  --state-overdue-bg: #fdeceb;
-  --state-overdue-solid: #d92d20;
+  --lamp-glow: 0 0 8px currentColor; /* reply + live lamps, dark only */
 
-  --state-in-sequence-fg: #6127c4;
-  --state-in-sequence-bg: #f0ebfe;
-  --state-in-sequence-solid: #7c4dff;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-2: 0 10px 30px -12px rgba(0, 0, 0, 0.7);
 
-  --state-dnc-fg: #a01313;
-  --state-dnc-bg: #fbe9e9;
-  --state-dnc-solid: #c01919;
+  /* ══ ALIAS layer (theme-independent; resolves against the active palette) ══
+   * The primitives + shell reference these names; they forward to law tokens. */
+  --surface-0: var(--bg);
+  --surface-1: var(--panel);
+  --surface-2: var(--panel-raised);
+  --surface-3: var(--panel-hover);
+  --surface-inset: var(--panel-inset);
+  --surface-sunken: var(--bg);
 
-  --state-won-fg: #066a40;
-  --state-won-bg: #e6f6ec;
-  --state-won-solid: #099250;
+  --ink-0: var(--ink);
+  --ink-1: var(--ink-mid);
+  --ink-2: var(--ink-dim);
+  --ink-3: var(--ink-faint);
 
-  --state-lost-fg: #545c67;
-  --state-lost-bg: #eef0f2;
-  --state-lost-solid: #7a828c;
+  --border-0: var(--line);
+  --border-1: var(--line-strong);
 
-  --state-draft-fg: #845408;
-  --state-draft-bg: #fdf3e4;
-  --state-draft-solid: #c9820a;
+  --accent: var(--focus);
+  --accent-ink: var(--bg); /* dark text on a cyan fill — legible both themes */
+  --accent-strong: var(--link);
+  --accent-weak-bg: var(--sel-bg);
+  --accent-hover: var(--focus);
+
+  --selection-bg: var(--selection);
+
+  /* Pill fg/solid forward to the six state tokens (won→reply, lost→idle/dim,
+   * draft→overdue) — text/bg AA-verified in the table above. */
+  --state-new-reply-fg: var(--state-reply);
+  --state-new-reply-solid: var(--state-reply);
+  --state-overdue-fg: var(--state-overdue);
+  --state-overdue-solid: var(--state-overdue);
+  --state-in-sequence-fg: var(--state-seq);
+  --state-in-sequence-solid: var(--state-seq);
+  --state-dnc-fg: var(--state-dnc);
+  --state-dnc-solid: var(--state-dnc);
+  --state-won-fg: var(--state-reply);
+  --state-won-solid: var(--state-reply);
+  --state-lost-fg: var(--ink-dim);
+  --state-lost-solid: var(--state-idle);
+  --state-draft-fg: var(--state-overdue);
+  --state-draft-solid: var(--state-overdue);
 }
 
-/* ── Color — DARK via OS preference ───────────────────────────────────────────
- * Only color tokens change; the geometry/typography tokens above are shared. */
-@media (prefers-color-scheme: dark) {
+/* ══ LIGHT palette — follows the OS when no [data-theme] is set ══════════════ */
+@media (prefers-color-scheme: light) {
   :root {
-    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
-    --shadow-2: 0 8px 24px -8px rgba(0, 0, 0, 0.6);
+    color-scheme: light;
 
-    --surface-0: #0e1013;
-    --surface-1: #15181c;
-    --surface-2: #1c2026;
-    --surface-3: #262b32;
-    --surface-inset: #101317;
-    --surface-sunken: #0b0d10;
+    --bg: #ecedeb;
+    --panel: #f7f7f5;
+    --panel-raised: #ffffff;
+    --panel-hover: #ececea;
+    --panel-inset: #f0f0ee;
+    --line: #d4d6d3;
+    --line-strong: #bcbebb;
 
-    --ink-0: #eef1f4;
-    --ink-1: #b6bdc6;
-    --ink-2: #8a929c;
-    --ink-3: #69717b;
+    --ink: #1b1e20;
+    --ink-mid: #3b4247;
+    --ink-dim: #5a6065;
+    --ink-faint: #727880;
 
-    --border-0: #2a2f37;
-    --border-1: #3a414a;
+    --focus: #0b7fc4;
+    --link: #0a6aa6;
+    --sel-bg: #e2eef6;
+    --selection: #cde6f5;
 
-    --accent: #4f8ff7;
-    --accent-ink: #06122a;
-    --accent-strong: #6ea6ff;
-    --accent-weak-bg: #16233a;
-    --accent-hover: #6ea6ff;
+    --state-reply: #0e7a57;
+    --state-overdue: #8f5b00;
+    --state-seq: #5a3ea6;
+    --state-dnc: #b01e33;
+    --state-live: #0b7fc4;
+    --state-idle: #9aa0a3;
 
-    --selection-bg: #1e365e;
+    --state-new-reply-bg: #dcf3ea;
+    --state-overdue-bg: #f6ecd7;
+    --state-in-sequence-bg: #ece6fa;
+    --state-dnc-bg: #fbe4e8;
+    --state-won-bg: #dcf3ea;
+    --state-lost-bg: #ecedeb;
+    --state-draft-bg: #f6ecd7;
 
-    --state-new-reply-fg: #9cc4ff;
-    --state-new-reply-bg: #132135;
-    --state-new-reply-solid: #4f8ff7;
+    --lamp-glow: none; /* light theme prints solid dots — no glow */
 
-    --state-overdue-fg: #ffb4ab;
-    --state-overdue-bg: #341311;
-    --state-overdue-solid: #ff5a4d;
-
-    --state-in-sequence-fg: #c9b0ff;
-    --state-in-sequence-bg: #20153a;
-    --state-in-sequence-solid: #a884ff;
-
-    --state-dnc-fg: #ff9d94;
-    --state-dnc-bg: #3a1210;
-    --state-dnc-solid: #ff6a5e;
-
-    --state-won-fg: #5fd39a;
-    --state-won-bg: #0d2419;
-    --state-won-solid: #2fbd7e;
-
-    --state-lost-fg: #9aa3ad;
-    --state-lost-bg: #1f242b;
-    --state-lost-solid: #7f8792;
-
-    --state-draft-fg: #f0c07a;
-    --state-draft-bg: #2c2110;
-    --state-draft-solid: #e0a445;
+    --shadow-1: 0 1px 2px rgba(16, 20, 26, 0.1);
+    --shadow-2: 0 10px 30px -12px rgba(16, 20, 26, 0.22);
   }
 }
 
-/* ── Manual overrides — win over the media query in BOTH directions ─────────── */
-:root[data-theme='light'] {
-  color-scheme: light;
-  --shadow-1: 0 1px 2px rgba(16, 20, 26, 0.08);
-  --shadow-2: 0 6px 20px -6px rgba(16, 20, 26, 0.22);
-
-  --surface-0: #ffffff;
-  --surface-1: #f6f7f9;
-  --surface-2: #eceef1;
-  --surface-3: #e3e6ea;
-  --surface-inset: #f0f2f4;
-  --surface-sunken: #eef0f3;
-
-  --ink-0: #191c20;
-  --ink-1: #464c54;
-  --ink-2: #5f666f;
-  --ink-3: #868d96;
-
-  --border-0: #dfe3e8;
-  --border-1: #c6ccd4;
-
-  --accent: #1f6feb;
-  --accent-ink: #ffffff;
-  --accent-strong: #1257c9;
-  --accent-weak-bg: #e6f0ff;
-  --accent-hover: #1a63d6;
-
-  --selection-bg: #cfe0fe;
-
-  --state-new-reply-fg: #0b4fc0;
-  --state-new-reply-bg: #e6f0ff;
-  --state-new-reply-solid: #1f6feb;
-  --state-overdue-fg: #b42318;
-  --state-overdue-bg: #fdeceb;
-  --state-overdue-solid: #d92d20;
-  --state-in-sequence-fg: #6127c4;
-  --state-in-sequence-bg: #f0ebfe;
-  --state-in-sequence-solid: #7c4dff;
-  --state-dnc-fg: #a01313;
-  --state-dnc-bg: #fbe9e9;
-  --state-dnc-solid: #c01919;
-  --state-won-fg: #066a40;
-  --state-won-bg: #e6f6ec;
-  --state-won-solid: #099250;
-  --state-lost-fg: #545c67;
-  --state-lost-bg: #eef0f2;
-  --state-lost-solid: #7a828c;
-  --state-draft-fg: #845408;
-  --state-draft-bg: #fdf3e4;
-  --state-draft-solid: #c9820a;
-}
-
+/* ══ Manual overrides — win over the media query in BOTH directions ═════════ */
 :root[data-theme='dark'] {
   color-scheme: dark;
+
+  --bg: #141719;
+  --panel: #1b1f23;
+  --panel-raised: #22272c;
+  --panel-hover: #2a3037;
+  --panel-inset: #101315;
+  --line: #30363c;
+  --line-strong: #414852;
+
+  --ink: #e8ebec;
+  --ink-mid: #c2c8ce;
+  --ink-dim: #8c949c;
+  --ink-faint: #727a82;
+
+  --focus: #56c8ff;
+  --link: #56c8ff;
+  --sel-bg: #16242e;
+  --selection: #1e3a4a;
+
+  --state-reply: #2ee6a8;
+  --state-overdue: #ffb224;
+  --state-seq: #b18cff;
+  --state-dnc: #ff4f66;
+  --state-live: #56c8ff;
+  --state-idle: #4a5258;
+
+  --state-new-reply-bg: #0c2a21;
+  --state-overdue-bg: #2e2410;
+  --state-in-sequence-bg: #221a38;
+  --state-dnc-bg: #331319;
+  --state-won-bg: #0c2a21;
+  --state-lost-bg: #20262c;
+  --state-draft-bg: #2e2410;
+
+  --lamp-glow: 0 0 8px currentColor;
+
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow-2: 0 8px 24px -8px rgba(0, 0, 0, 0.6);
+  --shadow-2: 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+}
 
-  --surface-0: #0e1013;
-  --surface-1: #15181c;
-  --surface-2: #1c2026;
-  --surface-3: #262b32;
-  --surface-inset: #101317;
-  --surface-sunken: #0b0d10;
+:root[data-theme='light'] {
+  color-scheme: light;
 
-  --ink-0: #eef1f4;
-  --ink-1: #b6bdc6;
-  --ink-2: #8a929c;
-  --ink-3: #69717b;
+  --bg: #ecedeb;
+  --panel: #f7f7f5;
+  --panel-raised: #ffffff;
+  --panel-hover: #ececea;
+  --panel-inset: #f0f0ee;
+  --line: #d4d6d3;
+  --line-strong: #bcbebb;
 
-  --border-0: #2a2f37;
-  --border-1: #3a414a;
+  --ink: #1b1e20;
+  --ink-mid: #3b4247;
+  --ink-dim: #5a6065;
+  --ink-faint: #727880;
 
-  --accent: #4f8ff7;
-  --accent-ink: #06122a;
-  --accent-strong: #6ea6ff;
-  --accent-weak-bg: #16233a;
-  --accent-hover: #6ea6ff;
+  --focus: #0b7fc4;
+  --link: #0a6aa6;
+  --sel-bg: #e2eef6;
+  --selection: #cde6f5;
 
-  --selection-bg: #1e365e;
+  --state-reply: #0e7a57;
+  --state-overdue: #8f5b00;
+  --state-seq: #5a3ea6;
+  --state-dnc: #b01e33;
+  --state-live: #0b7fc4;
+  --state-idle: #9aa0a3;
 
-  --state-new-reply-fg: #9cc4ff;
-  --state-new-reply-bg: #132135;
-  --state-new-reply-solid: #4f8ff7;
-  --state-overdue-fg: #ffb4ab;
-  --state-overdue-bg: #341311;
-  --state-overdue-solid: #ff5a4d;
-  --state-in-sequence-fg: #c9b0ff;
-  --state-in-sequence-bg: #20153a;
-  --state-in-sequence-solid: #a884ff;
-  --state-dnc-fg: #ff9d94;
-  --state-dnc-bg: #3a1210;
-  --state-dnc-solid: #ff6a5e;
-  --state-won-fg: #5fd39a;
-  --state-won-bg: #0d2419;
-  --state-won-solid: #2fbd7e;
-  --state-lost-fg: #9aa3ad;
-  --state-lost-bg: #1f242b;
-  --state-lost-solid: #7f8792;
-  --state-draft-fg: #f0c07a;
-  --state-draft-bg: #2c2110;
-  --state-draft-solid: #e0a445;
+  --state-new-reply-bg: #dcf3ea;
+  --state-overdue-bg: #f6ecd7;
+  --state-in-sequence-bg: #ece6fa;
+  --state-dnc-bg: #fbe4e8;
+  --state-won-bg: #dcf3ea;
+  --state-lost-bg: #ecedeb;
+  --state-draft-bg: #f6ecd7;
+
+  --lamp-glow: none;
+
+  --shadow-1: 0 1px 2px rgba(16, 20, 26, 0.1);
+  --shadow-2: 0 10px 30px -12px rgba(16, 20, 26, 0.22);
 }
 
 /* Comfortable density override — opt-in, loosens the dense defaults. */
 :root[data-density='comfortable'] {
   --control-h-sm: 28px;
-  --control-h: 32px;
-  --control-h-lg: 38px;
-  --row-h: 40px;
+  --control-h: 34px;
+  --control-h-lg: 40px;
+  --row-h: 44px;
 }

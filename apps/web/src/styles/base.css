@@ -107,6 +107,36 @@ samp {
   font-feature-settings: 'tnum' 1;
 }
 
+/* Monospace data face — ids, DSL, metrics, keycaps. */
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Wide-tracked uppercase — section labels + state WORDS only (never body). */
+.label {
+  font-family: var(--font-body);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--ink-2);
+}
+
+/*
+ * Etched 44px grid texture — landing hero + board headers ONLY. Two hairline
+ * gradients at the --etch-size cell; achromatic and faint so it reads as milled
+ * metal, never decoration that competes with state color.
+ */
+.sb-etched {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--ink) 5%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--ink) 5%, transparent) 1px, transparent 1px);
+  background-size: var(--etch-size) var(--etch-size);
+  background-position: center top;
+}
+
 /*
  * Focus ring — one definition, applied to every natively focusable control and
  * anything with [tabindex]. Keyboard-only via :focus-visible; :focus (mouse)
@@ -115,17 +145,16 @@ samp {
 :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
   outline: var(--focus-ring-width) solid var(--focus-ring);
   outline-offset: var(--focus-ring-offset);
-  border-radius: var(--radius-1);
 }
 :where(a, button, input, select, textarea, summary, [tabindex]):focus:not(:focus-visible) {
   outline: none;
 }
 
-/* Global display treatment for the few large numbers. */
+/* Global display treatment for titles + the few large numbers (condensed face). */
 .display {
   font-family: var(--font-display);
   font-weight: var(--fw-display);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.005em;
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
 }
@@ -141,7 +170,7 @@ samp {
 }
 *::-webkit-scrollbar-thumb {
   background: var(--border-1);
-  border-radius: var(--radius-pill);
+  border-radius: 0;
   border: 2px solid transparent;
   background-clip: content-box;
 }

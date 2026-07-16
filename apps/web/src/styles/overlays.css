@@ -1,8 +1,11 @@
 /*
  * Overlay + feedback layer: command palette, cheat sheet, shared modal, toasts,
- * and the Kbd-combo hint renderer. All color comes from tokens.css so both
- * themes and the AA guarantees hold. Entrance motion is subtle and collapses to
- * instant under prefers-reduced-motion (also enforced globally in base.css).
+ * and the Kbd-combo hint renderer. All color comes from tokens.css.
+ *
+ * MOTION LAW: the palette (⌘K) and cheat sheet (?) are KEYBOARD-summoned, so
+ * they open/close INSTANTLY (0ms) — no entrance transform/opacity at all. Only
+ * async, non-keyboard feedback (toasts) animates, and then only transform +
+ * opacity under 300ms. Everything is square (0 panel radius).
  */
 
 /* ── Backdrop + modal shell ──────────────────────────────────────────────── */
@@ -13,9 +16,9 @@
   display: flex;
   justify-content: center;
   padding: var(--space-5);
-  background: color-mix(in srgb, var(--surface-sunken) 62%, transparent);
+  background: color-mix(in srgb, var(--bg) 68%, transparent);
   backdrop-filter: blur(2px);
-  animation: sb-overlay-in var(--dur-fast) var(--ease);
+  /* Keyboard-summoned → no backdrop fade (0ms). */
 }
 .sb-overlay--center {
   align-items: center;
@@ -29,32 +32,14 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: var(--surface-0);
+  background: var(--surface-1);
   border: 1px solid var(--border-1);
   border-radius: var(--radius-3);
   box-shadow: var(--shadow-2);
-  animation: sb-modal-in var(--dur) var(--ease);
+  /* Keyboard-summoned → no entrance animation (0ms open/close). */
 }
 .sb-modal:focus {
   outline: none;
-}
-
-@keyframes sb-overlay-in {
-  from {
-    opacity: 0;
-  }
-}
-@keyframes sb-modal-in {
-  from {
-    opacity: 0;
-    transform: translateY(-6px) scale(0.985);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .sb-overlay,
-  .sb-modal {
-    animation: none;
-  }
 }
 
 /* ── Kbd combo (shared hint renderer) ────────────────────────────────────── */
@@ -71,6 +56,7 @@
 .sb-kbdcombo__then {
   color: var(--ink-3);
   font-size: var(--fs-micro);
+  font-family: var(--font-mono);
   margin: 0 2px;
 }
 
@@ -98,6 +84,7 @@
   border: none;
   background: transparent;
   color: var(--ink-0);
+  font-family: var(--font-body);
   font-size: var(--fs-md);
 }
 .sb-palette__input::placeholder {
@@ -123,7 +110,7 @@
   font-size: var(--fs-micro);
   font-weight: var(--fw-semibold);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tracking-label);
 }
 .sb-palette__opt {
   display: flex;
@@ -131,14 +118,15 @@
   gap: var(--space-3);
   min-height: var(--control-h-lg);
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-2);
+  border-radius: var(--radius-1);
   border-left: 2px solid transparent;
   cursor: pointer;
   scroll-margin: var(--space-3);
+  /* Arrow-key driven → instant (0ms) active state. */
 }
 .sb-palette__opt.is-active {
   background: var(--accent-weak-bg);
-  border-left-color: var(--accent);
+  border-left-color: var(--focus);
 }
 .sb-palette__opt-main {
   display: flex;
@@ -163,6 +151,7 @@
 .sb-palette__opt-sub {
   color: var(--ink-2);
   font-size: var(--fs-micro);
+  font-family: var(--font-mono);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -175,7 +164,7 @@
   gap: var(--space-5);
   padding: var(--space-2) var(--space-5);
   border-top: 1px solid var(--border-0);
-  background: var(--surface-1);
+  background: var(--surface-2);
   color: var(--ink-3);
   font-size: var(--fs-micro);
 }
@@ -199,8 +188,9 @@
   margin-bottom: var(--space-5);
 }
 .sb-cheatsheet__title {
+  font-family: var(--font-display);
   font-size: var(--fs-lg);
-  font-weight: var(--fw-semibold);
+  font-weight: var(--fw-display-strong);
 }
 .sb-cheatsheet__grid {
   display: grid;
@@ -215,7 +205,7 @@
   font-size: var(--fs-micro);
   font-weight: var(--fw-semibold);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tracking-label);
 }
 .sb-cheatsheet__row {
   display: flex;
@@ -234,8 +224,11 @@
 .sb-cheatsheet__empty {
   color: var(--ink-2);
 }
+.sb-cheatsheet__divider {
+  margin: var(--space-6) 0 var(--space-5);
+}
 
-/* ── Toasts ──────────────────────────────────────────────────────────────── */
+/* ── Toasts (async feedback — the one place entrance motion is allowed) ──── */
 .sb-toasts {
   position: fixed;
   right: var(--space-5);
@@ -259,7 +252,7 @@
   color: var(--ink-0);
   font-size: var(--fs-sm);
   pointer-events: auto;
-  animation: sb-toast-in var(--dur) var(--ease);
+  animation: sb-toast-in var(--dur) var(--ease-out);
 }
 .sb-toast__msg {
   flex: 1;
