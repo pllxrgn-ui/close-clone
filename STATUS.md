@@ -2,7 +2,9 @@
 
 **Phase:** MVP COMPLETE + DEPLOYED (07-16). Gate 1 ✅ · Gate 2 ✅ · merge train ✅ · **full product surface ✅** (inbox, pipeline, sequences UI, reports UI, bulk+settings — all merged, wired, and verified working in a real browser in mock mode). Demo ships two ways: the GitHub Pages link (`itguns.github.io/close-clone/welcome`, needs the one-time Settings→Pages switch on the ITGuns account) and the local PGlite real-engine (DEMO.md). ~2,600 tests green (969 web · 917 api · 85 shared). Demo ribbon live. CONTRACTS 1.3.0.
 
-**Readiness built, parked for integration:** Wave A (5a SSO+RBAC · 5c tokens/webhooks · 5e observability · 5f deploy kit) complete on branches, 399 tests. **Remaining to "all done":** merge Wave A → main (#26) · Wave B (5d Playwright E2E, 5h security review) · Phase 3 real integrations (3b–3g) · final coherence pass.
+**Wave A readiness: MERGED to main** (07-16) — SSO+RBAC, API tokens/webhooks/rate-limits, observability, deploy kit. api suite now **1,260 green**. Security headers wired into server.ts; the infra-gated production composition (real healthz, global OIDC guards, BullMQ webhook worker) is documented in deploy/WIRING.md and deferred to the deploy step per verify-before-completion (D-031).
+
+**Wave B: in progress** — 5d Playwright E2E (rep-loop + surfaces, mock mode, CI-wired) in the `e2e-suite` worktree; 5h security review read-only on main. **Remaining to "all done":** act on security findings · Phase 3 real integrations (3b–3g, mock-first) · final coherence pass.
 **Orchestrator:** Fable 5 · **Implementers:** Opus 4.8 subagents · **Mode:** MOCK_MODE-first (no external accounts present)
 
 ## The three constraints most likely to break this build, and the de-risk plan
