@@ -1,0 +1,23 @@
+{
+  "provider": "twilio",
+  "eventId": "CA00000000000000000000000000000003-0-ringing",
+  "channel": "voice",
+  "url": "https://switchboard.test/wh/twilio/status",
+  "receivedAt": "2026-07-15T12:02:00.000Z",
+  "headers": {
+    "Content-Type": "application/x-www-form-urlencoded",
+    "X-Twilio-Signature": "axJ6y/jr3WikgKugi4A/ActXLEI="
+  },
+  "rawBody": "AccountSid=AC00000000000000000000000000000000&CallSid=CA00000000000000000000000000000003&From=%2B13055550147&To=%2B15617770123&Direction=inbound&ApiVersion=2010-04-01&Timestamp=Wed%2C+15+Jul+2026+12%3A02%3A00+GMT&SequenceNumber=0&CallStatus=ringing",
+  "payload": {
+    "AccountSid": "AC00000000000000000000000000000000",
+    "CallSid": "CA00000000000000000000000000000003",
+    "From": "+13055550147",
+    "To": "+15617770123",
+    "Direction": "inbound",
+    "ApiVersion": "2010-04-01",
+    "Timestamp": "Wed, 15 Jul 2026 12:02:00 GMT",
+    "SequenceNumber": "0",
+    "CallStatus": "ringing"
+  }
+}

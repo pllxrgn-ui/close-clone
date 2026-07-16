@@ -1,0 +1,24 @@
+{
+  "provider": "twilio",
+  "eventId": "SM00000000000000000000000000000004",
+  "channel": "sms",
+  "url": "https://switchboard.test/wh/twilio/sms",
+  "receivedAt": "2026-07-15T12:03:00.000Z",
+  "headers": {
+    "Content-Type": "application/x-www-form-urlencoded",
+    "X-Twilio-Signature": "wpYuHaXj5JiNvytue0VHMHnXmGM="
+  },
+  "rawBody": "AccountSid=AC00000000000000000000000000000000&MessageSid=SM00000000000000000000000000000004&SmsSid=SM00000000000000000000000000000004&SmsMessageSid=SM00000000000000000000000000000004&From=%2B13055550147&To=%2B15617770123&Body=CANCEL&NumMedia=0&NumSegments=1&ApiVersion=2010-04-01",
+  "payload": {
+    "AccountSid": "AC00000000000000000000000000000000",
+    "MessageSid": "SM00000000000000000000000000000004",
+    "SmsSid": "SM00000000000000000000000000000004",
+    "SmsMessageSid": "SM00000000000000000000000000000004",
+    "From": "+13055550147",
+    "To": "+15617770123",
+    "Body": "CANCEL",
+    "NumMedia": "0",
+    "NumSegments": "1",
+    "ApiVersion": "2010-04-01"
+  }
+}

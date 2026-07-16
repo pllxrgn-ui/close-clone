@@ -1,0 +1,25 @@
+{
+  "provider": "twilio",
+  "eventId": "CA00000000000000000000000000000001-4-recording_started",
+  "channel": "voice",
+  "url": "https://switchboard.test/wh/twilio/status",
+  "receivedAt": "2026-07-15T12:00:00.000Z",
+  "headers": {
+    "Content-Type": "application/x-www-form-urlencoded",
+    "X-Twilio-Signature": "66D0fO7K7sL9N1To71PN7idvyqc="
+  },
+  "rawBody": "AccountSid=AC00000000000000000000000000000000&CallSid=CA00000000000000000000000000000001&From=%2B15617770123&To=%2B13055550147&Direction=outbound-api&ApiVersion=2010-04-01&Timestamp=Wed%2C+15+Jul+2026+12%3A00%3A00+GMT&SequenceNumber=4&RecordingSid=RE00000000000000000000000000000001&RecordingStatus=in-progress&RecordingUrl=https%3A%2F%2Fapi.twilio.com%2F2010-04-01%2FAccounts%2FAC00000000000000000000000000000000%2FRecordings%2FRE00000000000000000000000000000001",
+  "payload": {
+    "AccountSid": "AC00000000000000000000000000000000",
+    "CallSid": "CA00000000000000000000000000000001",
+    "From": "+15617770123",
+    "To": "+13055550147",
+    "Direction": "outbound-api",
+    "ApiVersion": "2010-04-01",
+    "Timestamp": "Wed, 15 Jul 2026 12:00:00 GMT",
+    "SequenceNumber": "4",
+    "RecordingSid": "RE00000000000000000000000000000001",
+    "RecordingStatus": "in-progress",
+    "RecordingUrl": "https://api.twilio.com/2010-04-01/Accounts/AC00000000000000000000000000000000/Recordings/RE00000000000000000000000000000001"
+  }
+}
