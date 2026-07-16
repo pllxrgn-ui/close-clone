@@ -19,6 +19,7 @@ import { registerDevCors } from './cors.ts';
 import { registerDevAuthRoutes } from './auth.ts';
 import { registerDevReferenceRoutes } from './reference.ts';
 import { registerDevLeadRoutes } from './leads.ts';
+import { registerDevLeadDetailRoutes } from './lead-detail.ts';
 import { registerDevSmartViewRoutes, seedDevSmartViews, type RawQueryable } from './smart-views.ts';
 
 /**
@@ -148,6 +149,7 @@ export async function buildDevServer(opts: BuildDevServerOptions = {}): Promise<
   registerDevAuthRoutes(app, { db, sessionSecret: config.sessionSecret });
   registerDevReferenceRoutes(app, { db });
   registerDevLeadRoutes(app, { db });
+  registerDevLeadDetailRoutes(app, { db });
   registerDevSmartViewRoutes(app, {
     db,
     client,
