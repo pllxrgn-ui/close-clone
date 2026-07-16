@@ -4,9 +4,19 @@ import { sendIntents } from '../../db/index.ts';
 import { createTestDb, type TestDb } from '../../db/test-helpers.ts';
 import { MockEmailProvider } from '../../providers/mock/mock-email-provider.ts';
 import { SyncStateService } from '../sync/state.ts';
-import { makeCipher, makeEngine, seedAccount as seedSyncAccount, seedUser as seedSyncUser } from '../sync/test-support.ts';
+import {
+  makeCipher,
+  makeEngine,
+  seedAccount as seedSyncAccount,
+  seedUser as seedSyncUser,
+} from '../sync/test-support.ts';
 import { enrollContacts } from './enrollment.ts';
-import { expireStaleClaims, recoverResyncAccounts, sweepDueIntents, type SweeperDeps } from './sweeper.ts';
+import {
+  expireStaleClaims,
+  recoverResyncAccounts,
+  sweepDueIntents,
+  type SweeperDeps,
+} from './sweeper.ts';
 import {
   intentState,
   intentsForEnrollment,
@@ -40,7 +50,9 @@ function sweeperDeps(claimTimeoutMs: number): SweeperDeps {
 }
 
 async function enrollIntent(): Promise<string> {
-  const { sequenceId } = await seedSequence(ctx.db, [{ type: 'email', delayHours: 0, templateId: template }]);
+  const { sequenceId } = await seedSequence(ctx.db, [
+    { type: 'email', delayHours: 0, templateId: template },
+  ]);
   const res = await enrollContacts(h.deps, {
     sequenceId,
     enrolledBy: rep,

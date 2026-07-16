@@ -91,7 +91,10 @@ async function loadSteps(exec: Db, sequenceId: string): Promise<StepRow[]> {
 }
 
 /** Enroll a batch of contacts into a sequence. */
-export async function enrollContacts(deps: EnrollmentDeps, input: EnrollInput): Promise<EnrollResult> {
+export async function enrollContacts(
+  deps: EnrollmentDeps,
+  input: EnrollInput,
+): Promise<EnrollResult> {
   const { db } = deps;
 
   const seqRows = await db
@@ -245,7 +248,11 @@ function isUniqueViolation(err: unknown): boolean {
   const code = (err as { code?: unknown }).code;
   if (code === '23505') return true;
   const cause = (err as { cause?: unknown }).cause;
-  if (typeof cause === 'object' && cause !== null && (cause as { code?: unknown }).code === '23505') {
+  if (
+    typeof cause === 'object' &&
+    cause !== null &&
+    (cause as { code?: unknown }).code === '23505'
+  ) {
     return true;
   }
   const message = (err as { message?: unknown }).message;

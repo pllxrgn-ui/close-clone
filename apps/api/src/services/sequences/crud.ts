@@ -42,7 +42,10 @@ export interface SequenceWithSteps {
   steps: SequenceStepRow[];
 }
 
-export async function createSequence(db: Db, input: CreateSequenceInput): Promise<SequenceWithSteps> {
+export async function createSequence(
+  db: Db,
+  input: CreateSequenceInput,
+): Promise<SequenceWithSteps> {
   if (input.steps.length === 0) {
     throw new SequenceValidationError('a sequence must have at least one step');
   }
@@ -183,7 +186,9 @@ export async function updateSequence(
 export async function enrollmentsForSequence(
   db: Db,
   sequenceId: string,
-): Promise<{ id: string; leadId: string; contactId: string; state: string; pausedReason: string | null }[]> {
+): Promise<
+  { id: string; leadId: string; contactId: string; state: string; pausedReason: string | null }[]
+> {
   return db
     .select({
       id: sequenceEnrollments.id,

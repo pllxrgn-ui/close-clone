@@ -34,7 +34,12 @@ export type SequenceRouteDeps = EnrollmentDeps;
 
 const stepSchema = z.object({
   type: z.enum(['email', 'call_task', 'sms']),
-  delayHours: z.number().int().min(0).max(24 * 365).optional(),
+  delayHours: z
+    .number()
+    .int()
+    .min(0)
+    .max(24 * 365)
+    .optional(),
   templateId: z.string().uuid().nullish(),
   requiresReview: z.boolean().optional(),
   condition: z.record(z.unknown()).nullish(),
@@ -72,7 +77,8 @@ const enrollBodySchema = z.object({
 
 function mapSequenceError(reply: FastifyReply, err: unknown): FastifyReply | null {
   if (err instanceof SequenceNotFoundError) return sendError(reply, 'NOT_FOUND', err.message);
-  if (err instanceof SequenceValidationError) return sendError(reply, 'VALIDATION_FAILED', err.message);
+  if (err instanceof SequenceValidationError)
+    return sendError(reply, 'VALIDATION_FAILED', err.message);
   return null;
 }
 
@@ -174,7 +180,9 @@ export function registerSequenceRoutes(app: FastifyInstance, deps: SequenceRoute
     const input: EnrollInput = {
       sequenceId: params.data.id,
       ...(body.data.enrolledBy !== undefined ? { enrolledBy: body.data.enrolledBy } : {}),
-      ...(body.data.emailAccountId !== undefined ? { emailAccountId: body.data.emailAccountId } : {}),
+      ...(body.data.emailAccountId !== undefined
+        ? { emailAccountId: body.data.emailAccountId }
+        : {}),
       targets: body.data.targets,
     };
     try {

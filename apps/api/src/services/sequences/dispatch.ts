@@ -69,13 +69,7 @@ export interface DispatchDeps {
 }
 
 export type DispatchResultKind =
-  | 'sent'
-  | 'skipped'
-  | 'blocked'
-  | 'deferred'
-  | 'not_claimed'
-  | 'failed'
-  | 'paused_during_send';
+  'sent' | 'skipped' | 'blocked' | 'deferred' | 'not_claimed' | 'failed' | 'paused_during_send';
 
 export interface DispatchResult {
   kind: DispatchResultKind;
@@ -264,13 +258,19 @@ export async function processIntent(deps: DispatchDeps, intentId: string): Promi
     // 3. Enrollment must be active (covers paused-by-reply/bounce/unsubscribe).
     if (enrollment.state !== 'active') {
       await markTerminal(tx, intentId, 'SKIPPED', `enrollment_${enrollment.state}`);
-      return { kind: 'terminal', result: { kind: 'skipped', intentId, reason: `enrollment_${enrollment.state}` } };
+      return {
+        kind: 'terminal',
+        result: { kind: 'skipped', intentId, reason: `enrollment_${enrollment.state}` },
+      };
     }
 
     if (claim.channel === 'sms') {
       // SMS sequence steps await the telephony stream (3x); never silently sent.
       await markTerminal(tx, intentId, 'SKIPPED', 'sms_channel_unavailable');
-      return { kind: 'terminal', result: { kind: 'skipped', intentId, reason: 'sms_channel_unavailable' } };
+      return {
+        kind: 'terminal',
+        result: { kind: 'skipped', intentId, reason: 'sms_channel_unavailable' },
+      };
     }
 
     if (claim.channel === 'call_task') {
@@ -302,13 +302,19 @@ export async function processIntent(deps: DispatchDeps, intentId: string): Promi
       `);
       if ((replied as { rows: unknown[] }).rows.length > 0) {
         await markTerminal(tx, intentId, 'SKIPPED', 'condition_skip_replied');
-        return { kind: 'terminal', result: { kind: 'skipped', intentId, reason: 'condition_skip_replied' } };
+        return {
+          kind: 'terminal',
+          result: { kind: 'skipped', intentId, reason: 'condition_skip_replied' },
+        };
       }
     }
 
     if (ctx.emailAccountId === null) {
       await markTerminal(tx, intentId, 'SKIPPED', 'no_email_account');
-      return { kind: 'terminal', result: { kind: 'skipped', intentId, reason: 'no_email_account' } };
+      return {
+        kind: 'terminal',
+        result: { kind: 'skipped', intentId, reason: 'no_email_account' },
+      };
     }
     if (step.templateId === null) {
       await markTerminal(tx, intentId, 'SKIPPED', 'no_template');
@@ -317,7 +323,13 @@ export async function processIntent(deps: DispatchDeps, intentId: string): Promi
 
     // Load lead / contact / account / user.
     const leadRows = await tx
-      .select({ name: leads.name, url: leads.url, description: leads.description, custom: leads.custom, dnc: leads.dnc })
+      .select({
+        name: leads.name,
+        url: leads.url,
+        description: leads.description,
+        custom: leads.custom,
+        dnc: leads.dnc,
+      })
       .from(leads)
       .where(and(eq(leads.id, ctx.leadId), sql`${leads.deletedAt} is null`))
       .limit(1);
@@ -328,19 +340,31 @@ export async function processIntent(deps: DispatchDeps, intentId: string): Promi
     }
 
     const contactRows = await tx
-      .select({ name: contacts.name, title: contacts.title, emails: contacts.emails, phones: contacts.phones, dnc: contacts.dnc })
+      .select({
+        name: contacts.name,
+        title: contacts.title,
+        emails: contacts.emails,
+        phones: contacts.phones,
+        dnc: contacts.dnc,
+      })
       .from(contacts)
       .where(and(eq(contacts.id, ctx.contactId), sql`${contacts.deletedAt} is null`))
       .limit(1);
     const contact = contactRows[0];
     if (contact === undefined) {
       await markTerminal(tx, intentId, 'SKIPPED', 'contact_not_found');
-      return { kind: 'terminal', result: { kind: 'skipped', intentId, reason: 'contact_not_found' } };
+      return {
+        kind: 'terminal',
+        result: { kind: 'skipped', intentId, reason: 'contact_not_found' },
+      };
     }
     const recipient = contact.emails[0]?.email ?? null;
     if (recipient === null) {
       await markTerminal(tx, intentId, 'SKIPPED', 'no_recipient_email');
-      return { kind: 'terminal', result: { kind: 'skipped', intentId, reason: 'no_recipient_email' } };
+      return {
+        kind: 'terminal',
+        result: { kind: 'skipped', intentId, reason: 'no_recipient_email' },
+      };
     }
 
     // I-DNC: lead + contact DNC inside the txn → BLOCKED (never an override prompt).
@@ -372,14 +396,23 @@ export async function processIntent(deps: DispatchDeps, intentId: string): Promi
 
     // Account (address + tokens) — the mailbox this sequence sends from.
     const accountRows = await tx
-      .select({ address: emailAccounts.address, provider: emailAccounts.provider, oauthTokens: emailAccounts.oauthTokens, dailySendCount: emailAccounts.dailySendCount, dailyCountDate: emailAccounts.dailyCountDate })
+      .select({
+        address: emailAccounts.address,
+        provider: emailAccounts.provider,
+        oauthTokens: emailAccounts.oauthTokens,
+        dailySendCount: emailAccounts.dailySendCount,
+        dailyCountDate: emailAccounts.dailyCountDate,
+      })
       .from(emailAccounts)
       .where(eq(emailAccounts.id, ctx.emailAccountId))
       .for('update');
     const account = accountRows[0];
     if (account === undefined || account.oauthTokens === null) {
       await markTerminal(tx, intentId, 'SKIPPED', 'account_unlinked');
-      return { kind: 'terminal', result: { kind: 'skipped', intentId, reason: 'account_unlinked' } };
+      return {
+        kind: 'terminal',
+        result: { kind: 'skipped', intentId, reason: 'account_unlinked' },
+      };
     }
 
     // I-SEND-4b: per-mailbox daily cap — counter incremented INSIDE this txn.
@@ -407,7 +440,10 @@ export async function processIntent(deps: DispatchDeps, intentId: string): Promi
     const template = templateRows[0];
     if (template === undefined) {
       await markTerminal(tx, intentId, 'SKIPPED', 'template_not_found');
-      return { kind: 'terminal', result: { kind: 'skipped', intentId, reason: 'template_not_found' } };
+      return {
+        kind: 'terminal',
+        result: { kind: 'skipped', intentId, reason: 'template_not_found' },
+      };
     }
     let user: { name: string; email: string } | null = null;
     if (ctx.enrolledBy !== null) {
@@ -420,10 +456,17 @@ export async function processIntent(deps: DispatchDeps, intentId: string): Promi
     }
     const mergeCtx: MergeContext = {
       lead: { name: lead.name, url: lead.url, description: lead.description, custom: lead.custom },
-      contact: { name: contact.name, title: contact.title, email: recipient, phone: contact.phones[0]?.phone ?? null },
+      contact: {
+        name: contact.name,
+        title: contact.title,
+        email: recipient,
+        phone: contact.phones[0]?.phone ?? null,
+      },
       user,
     };
-    const rendered = renderTemplate({ subject: template.subject, body: template.body }, mergeCtx, { format: 'text' });
+    const rendered = renderTemplate({ subject: template.subject, body: template.body }, mergeCtx, {
+      format: 'text',
+    });
 
     const messageId = deterministicMessageId(ctx.emailAccountId, intentId, account.address);
     const unsubHeaders = buildListUnsubscribeHeaders(deps.unsubscribe, recipient);
@@ -449,7 +492,10 @@ export async function processIntent(deps: DispatchDeps, intentId: string): Promi
   if (phaseA.kind === 'terminal') return phaseA.result;
 
   // --- Phase B: provider.send OUTSIDE the transaction (idempotencyKey=intentId).
-  const provider: EmailProvider = deps.providerFor({ address: phaseA.address, provider: phaseA.provider });
+  const provider: EmailProvider = deps.providerFor({
+    address: phaseA.address,
+    provider: phaseA.provider,
+  });
   const tokens = deps.cipher.decrypt(phaseA.oauthTokens);
   let providerMessageId: string;
   try {
@@ -457,7 +503,12 @@ export async function processIntent(deps: DispatchDeps, intentId: string): Promi
     providerMessageId = res.providerMessageId;
   } catch (err) {
     await deps.db.transaction(async (txRaw) => {
-      await markTerminal(txRaw as Db, intentId, 'FAILED', err instanceof Error ? err.message : String(err));
+      await markTerminal(
+        txRaw as Db,
+        intentId,
+        'FAILED',
+        err instanceof Error ? err.message : String(err),
+      );
     });
     return { kind: 'failed', intentId, reason: 'provider_error' };
   }
@@ -485,9 +536,19 @@ export async function processIntent(deps: DispatchDeps, intentId: string): Promi
       ...(phaseA.ctx.enrolledBy !== null ? { userId: phaseA.ctx.enrolledBy } : {}),
       type: 'sequence_step_sent',
       occurredAt: nowIso,
-      payload: { enrollmentId: phaseA.ctx.enrollmentId, stepId: phaseA.ctx.stepId, channel: 'email' },
+      payload: {
+        enrollmentId: phaseA.ctx.enrollmentId,
+        stepId: phaseA.ctx.stepId,
+        channel: 'email',
+      },
     });
-    await finishIfComplete(tx, phaseA.ctx.enrollmentId, phaseA.ctx.leadId, phaseA.ctx.contactId, nowIso);
+    await finishIfComplete(
+      tx,
+      phaseA.ctx.enrollmentId,
+      phaseA.ctx.leadId,
+      phaseA.ctx.contactId,
+      nowIso,
+    );
     return { kind: 'sent', intentId, providerMessageId };
   });
 }
@@ -496,7 +557,13 @@ export async function processIntent(deps: DispatchDeps, intentId: string): Promi
 async function deferIntent(exec: Db, intentId: string, dueIso: string): Promise<void> {
   await exec
     .update(sendIntents)
-    .set({ state: 'SCHEDULED', claimedAt: null, workerId: null, dueAt: dueIso, updatedAt: sql`now()` })
+    .set({
+      state: 'SCHEDULED',
+      claimedAt: null,
+      workerId: null,
+      dueAt: dueIso,
+      updatedAt: sql`now()`,
+    })
     .where(eq(sendIntents.id, intentId));
 }
 

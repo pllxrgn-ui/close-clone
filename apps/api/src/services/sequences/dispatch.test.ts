@@ -37,8 +37,12 @@ let contact: string;
 let account: string;
 let template: string;
 
-async function enrollOneEmailStep(delayHours = 0): Promise<{ enrollmentId: string; intentId: string }> {
-  const { sequenceId } = await seedSequence(ctx.db, [{ type: 'email', delayHours, templateId: template }]);
+async function enrollOneEmailStep(
+  delayHours = 0,
+): Promise<{ enrollmentId: string; intentId: string }> {
+  const { sequenceId } = await seedSequence(ctx.db, [
+    { type: 'email', delayHours, templateId: template },
+  ]);
   const res = await enrollContacts(h.deps, {
     sequenceId,
     enrolledBy: rep,
@@ -57,7 +61,10 @@ beforeEach(async () => {
   lead = await seedLead(ctx.db, 'Acme');
   contact = await seedContact(ctx.db, lead, 'dana@acme.test', { name: 'Dana' });
   account = await seedAccount(ctx.db, h.cipher, rep, 'rep@mock.test');
-  template = await seedTemplate(ctx.db, rep, { subject: 'Hi {{contact.name}}', body: 'Hello {{lead.name}}' });
+  template = await seedTemplate(ctx.db, rep, {
+    subject: 'Hi {{contact.name}}',
+    body: 'Hello {{lead.name}}',
+  });
   await setOrgSettings(ctx.db, { dailySendCap: 200, companyTimezone: 'UTC' });
 }, 120_000);
 
@@ -94,7 +101,9 @@ describe('happy path + completion', () => {
     });
     await processIntent(h.deps, intentId);
     expect(captured?.['List-Unsubscribe']).toMatch(/mailto:/);
-    expect(captured?.['List-Unsubscribe']).toMatch(/https:\/\/app\.switchboard\.test\/api\/v1\/unsubscribe\//);
+    expect(captured?.['List-Unsubscribe']).toMatch(
+      /https:\/\/app\.switchboard\.test\/api\/v1\/unsubscribe\//,
+    );
     expect(captured?.['List-Unsubscribe-Post']).toBe('List-Unsubscribe=One-Click');
   });
 
@@ -137,7 +146,9 @@ describe('I-SEND-1 (never twice)', () => {
 describe('I-SEND-3 / I-DNC (suppression + DNC inside the claim txn)', () => {
   test('an active suppression on the recipient BLOCKS the send', async () => {
     const { intentId } = await enrollOneEmailStep(0);
-    await ctx.db.insert(suppressions).values({ kind: 'email', value: 'dana@acme.test', source: 'manual' });
+    await ctx.db
+      .insert(suppressions)
+      .values({ kind: 'email', value: 'dana@acme.test', source: 'manual' });
     const result = await processIntent(h.deps, intentId);
     expect(result.kind).toBe('blocked');
     const state = await intentState(ctx.db, intentId);
@@ -148,9 +159,12 @@ describe('I-SEND-3 / I-DNC (suppression + DNC inside the claim txn)', () => {
 
   test('a RELEASED suppression does NOT block', async () => {
     const { intentId } = await enrollOneEmailStep(0);
-    await ctx.db
-      .insert(suppressions)
-      .values({ kind: 'email', value: 'dana@acme.test', source: 'manual', releasedAt: new Date().toISOString() });
+    await ctx.db.insert(suppressions).values({
+      kind: 'email',
+      value: 'dana@acme.test',
+      source: 'manual',
+      releasedAt: new Date().toISOString(),
+    });
     const result = await processIntent(h.deps, intentId);
     expect(result.kind).toBe('sent');
   });
@@ -175,9 +189,7 @@ describe('I-SEND-3 / I-DNC (suppression + DNC inside the claim txn)', () => {
 describe('I-SEND-4 (window + per-mailbox daily cap)', () => {
   test('a send outside the org window is deferred, not sent', async () => {
     // Window 09:00–10:00 UTC; harness clock is 15:00 UTC → outside.
-    await ctx.db
-      .update(orgSettings)
-      .set({ sendingWindow: { start: '09:00', end: '10:00' } });
+    await ctx.db.update(orgSettings).set({ sendingWindow: { start: '09:00', end: '10:00' } });
     const { intentId } = await enrollOneEmailStep(0);
     const result = await processIntent(h.deps, intentId);
     expect(result.kind).toBe('deferred');
@@ -188,9 +200,7 @@ describe('I-SEND-4 (window + per-mailbox daily cap)', () => {
   });
 
   test('inside the window it sends', async () => {
-    await ctx.db
-      .update(orgSettings)
-      .set({ sendingWindow: { start: '00:00', end: '23:59' } });
+    await ctx.db.update(orgSettings).set({ sendingWindow: { start: '00:00', end: '23:59' } });
     const { intentId } = await enrollOneEmailStep(0);
     expect((await processIntent(h.deps, intentId)).kind).toBe('sent');
   });
@@ -203,7 +213,9 @@ describe('I-SEND-4 (window + per-mailbox daily cap)', () => {
 
     // Second contact on the SAME mailbox: over cap → deferred.
     const contact2 = await seedContact(ctx.db, lead, 'evan@acme.test', { name: 'Evan' });
-    const { sequenceId } = await seedSequence(ctx.db, [{ type: 'email', delayHours: 0, templateId: template }]);
+    const { sequenceId } = await seedSequence(ctx.db, [
+      { type: 'email', delayHours: 0, templateId: template },
+    ]);
     const res = await enrollContacts(h.deps, {
       sequenceId,
       enrolledBy: rep,

@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'vitest';
-import { BullmqQueueDriver, type BullmqJobLike, type QueueLike, type WorkerLike } from './bullmq-driver.ts';
+import {
+  BullmqQueueDriver,
+  type BullmqJobLike,
+  type QueueLike,
+  type WorkerLike,
+} from './bullmq-driver.ts';
 
 /**
  * BullMQ driver (DECISIONS D-013): NO Redis on the host, so this asserts the
@@ -55,7 +60,11 @@ function build(): { driver: BullmqQueueDriver; queue: FakeQueue; workers: FakeWo
 describe('BullmqQueueDriver', () => {
   test('maps delayMs and jobId onto BullMQ add options', async () => {
     const { driver, queue } = build();
-    await driver.enqueue('sequence:send', { intentId: 'i1' }, { delayMs: 5000, jobId: 'intent:i1' });
+    await driver.enqueue(
+      'sequence:send',
+      { intentId: 'i1' },
+      { delayMs: 5000, jobId: 'intent:i1' },
+    );
     expect(queue.adds).toHaveLength(1);
     expect(queue.adds[0]).toEqual({
       name: 'sequence:send',

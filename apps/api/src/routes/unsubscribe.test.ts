@@ -54,7 +54,9 @@ afterEach(async () => {
 
 async function enroll(): Promise<string> {
   const template = await seedTemplate(ctx.db, rep);
-  const { sequenceId } = await seedSequence(ctx.db, [{ type: 'email', delayHours: 0, templateId: template }]);
+  const { sequenceId } = await seedSequence(ctx.db, [
+    { type: 'email', delayHours: 0, templateId: template },
+  ]);
   const res = await enrollContacts(h.deps, {
     sequenceId,
     enrolledBy: rep,

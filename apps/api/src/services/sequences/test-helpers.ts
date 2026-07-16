@@ -51,7 +51,10 @@ export function makeHarness(db: Db): EngineHarness {
   const now = (): Date => clock.now;
   const queue = new InProcessQueueDriver({ mode: 'manual', now: () => clock.now.getTime() });
   const providers = new Map<string, MockEmailProvider>();
-  const providerFor = (identity: { address: string; provider: 'gmail' | 'mock' }): MockEmailProvider => {
+  const providerFor = (identity: {
+    address: string;
+    provider: 'gmail' | 'mock';
+  }): MockEmailProvider => {
     const key = identity.address.toLowerCase();
     let p = providers.get(key);
     if (p === undefined) {
@@ -74,7 +77,10 @@ export function makeHarness(db: Db): EngineHarness {
 
 let seq = 0;
 
-export async function seedUser(db: Db, email = `rep${(seq += 1)}@switchboard.test`): Promise<string> {
+export async function seedUser(
+  db: Db,
+  email = `rep${(seq += 1)}@switchboard.test`,
+): Promise<string> {
   const rows = await db
     .insert(users)
     .values({ email, name: 'Rep', role: 'rep', idpSubject: `idp|${email}`, isActive: true })
@@ -82,7 +88,11 @@ export async function seedUser(db: Db, email = `rep${(seq += 1)}@switchboard.tes
   return rows[0]!.id;
 }
 
-export async function seedLead(db: Db, name = 'Acme', opts: { dnc?: boolean } = {}): Promise<string> {
+export async function seedLead(
+  db: Db,
+  name = 'Acme',
+  opts: { dnc?: boolean } = {},
+): Promise<string> {
   const rows = await db
     .insert(leads)
     .values({ name, ...(opts.dnc === true ? { dnc: true } : {}) })

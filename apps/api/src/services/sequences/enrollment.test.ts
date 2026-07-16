@@ -73,7 +73,9 @@ describe('intent scheduling', () => {
 
 describe('bulk + partial-unique', () => {
   test('skips already-enrolled, missing lead, and cross-lead contacts with reasons', async () => {
-    const { sequenceId } = await seedSequence(ctx.db, [{ type: 'email', delayHours: 0, templateId: template }]);
+    const { sequenceId } = await seedSequence(ctx.db, [
+      { type: 'email', delayHours: 0, templateId: template },
+    ]);
     const otherLead = await seedLead(ctx.db, 'Beta');
     const otherContact = await seedContact(ctx.db, otherLead, 'x@beta.test');
 
@@ -101,7 +103,9 @@ describe('bulk + partial-unique', () => {
   });
 
   test('a finished/unenrolled contact CAN be re-enrolled (partial unique excludes them)', async () => {
-    const { sequenceId } = await seedSequence(ctx.db, [{ type: 'email', delayHours: 0, templateId: template }]);
+    const { sequenceId } = await seedSequence(ctx.db, [
+      { type: 'email', delayHours: 0, templateId: template },
+    ]);
     const res1 = await enrollContacts(h.deps, {
       sequenceId,
       enrolledBy: rep,
@@ -132,7 +136,11 @@ describe('validation', () => {
       status: 'archived',
     });
     await expect(
-      enrollContacts(h.deps, { sequenceId, emailAccountId: account, targets: [{ leadId: lead, contactId: contact }] }),
+      enrollContacts(h.deps, {
+        sequenceId,
+        emailAccountId: account,
+        targets: [{ leadId: lead, contactId: contact }],
+      }),
     ).rejects.toBeInstanceOf(SequenceValidationError);
   });
 

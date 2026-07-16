@@ -50,7 +50,10 @@ async function createSeq(): Promise<string> {
   const res = await app.inject({
     method: 'POST',
     url: '/api/v1/sequences',
-    payload: { name: 'Onboarding', steps: [{ type: 'email', delayHours: 0, templateId: template }] },
+    payload: {
+      name: 'Onboarding',
+      steps: [{ type: 'email', delayHours: 0, templateId: template }],
+    },
   });
   expect(res.statusCode).toBe(201);
   return res.json<{ sequence: { id: string } }>().sequence.id;
@@ -94,7 +97,11 @@ describe('enroll', () => {
     const res = await app.inject({
       method: 'POST',
       url: `/api/v1/sequences/${id}/enroll`,
-      payload: { enrolledBy: rep, emailAccountId: account, targets: [{ leadId: lead, contactId: contact }] },
+      payload: {
+        enrolledBy: rep,
+        emailAccountId: account,
+        targets: [{ leadId: lead, contactId: contact }],
+      },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json<{ enrolled: unknown[] }>().enrolled).toHaveLength(1);
@@ -109,9 +116,14 @@ describe('enroll', () => {
     const res = await app.inject({
       method: 'POST',
       url: `/api/v1/sequences/${id}/enroll`,
-      payload: { enrolledBy: rep, emailAccountId: account, targets: [{ leadId: lead, contactId: contact }] },
+      payload: {
+        enrolledBy: rep,
+        emailAccountId: account,
+        targets: [{ leadId: lead, contactId: contact }],
+      },
     });
-    const enrollmentId = res.json<{ enrolled: { enrollmentId: string }[] }>().enrolled[0]!.enrollmentId;
+    const enrollmentId = res.json<{ enrolled: { enrollmentId: string }[] }>().enrolled[0]!
+      .enrollmentId;
 
     // Drive the wake-up the enroll enqueued.
     await h.queue.tick();

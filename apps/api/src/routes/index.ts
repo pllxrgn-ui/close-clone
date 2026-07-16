@@ -50,7 +50,11 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     });
   }
   if (deps.sequences !== undefined) {
-    registerSequenceRoutes(app, { db: deps.db, queue: deps.sequences.queue, now: deps.sequences.now });
+    registerSequenceRoutes(app, {
+      db: deps.db,
+      queue: deps.sequences.queue,
+      now: deps.sequences.now,
+    });
   }
   if (deps.unsubscribe !== undefined) {
     registerUnsubscribeRoutes(app, { db: deps.db, secret: deps.unsubscribe.secret });

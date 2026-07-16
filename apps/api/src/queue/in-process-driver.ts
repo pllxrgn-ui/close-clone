@@ -57,10 +57,13 @@ export class InProcessQueueDriver implements QueueDriver {
     this.pending.set(jobId, { job, fireAt });
 
     if (this.mode === 'timer') {
-      const timer = setTimeout(() => {
-        this.timers.delete(timer);
-        void this.fire(jobId);
-      }, Math.max(0, delayMs));
+      const timer = setTimeout(
+        () => {
+          this.timers.delete(timer);
+          void this.fire(jobId);
+        },
+        Math.max(0, delayMs),
+      );
       // Do not keep the event loop alive purely for a queued wake-up.
       if (typeof timer.unref === 'function') timer.unref();
       this.timers.add(timer);

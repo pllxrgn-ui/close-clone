@@ -40,7 +40,9 @@ let account: string;
 let template: string;
 
 async function enroll(): Promise<{ enrollmentId: string; intentId: string }> {
-  const { sequenceId } = await seedSequence(ctx.db, [{ type: 'email', delayHours: 0, templateId: template }]);
+  const { sequenceId } = await seedSequence(ctx.db, [
+    { type: 'email', delayHours: 0, templateId: template },
+  ]);
   const res = await enrollContacts(h.deps, {
     sequenceId,
     enrolledBy: rep,
@@ -88,8 +90,12 @@ describe('reply committed before the claim', () => {
 
   test('pausing twice emits sequence_paused exactly once (idempotent)', async () => {
     const { enrollmentId } = await enroll();
-    await ctx.db.transaction(async (tx) => pauseActiveEnrollments(tx as never, { leadId: lead }, 'reply'));
-    await ctx.db.transaction(async (tx) => pauseActiveEnrollments(tx as never, { leadId: lead }, 'reply'));
+    await ctx.db.transaction(async (tx) =>
+      pauseActiveEnrollments(tx as never, { leadId: lead }, 'reply'),
+    );
+    await ctx.db.transaction(async (tx) =>
+      pauseActiveEnrollments(tx as never, { leadId: lead }, 'reply'),
+    );
     expect((await enrollmentState(ctx.db, enrollmentId)).state).toBe('paused');
     expect(await countActivities(ctx.db, lead, 'sequence_paused')).toBe(1);
   });
@@ -110,7 +116,12 @@ describe('reply via the ingest seam', () => {
       },
     };
     await ctx.db.transaction(async (tx) => {
-      await ingestMessage(tx as never, deps, account, makeRaw({ direction: 'in', from: 'dana@acme.test' }));
+      await ingestMessage(
+        tx as never,
+        deps,
+        account,
+        makeRaw({ direction: 'in', from: 'dana@acme.test' }),
+      );
     });
     expect((await enrollmentState(ctx.db, enrollmentId)).state).toBe('paused');
     expect(await countActivities(ctx.db, lead, 'sequence_paused')).toBe(1);
@@ -125,7 +136,10 @@ describe('reply during the claim window (phase B)', () => {
     // flight (between the claim commit and the SENT-marking txn), then delegates.
     const realFor = h.providerFor;
     let paused = false;
-    const wrappingFor = (identity: { address: string; provider: 'gmail' | 'mock' }): EmailProvider => {
+    const wrappingFor = (identity: {
+      address: string;
+      provider: 'gmail' | 'mock';
+    }): EmailProvider => {
       const real = realFor(identity);
       const wrapper: EmailProvider = {
         getAuthUrl: (hint, uri) => real.getAuthUrl(hint, uri),
@@ -137,7 +151,9 @@ describe('reply during the claim window (phase B)', () => {
         send: async (tokens, draft: OutboundEmail, key: string) => {
           if (!paused) {
             paused = true;
-            await ctx.db.transaction(async (tx) => pauseActiveEnrollments(tx as never, { leadId: lead }, 'reply'));
+            await ctx.db.transaction(async (tx) =>
+              pauseActiveEnrollments(tx as never, { leadId: lead }, 'reply'),
+            );
           }
           return real.send(tokens, draft, key);
         },
@@ -160,7 +176,11 @@ describe('reply during the claim window (phase B)', () => {
 describe('bounce', () => {
   test('a bounce records email_bounced + sequence_paused and pauses the enrollment', async () => {
     const { enrollmentId, intentId } = await enroll();
-    await recordBounceAndPause(ctx.db, { leadId: lead, contactId: contact, reason: 'mailbox full' });
+    await recordBounceAndPause(ctx.db, {
+      leadId: lead,
+      contactId: contact,
+      reason: 'mailbox full',
+    });
 
     expect(await countActivities(ctx.db, lead, 'email_bounced')).toBe(1);
     expect(await countActivities(ctx.db, lead, 'sequence_paused')).toBe(1);

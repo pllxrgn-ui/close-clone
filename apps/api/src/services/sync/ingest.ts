@@ -124,7 +124,9 @@ export async function messageExists(
   const rows = await exec
     .select({ id: emailMessages.id })
     .from(emailMessages)
-    .where(and(eq(emailMessages.accountId, accountId), eq(emailMessages.rfcMessageId, rfcMessageId)))
+    .where(
+      and(eq(emailMessages.accountId, accountId), eq(emailMessages.rfcMessageId, rfcMessageId)),
+    )
     .limit(1);
   return rows.length > 0;
 }

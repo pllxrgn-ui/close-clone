@@ -1,4 +1,9 @@
-import { processIntent, requeueDeferred, type DispatchDeps, type DispatchResult } from './dispatch.ts';
+import {
+  processIntent,
+  requeueDeferred,
+  type DispatchDeps,
+  type DispatchResult,
+} from './dispatch.ts';
 import { SEND_JOB_NAME } from './job-names.ts';
 
 /**

@@ -2,11 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { createTestDb, type TestDb } from '../../db/test-helpers.ts';
 import { enrollContacts } from './enrollment.ts';
 import { processIntent } from './dispatch.ts';
-import {
-  applyUnsubscribe,
-  createUnsubscribeToken,
-  verifyUnsubscribeToken,
-} from './unsubscribe.ts';
+import { applyUnsubscribe, createUnsubscribeToken, verifyUnsubscribeToken } from './unsubscribe.ts';
 import { isEmailSuppressed } from './suppression.ts';
 import {
   countActivities,
@@ -40,7 +36,9 @@ let account: string;
 let template: string;
 
 async function enroll(): Promise<{ enrollmentId: string; intentId: string }> {
-  const { sequenceId } = await seedSequence(ctx.db, [{ type: 'email', delayHours: 0, templateId: template }]);
+  const { sequenceId } = await seedSequence(ctx.db, [
+    { type: 'email', delayHours: 0, templateId: template },
+  ]);
   const res = await enrollContacts(h.deps, {
     sequenceId,
     enrolledBy: rep,
@@ -131,7 +129,9 @@ describe('intent-level suppression after unsubscribe', () => {
     await applyUnsubscribe(ctx.db, { email: 'zed@acme.test' });
     const lead2 = await seedLead(ctx.db, 'Beta');
     const contact2 = await seedContact(ctx.db, lead2, 'zed@acme.test', { name: 'Zed' });
-    const { sequenceId } = await seedSequence(ctx.db, [{ type: 'email', delayHours: 0, templateId: template }]);
+    const { sequenceId } = await seedSequence(ctx.db, [
+      { type: 'email', delayHours: 0, templateId: template },
+    ]);
     const res = await enrollContacts(h.deps, {
       sequenceId,
       enrolledBy: rep,

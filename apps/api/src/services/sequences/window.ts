@@ -80,7 +80,8 @@ export function localParts(instant: Date, tz: string): LocalParts {
   let minute = 0;
   for (const part of fmt.formatToParts(instant)) {
     if (part.type === 'weekday') weekday = WEEKDAY_INDEX[part.value] ?? 0;
-    else if (part.type === 'hour') hour = Number(part.value) % 24; // '24' → 0 midnight
+    else if (part.type === 'hour')
+      hour = Number(part.value) % 24; // '24' → 0 midnight
     else if (part.type === 'minute') minute = Number(part.value);
   }
   return { weekday, minutes: hour * 60 + minute };
