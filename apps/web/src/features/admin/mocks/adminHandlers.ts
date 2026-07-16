@@ -49,18 +49,28 @@ export const adminHandlers = [
 
   // ── Bulk enroll over an explicit selection (C7 POST /sequences/:id/enroll) ──
   // I-DNC: DNC leads are never enrolled; the count split surfaces the rail.
+  //
+  // Body-shape routing. MSW is first-match-wins and this handler is registered
+  // BEFORE comms' (see mocks/browser.ts + server.ts). The same C7 path also serves
+  // the single-contact enroll the sequence drawer POSTs as {leadId, contactId};
+  // that one is owned by comms' handler. This handler owns only the BULK
+  // {leadIds:[...]} body — so when the body is not a bulk body, return undefined to
+  // fall through to comms rather than 400 on the missing leadIds. We read a CLONE
+  // for the shape probe so the original request body stays unconsumed for the comms
+  // handler that answers next.
   http.post(api('/sequences/:id/enroll'), async ({ params, request }) => {
+    const body = await readJson(request.clone());
+    if (!body || !Array.isArray(body.leadIds)) return undefined;
+
     const seq = adminStore.sequences.find((s) => s.id === String(params.id));
     if (!seq) return errorJson(404, 'NOT_FOUND', 'Sequence not found');
     if (seq.status !== 'active') {
       return errorJson(422, 'VALIDATION_FAILED', 'Cannot enroll into an archived sequence');
     }
-    const body = await readJson(request);
-    const leadIds = body?.leadIds;
-    if (!Array.isArray(leadIds) || leadIds.length === 0) {
+    if (body.leadIds.length === 0) {
       return errorJson(400, 'VALIDATION_FAILED', 'leadIds must be a non-empty array');
     }
-    const ids = new Set(leadIds.map(String));
+    const ids = new Set(body.leadIds.map(String));
     const selected = db.leads.filter((l) => ids.has(l.id));
     const enrollable = selected.filter((l) => !l.dnc);
     const skipped = selected.length - enrollable.length;
