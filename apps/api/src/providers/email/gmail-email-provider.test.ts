@@ -105,9 +105,7 @@ describe('exchangeCode', () => {
   });
 
   test('throws when the token response omits the refresh token', async () => {
-    const p = provider([
-      { match: (r) => r.url.includes('/token'), body: { access_token: 'at' } },
-    ]);
+    const p = provider([{ match: (r) => r.url.includes('/token'), body: { access_token: 'at' } }]);
     await expect(p.exchangeCode('c', 'https://app/cb')).rejects.toThrow(GmailApiError);
   });
 });
@@ -125,7 +123,10 @@ describe('listMessages (backfill)', () => {
           nextPageToken: 'PAGE2',
         },
       },
-      { match: (r) => r.url.includes('/profile'), body: { emailAddress: 'rep@company.test', historyId: '9000' } },
+      {
+        match: (r) => r.url.includes('/profile'),
+        body: { emailAddress: 'rep@company.test', historyId: '9000' },
+      },
     ]);
     const page = await p.listMessages(TOKENS);
     expect(page.messages).toEqual([
@@ -240,7 +241,10 @@ describe('listHistory (incremental)', () => {
 describe('send', () => {
   test('posts a base64url MIME message and returns the ids', async () => {
     const { transport, calls } = transportOf([
-      { match: (r) => r.url.includes('/messages/send'), body: { id: 'sent-1', threadId: 't-sent' } },
+      {
+        match: (r) => r.url.includes('/messages/send'),
+        body: { id: 'sent-1', threadId: 't-sent' },
+      },
     ]);
     const p = buildProvider({ transport, messageIdFactory: () => '<fixed@company.test>' });
     const result = await p.send(
@@ -290,13 +294,26 @@ describe('coalesceHistory (unit)', () => {
   test('label add then remove collapses to the final label set', () => {
     const page = coalesceHistory(
       [
-        { labelsAdded: [{ message: { id: 'y', threadId: 't', labelIds: ['INBOX'] }, labelIds: ['STARRED'] }] },
-        { labelsRemoved: [{ message: { id: 'y', threadId: 't', labelIds: ['INBOX', 'STARRED'] }, labelIds: ['STARRED'] }] },
+        {
+          labelsAdded: [
+            { message: { id: 'y', threadId: 't', labelIds: ['INBOX'] }, labelIds: ['STARRED'] },
+          ],
+        },
+        {
+          labelsRemoved: [
+            {
+              message: { id: 'y', threadId: 't', labelIds: ['INBOX', 'STARRED'] },
+              labelIds: ['STARRED'],
+            },
+          ],
+        },
       ],
       '100',
       undefined,
     );
-    expect(page.labelsChanged).toEqual([{ providerMessageId: 'y', threadId: 't', labels: ['INBOX'] }]);
+    expect(page.labelsChanged).toEqual([
+      { providerMessageId: 'y', threadId: 't', labels: ['INBOX'] },
+    ]);
   });
 });
 

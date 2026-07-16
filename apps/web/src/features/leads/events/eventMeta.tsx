@@ -83,10 +83,20 @@ function fromTo(payload: Payload): string | null {
 }
 
 const EVENT_META = {
-  call_logged: { icon: PhoneIcon, tone: 'neutral', label: 'Call logged', detail: (p) => str(p, 'outcome') },
+  call_logged: {
+    icon: PhoneIcon,
+    tone: 'neutral',
+    label: 'Call logged',
+    detail: (p) => str(p, 'outcome'),
+  },
   call_missed: { icon: PhoneMissedIcon, tone: 'overdue', label: 'Missed call' },
   voicemail_received: { icon: VoicemailIcon, tone: 'reply', label: 'Voicemail received' },
-  email_sent: { icon: SendIcon, tone: 'neutral', label: 'Email sent', detail: (p) => str(p, 'subject') },
+  email_sent: {
+    icon: SendIcon,
+    tone: 'neutral',
+    label: 'Email sent',
+    detail: (p) => str(p, 'subject'),
+  },
   email_received: {
     icon: MailIcon,
     tone: 'reply',

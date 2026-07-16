@@ -50,7 +50,13 @@ describe('materialization on a matched thread', () => {
       ctx.db,
       real,
       accountId,
-      makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', direction: 'in', subject: 'Deal', sentAt: '2026-03-01T09:00:00.000Z' }),
+      makeRaw({
+        rfcMessageId: '<a@x>',
+        from: 'a@ext.test',
+        direction: 'in',
+        subject: 'Deal',
+        sentAt: '2026-03-01T09:00:00.000Z',
+      }),
     );
 
     const acts = await activitiesFor(ctx.db, lead);
@@ -94,8 +100,16 @@ describe('materialization on a matched thread', () => {
   test('payload carries emailMessageId, threadId and subject', async () => {
     const lead = await seedLead(ctx.db, 'Acme');
     await seedContact(ctx.db, lead, ['a@ext.test']);
-    await ingest(ctx.db, real, accountId, makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Deal' }));
-    const rows = await ctx.db.select({ payload: activities.payload }).from(activities).where(eq(activities.leadId, lead));
+    await ingest(
+      ctx.db,
+      real,
+      accountId,
+      makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Deal' }),
+    );
+    const rows = await ctx.db
+      .select({ payload: activities.payload })
+      .from(activities)
+      .where(eq(activities.leadId, lead));
     const payload = rows[0]!.payload as Record<string, unknown>;
     expect(typeof payload['emailMessageId']).toBe('string');
     expect(typeof payload['threadId']).toBe('string');
@@ -105,12 +119,22 @@ describe('materialization on a matched thread', () => {
   test('every message in a matched thread appears exactly once', async () => {
     const lead = await seedLead(ctx.db, 'Acme');
     await seedContact(ctx.db, lead, ['a@ext.test']);
-    await ingest(ctx.db, real, accountId, makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Deal' }));
     await ingest(
       ctx.db,
       real,
       accountId,
-      makeRaw({ rfcMessageId: '<b@x>', from: 'a@ext.test', subject: 'Re: Deal', references: ['<a@x>'] }),
+      makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Deal' }),
+    );
+    await ingest(
+      ctx.db,
+      real,
+      accountId,
+      makeRaw({
+        rfcMessageId: '<b@x>',
+        from: 'a@ext.test',
+        subject: 'Re: Deal',
+        references: ['<a@x>'],
+      }),
     );
     const acts = await activitiesFor(ctx.db, lead);
     expect(acts).toHaveLength(2);
@@ -133,7 +157,12 @@ describe('exactly-once under replay', () => {
   test('materializeThreadActivities is idempotent when called directly', async () => {
     const lead = await seedLead(ctx.db, 'Acme');
     await seedContact(ctx.db, lead, ['a@ext.test']);
-    await ingest(ctx.db, real, accountId, makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Deal' }));
+    await ingest(
+      ctx.db,
+      real,
+      accountId,
+      makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Deal' }),
+    );
     const [thread] = await threadsFor(ctx.db, accountId);
     // Already materialized during ingest → a direct re-run writes nothing.
     const written = await materializeThreadActivities(ctx.db, thread!.id, lead);
@@ -144,13 +173,23 @@ describe('exactly-once under replay', () => {
 describe('ambiguous threads carry no activity until matched', () => {
   test('ambiguous ingest writes zero activities', async () => {
     const lead = await seedLead(ctx.db, 'Acme'); // exists, but no contact links it
-    await ingest(ctx.db, ambiguous, accountId, makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test' }));
+    await ingest(
+      ctx.db,
+      ambiguous,
+      accountId,
+      makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test' }),
+    );
     expect(await activitiesFor(ctx.db, lead)).toHaveLength(0);
   });
 
   test('materializing an ambiguous thread later (triage resolve path) writes exactly once', async () => {
     const lead = await seedLead(ctx.db, 'Acme');
-    await ingest(ctx.db, ambiguous, accountId, makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Deal' }));
+    await ingest(
+      ctx.db,
+      ambiguous,
+      accountId,
+      makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Deal' }),
+    );
     const [thread] = await threadsFor(ctx.db, accountId);
     expect(thread!.triageStatus).toBe('ambiguous');
 

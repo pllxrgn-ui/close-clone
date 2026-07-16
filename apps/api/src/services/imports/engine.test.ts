@@ -20,7 +20,10 @@ import { dedupeConfigSchema, type ImportMapping } from './types.ts';
  * + count test.
  */
 
-const FIXTURES = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../../fixtures/imports');
+const FIXTURES = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '../../../../../fixtures/imports',
+);
 const USER = '00000000-0000-4000-8000-0000000000e1';
 
 let ctx: TestDb;
@@ -75,7 +78,8 @@ describe('engine — upload → dry-run → commit', () => {
   };
 
   test('the full flow creates the right rows and events', async () => {
-    const csv = 'Company,Website,Email\nAcme,https://acme.com,a@acme.com\nGlobex,globex.io,b@globex.io\n';
+    const csv =
+      'Company,Website,Email\nAcme,https://acme.com,a@acme.com\nGlobex,globex.io,b@globex.io\n';
     const imp = await createImport(ctx.db, storage, {
       createdBy: USER,
       filename: 'leads.csv',
@@ -180,42 +184,38 @@ describe('engine — 10k-row scale + latency', () => {
     ],
   };
 
-  test(
-    'imports 10k rows under 60s with exact counts',
-    async () => {
-      const imp = await createImport(ctx.db, storage, {
-        createdBy: USER,
-        filename: 'leads-10k.csv',
-        source: createReadStream(join(FIXTURES, 'leads-10k.csv')),
-      });
+  test('imports 10k rows under 60s with exact counts', async () => {
+    const imp = await createImport(ctx.db, storage, {
+      createdBy: USER,
+      filename: 'leads-10k.csv',
+      source: createReadStream(join(FIXTURES, 'leads-10k.csv')),
+    });
 
-      const t0 = performance.now();
-      const plan = await dryRunImport(ctx.db, storage, imp.id, { mapping, dedupe });
-      const tDry = performance.now();
-      expect(plan.counts).toMatchObject({
-        totalRows: EXPECTED_10K.totalRows,
-        errorRows: EXPECTED_10K.errorRows,
-        dedupeSkipped: EXPECTED_10K.dedupeSkipped,
-        leadsCreated: EXPECTED_10K.leadsCreated,
-        contactsCreated: EXPECTED_10K.contactsCreated,
-      });
+    const t0 = performance.now();
+    const plan = await dryRunImport(ctx.db, storage, imp.id, { mapping, dedupe });
+    const tDry = performance.now();
+    expect(plan.counts).toMatchObject({
+      totalRows: EXPECTED_10K.totalRows,
+      errorRows: EXPECTED_10K.errorRows,
+      dedupeSkipped: EXPECTED_10K.dedupeSkipped,
+      leadsCreated: EXPECTED_10K.leadsCreated,
+      contactsCreated: EXPECTED_10K.contactsCreated,
+    });
 
-      const outcome = await commitImport(ctx.db, imp.id, { batchSize: 1000 });
-      const tCommit = performance.now();
-      expect(outcome.status).toBe('committed');
-      expect(outcome.counters.leads).toBe(EXPECTED_10K.leadsCreated);
+    const outcome = await commitImport(ctx.db, imp.id, { batchSize: 1000 });
+    const tCommit = performance.now();
+    expect(outcome.status).toBe('committed');
+    expect(outcome.counters.leads).toBe(EXPECTED_10K.leadsCreated);
 
-      expect(await count(ctx.db, 'leads')).toBe(EXPECTED_10K.leadsCreated);
-      expect(await count(ctx.db, 'contacts')).toBe(EXPECTED_10K.contactsCreated);
-      expect(await count(ctx.db, 'activities')).toBe(EXPECTED_10K.leadsCreated * 2);
+    expect(await count(ctx.db, 'leads')).toBe(EXPECTED_10K.leadsCreated);
+    expect(await count(ctx.db, 'contacts')).toBe(EXPECTED_10K.contactsCreated);
+    expect(await count(ctx.db, 'activities')).toBe(EXPECTED_10K.leadsCreated * 2);
 
-      const total = tCommit - t0;
-       
-      console.log(
-        `[10k] dry-run ${Math.round(tDry - t0)}ms · commit ${Math.round(tCommit - tDry)}ms · total ${Math.round(total)}ms`,
-      );
-      expect(total).toBeLessThan(60_000);
-    },
-    120_000,
-  );
+    const total = tCommit - t0;
+
+    console.log(
+      `[10k] dry-run ${Math.round(tDry - t0)}ms · commit ${Math.round(tCommit - tDry)}ms · total ${Math.round(total)}ms`,
+    );
+    expect(total).toBeLessThan(60_000);
+  }, 120_000);
 });

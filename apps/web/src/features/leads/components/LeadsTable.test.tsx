@@ -36,7 +36,9 @@ function TableProbe({ leads, onOpen = () => {} }: ProbeProps): JSX.Element {
       ctx={ctx}
       sort={sort}
       onSortChange={(key) =>
-        setSort((s) => (s?.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }))
+        setSort((s) =>
+          s?.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' },
+        )
       }
       selectedIds={selected}
       onToggleSelect={(id) =>
@@ -48,7 +50,9 @@ function TableProbe({ leads, onOpen = () => {} }: ProbeProps): JSX.Element {
         })
       }
       onToggleSelectAll={() =>
-        setSelected((prev) => (prev.size === leads.length ? new Set() : new Set(leads.map((l) => l.id))))
+        setSelected((prev) =>
+          prev.size === leads.length ? new Set() : new Set(leads.map((l) => l.id)),
+        )
       }
       selectAllState={selectAllState}
       onOpen={onOpen}

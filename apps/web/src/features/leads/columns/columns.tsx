@@ -129,10 +129,7 @@ const nextTaskColumn: ColumnDef = {
     if (iso === null) return <span className="lead-cell__muted">—</span>;
     const overdue = (timeMs(iso) ?? Infinity) < ctx.now.getTime();
     return (
-      <time
-        dateTime={iso}
-        className={overdue ? 'lead-cell__time is-overdue' : 'lead-cell__time'}
-      >
+      <time dateTime={iso} className={overdue ? 'lead-cell__time is-overdue' : 'lead-cell__time'}>
         {formatRelativeTime(iso, ctx.now)}
       </time>
     );

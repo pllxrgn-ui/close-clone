@@ -156,53 +156,53 @@ export function LeadsTable({
       >
         {/* Header row (sort controls + select-all) */}
         <div className="lead-table__head" role="rowgroup">
-        <div className="lead-table__row lead-table__row--head" role="row" aria-rowindex={1}>
-          <span className="lead-cell lead-cell--select" role="columnheader">
-            <input
-              ref={selectAllRef}
-              type="checkbox"
-              className="lead-check"
-              aria-label="Select all loaded leads"
-              checked={selectAllState === 'all'}
-              onChange={onToggleSelectAll}
-            />
-          </span>
-          {columns.map((col) => {
-            const active = sort?.key === col.key;
-            const ariaSort = active ? (sort?.dir === 'asc' ? 'ascending' : 'descending') : 'none';
-            return (
-              <span
-                key={col.key}
-                className={cx('lead-cell', 'lead-cell--head', `lead-cell--${col.align}`)}
-                role="columnheader"
-                aria-sort={col.sortable ? ariaSort : undefined}
-              >
-                {col.sortable ? (
-                  <button
-                    type="button"
-                    className={cx('lead-sort', active && 'is-active')}
-                    onClick={() => onSortChange(col.key)}
-                  >
+          <div className="lead-table__row lead-table__row--head" role="row" aria-rowindex={1}>
+            <span className="lead-cell lead-cell--select" role="columnheader">
+              <input
+                ref={selectAllRef}
+                type="checkbox"
+                className="lead-check"
+                aria-label="Select all loaded leads"
+                checked={selectAllState === 'all'}
+                onChange={onToggleSelectAll}
+              />
+            </span>
+            {columns.map((col) => {
+              const active = sort?.key === col.key;
+              const ariaSort = active ? (sort?.dir === 'asc' ? 'ascending' : 'descending') : 'none';
+              return (
+                <span
+                  key={col.key}
+                  className={cx('lead-cell', 'lead-cell--head', `lead-cell--${col.align}`)}
+                  role="columnheader"
+                  aria-sort={col.sortable ? ariaSort : undefined}
+                >
+                  {col.sortable ? (
+                    <button
+                      type="button"
+                      className={cx('lead-sort', active && 'is-active')}
+                      onClick={() => onSortChange(col.key)}
+                    >
+                      <span className="lead-sort__label">{col.header}</span>
+                      {active ? (
+                        sort?.dir === 'asc' ? (
+                          <ChevronUpIcon size={13} className="lead-sort__icon" />
+                        ) : (
+                          <ChevronDownIcon size={13} className="lead-sort__icon" />
+                        )
+                      ) : null}
+                    </button>
+                  ) : (
                     <span className="lead-sort__label">{col.header}</span>
-                    {active ? (
-                      sort?.dir === 'asc' ? (
-                        <ChevronUpIcon size={13} className="lead-sort__icon" />
-                      ) : (
-                        <ChevronDownIcon size={13} className="lead-sort__icon" />
-                      )
-                    ) : null}
-                  </button>
-                ) : (
-                  <span className="lead-sort__label">{col.header}</span>
-                )}
-              </span>
-            );
-          })}
-          <span className="lead-cell lead-cell--state" role="columnheader">
-            <span className="lead-sort__label">State</span>
-          </span>
+                  )}
+                </span>
+              );
+            })}
+            <span className="lead-cell lead-cell--state" role="columnheader">
+              <span className="lead-sort__label">State</span>
+            </span>
+          </div>
         </div>
-      </div>
 
         {/* Virtualized body */}
         <div
@@ -217,61 +217,57 @@ export function LeadsTable({
             role="presentation"
             style={{ height: `${virtualizer.getTotalSize()}px` }}
           >
-          {virtualRows.map((vi) => {
-            const lead = leads[vi.index];
-            if (!lead) return null;
-            const itemProps = nav.getItemProps(vi.index);
-            const selected = selectedIds.has(lead.id);
-            const primary = primaryLeadState(lead, now);
-            const rowStyle: CSSProperties = {
-              transform: `translateY(${vi.start}px)`,
-              height: `${vi.size}px`,
-            };
-            return (
-              <div
-                key={lead.id}
-                ref={itemProps.ref}
-                role="row"
-                aria-rowindex={vi.index + 2}
-                aria-selected={selected}
-                aria-label={rowLabel(lead, ctx, primary)}
-                tabIndex={itemProps.tabIndex}
-                className={cx('lead-table__row', 'lead-row', selected && 'is-selected')}
-                data-active={vi.index === nav.activeIndex ? 'true' : undefined}
-                style={rowStyle}
-                onClick={itemProps.onClick}
-                onFocus={itemProps.onFocus}
-              >
-                <Rail state={primary} className="lead-row__rail" />
-                <span className="lead-cell lead-cell--select" role="gridcell">
-                  <input
-                    type="checkbox"
-                    className="lead-check"
-                    aria-label={`Select ${lead.name}`}
-                    checked={selected}
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={() => onToggleSelect(lead.id)}
-                  />
-                </span>
-                {columns.map((col) => (
-                  <span
-                    key={col.key}
-                    className={cx('lead-cell', `lead-cell--${col.align}`)}
-                    role="gridcell"
-                  >
-                    {col.render(lead, ctx)}
+            {virtualRows.map((vi) => {
+              const lead = leads[vi.index];
+              if (!lead) return null;
+              const itemProps = nav.getItemProps(vi.index);
+              const selected = selectedIds.has(lead.id);
+              const primary = primaryLeadState(lead, now);
+              const rowStyle: CSSProperties = {
+                transform: `translateY(${vi.start}px)`,
+                height: `${vi.size}px`,
+              };
+              return (
+                <div
+                  key={lead.id}
+                  ref={itemProps.ref}
+                  role="row"
+                  aria-rowindex={vi.index + 2}
+                  aria-selected={selected}
+                  aria-label={rowLabel(lead, ctx, primary)}
+                  tabIndex={itemProps.tabIndex}
+                  className={cx('lead-table__row', 'lead-row', selected && 'is-selected')}
+                  data-active={vi.index === nav.activeIndex ? 'true' : undefined}
+                  style={rowStyle}
+                  onClick={itemProps.onClick}
+                  onFocus={itemProps.onFocus}
+                >
+                  <Rail state={primary} className="lead-row__rail" />
+                  <span className="lead-cell lead-cell--select" role="gridcell">
+                    <input
+                      type="checkbox"
+                      className="lead-check"
+                      aria-label={`Select ${lead.name}`}
+                      checked={selected}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={() => onToggleSelect(lead.id)}
+                    />
                   </span>
-                ))}
-                <span className="lead-cell lead-cell--state" role="gridcell">
-                  <LeadStatePills
-                    lead={lead}
-                    now={now}
-                    className="lead-statepills"
-                  />
-                </span>
-              </div>
-            );
-          })}
+                  {columns.map((col) => (
+                    <span
+                      key={col.key}
+                      className={cx('lead-cell', `lead-cell--${col.align}`)}
+                      role="gridcell"
+                    >
+                      {col.render(lead, ctx)}
+                    </span>
+                  ))}
+                  <span className="lead-cell lead-cell--state" role="gridcell">
+                    <LeadStatePills lead={lead} now={now} className="lead-statepills" />
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

@@ -60,7 +60,9 @@ export function formatRelativeTime(iso: string, now: Date = new Date()): string 
             ? `${Math.floor(abs / WEEK)}w`
             : null;
   if (stamp === null) {
-    return d.getFullYear() === now.getFullYear() ? dateShortFmt.format(d) : dateShortYearFmt.format(d);
+    return d.getFullYear() === now.getFullYear()
+      ? dateShortFmt.format(d)
+      : dateShortYearFmt.format(d);
   }
   return past ? stamp : `in ${stamp}`;
 }
@@ -91,7 +93,9 @@ export function formatDayLabel(iso: string, now: Date = new Date()): string {
   if (daysAgo === 0) return 'Today';
   if (daysAgo === 1) return 'Yesterday';
   if (daysAgo > 1 && daysAgo < 7) return weekdayFmt.format(d);
-  return d.getFullYear() === now.getFullYear() ? dateShortFmt.format(d) : dateShortYearFmt.format(d);
+  return d.getFullYear() === now.getFullYear()
+    ? dateShortFmt.format(d)
+    : dateShortYearFmt.format(d);
 }
 
 /** A stable per-day key (local `YYYY-MM-DD`) for grouping timeline events. */

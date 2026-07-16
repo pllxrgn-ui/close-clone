@@ -1,13 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import {
-  csvField,
-  csvHeader,
-  csvRow,
-  jsonlRow,
-  toRecord,
-  type OutputColumn,
-} from './serialize.ts';
+import { csvField, csvHeader, csvRow, jsonlRow, toRecord, type OutputColumn } from './serialize.ts';
 
 /**
  * Task 5g — export serialization. Locks the CSV RFC-4180 quoting rules, the

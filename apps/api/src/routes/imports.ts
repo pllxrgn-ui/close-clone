@@ -1,9 +1,4 @@
-import type {
-  FastifyInstance,
-  FastifyReply,
-  FastifyRequest,
-  preHandlerHookHandler,
-} from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest, preHandlerHookHandler } from 'fastify';
 import { z, ZodError } from 'zod';
 
 import type { Db, ImportRow } from '../db/index.ts';
@@ -153,7 +148,11 @@ export function registerImportRoutes(app: FastifyInstance, deps: ImportRouteDeps
 
       const boundary = parseBoundary(request.headers['content-type']);
       if (boundary === null) {
-        return sendError(reply, 'VALIDATION_FAILED', 'expected multipart/form-data with a boundary');
+        return sendError(
+          reply,
+          'VALIDATION_FAILED',
+          'expected multipart/form-data with a boundary',
+        );
       }
 
       // The raw request stream is an AsyncIterable<Buffer>; never buffered whole.
@@ -162,7 +161,8 @@ export function registerImportRoutes(app: FastifyInstance, deps: ImportRouteDeps
       let body: AsyncGenerator<Buffer>;
       try {
         const file = await readFirstFilePart(source, boundary);
-        filename = file.filename !== null && file.filename.length > 0 ? file.filename : 'import.csv';
+        filename =
+          file.filename !== null && file.filename.length > 0 ? file.filename : 'import.csv';
         body = file.body;
       } catch (err) {
         const mapped = importErrorToC8(err);
@@ -198,7 +198,12 @@ export function registerImportRoutes(app: FastifyInstance, deps: ImportRouteDeps
         input = parseDryRunBody(request.body);
       } catch (err) {
         if (err instanceof ZodError) {
-          return sendError(reply, 'VALIDATION_FAILED', 'invalid mapping or dedupe config', err.flatten());
+          return sendError(
+            reply,
+            'VALIDATION_FAILED',
+            'invalid mapping or dedupe config',
+            err.flatten(),
+          );
         }
         throw err;
       }

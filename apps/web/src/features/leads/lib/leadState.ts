@@ -117,6 +117,9 @@ export function deriveLeadStates(lead: LeadStateInput, now: Date = new Date()): 
 }
 
 /** The single highest-precedence state (drives the leading rail), or null. */
-export function primaryLeadState(lead: LeadStateInput, now: Date = new Date()): LeadStateKey | null {
+export function primaryLeadState(
+  lead: LeadStateInput,
+  now: Date = new Date(),
+): LeadStateKey | null {
   return deriveLeadStates(lead, now)[0] ?? null;
 }

@@ -200,7 +200,10 @@ export async function mergeLeads(db: Db, input: MergeLeadsInput): Promise<MergeR
         .update(opportunities)
         .set({ contactId: survivor, updatedAt: sql`now()` })
         .where(eq(opportunities.contactId, lc.id));
-      await tx.update(activities).set({ contactId: survivor }).where(eq(activities.contactId, lc.id));
+      await tx
+        .update(activities)
+        .set({ contactId: survivor })
+        .where(eq(activities.contactId, lc.id));
       await tx
         .update(calls)
         .set({ contactId: survivor, updatedAt: sql`now()` })

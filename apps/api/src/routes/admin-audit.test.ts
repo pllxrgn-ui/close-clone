@@ -36,14 +36,25 @@ async function seedRow(tag: string, values: typeof auditLog.$inferInsert): Promi
 beforeAll(async () => {
   ctx = await createTestDb();
   await ctx.db.insert(users).values({
-    id: ADMIN, email: 'admin@x.test', name: 'Admin', role: 'admin', idpSubject: 'idp|admin',
+    id: ADMIN,
+    email: 'admin@x.test',
+    name: 'Admin',
+    role: 'admin',
+    idpSubject: 'idp|admin',
   });
   await seedRow('a1', {
-    action: 'auth.login', entity: 'auth', actorType: 'user', actorId: ADMIN, at: TA,
+    action: 'auth.login',
+    entity: 'auth',
+    actorType: 'user',
+    actorId: ADMIN,
+    at: TA,
   });
   await seedRow('a2', {
-    action: 'admin.compliance_switch_changed', entity: 'email_account', actorType: 'user',
-    actorId: ADMIN, at: TB,
+    action: 'admin.compliance_switch_changed',
+    entity: 'email_account',
+    actorType: 'user',
+    actorId: ADMIN,
+    at: TB,
     // Raw token material seeded directly — the endpoint must not echo it back.
     before: { address: 'box@x.test', oauthTokens: 'ya29.RAW_OLD' },
     after: { address: 'box@x.test', oauthTokens: 'ya29.RAW_NEW' },

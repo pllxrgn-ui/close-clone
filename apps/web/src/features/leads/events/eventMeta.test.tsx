@@ -54,9 +54,9 @@ describe('eventMeta — detail derivation', () => {
   });
 
   test('status_changed shows a from→to transition', () => {
-    expect(resolveEventMeta('status_changed').detail?.({ from: 'Potential', to: 'Qualified' })).toBe(
-      'Potential → Qualified',
-    );
+    expect(
+      resolveEventMeta('status_changed').detail?.({ from: 'Potential', to: 'Qualified' }),
+    ).toBe('Potential → Qualified');
   });
 
   test('sequence_paused surfaces the reason', () => {

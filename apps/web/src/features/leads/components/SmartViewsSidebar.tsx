@@ -86,7 +86,12 @@ export function SmartViewsSidebar({
           ))}
         </div>
       ) : (
-        <div className="sv-rail__list" role="listbox" aria-label="Smart Views" {...nav.containerProps}>
+        <div
+          className="sv-rail__list"
+          role="listbox"
+          aria-label="Smart Views"
+          {...nav.containerProps}
+        >
           {entries.map((entry, index) => {
             const prev = entries[index - 1];
             const showHeader = !prev || prev.group !== entry.group;

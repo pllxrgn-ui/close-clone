@@ -59,7 +59,11 @@ export class CommitInProgressError extends CommitError {
 export class ImportNotCommittableError extends CommitError {
   readonly status: string;
   constructor(importId: string, status: string) {
-    super('ImportNotCommittableError', `import ${importId} cannot be committed from '${status}'`, importId);
+    super(
+      'ImportNotCommittableError',
+      `import ${importId} cannot be committed from '${status}'`,
+      importId,
+    );
     this.status = status;
   }
 }
@@ -287,7 +291,16 @@ export async function commitImport(
     counters = cp?.counters ?? zeroCounters();
     startedAt = cp?.startedAt ?? startedAt;
     // Re-claim: refresh the lease so a racing committer sees it fresh.
-    await writeCheckpoint(db, importId, 'in_progress', startIndex, counters, committerId, startedAt, nowDate);
+    await writeCheckpoint(
+      db,
+      importId,
+      'in_progress',
+      startIndex,
+      counters,
+      committerId,
+      startedAt,
+      nowDate,
+    );
   } else {
     // status === 'dry_run': claim via compare-and-swap on status.
     const claimed = await db
@@ -322,7 +335,16 @@ export async function commitImport(
             await applyRow(tx, r, row.createdBy, importId, row.rowCount, occurredAt, counters);
           }
         }
-        await writeCheckpoint(tx, importId, 'in_progress', end, counters, committerId, startedAt, heartbeat);
+        await writeCheckpoint(
+          tx,
+          importId,
+          'in_progress',
+          end,
+          counters,
+          committerId,
+          startedAt,
+          heartbeat,
+        );
       });
       idx = end;
       batchNo += 1;
@@ -405,7 +427,9 @@ async function writeCheckpoint(
   await db
     .update(imports)
     .set({
-      result: toJson(makeCheckpoint(status, nextRowIndex, counters, committerId, startedAt, heartbeat)),
+      result: toJson(
+        makeCheckpoint(status, nextRowIndex, counters, committerId, startedAt, heartbeat),
+      ),
       updatedAt: heartbeat.toISOString(),
     })
     .where(eq(imports.id, importId));

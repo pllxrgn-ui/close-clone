@@ -28,7 +28,12 @@ const lead = makeLead({
   url: 'https://north-labs.example.com',
 });
 const contact = makeContact({ leadId: lead.id, name: 'Sam Patel', title: 'VP Sales' });
-const opp = makeOpportunity({ leadId: lead.id, valueCents: 5_000_000, stageId: stage.id, status: 'active' });
+const opp = makeOpportunity({
+  leadId: lead.id,
+  valueCents: 5_000_000,
+  stageId: stage.id,
+  status: 'active',
+});
 const events = [
   makeActivity({ type: 'email_received', leadId: lead.id, payload: { subject: 'Re: pilot' } }),
   makeActivity({ type: 'call_logged', leadId: lead.id, userId: user.id }),

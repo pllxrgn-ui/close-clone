@@ -1,11 +1,5 @@
 import { and, eq, sql } from 'drizzle-orm';
-import {
-  auditLog,
-  emailThreads,
-  leads,
-  users,
-  type Db,
-} from '../../db/index.ts';
+import { auditLog, emailThreads, leads, users, type Db } from '../../db/index.ts';
 import { materializeThreadActivities } from './activities.ts';
 import { findCandidateLeadIds } from './matching.ts';
 

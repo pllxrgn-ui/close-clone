@@ -76,18 +76,16 @@ describe('useReveal — content is never stuck hidden', () => {
   });
 
   test('reveals immediately under reduced motion', () => {
-    vi.spyOn(window, 'matchMedia').mockImplementation(
-      (query: string): MediaQueryList => ({
-        matches: query.includes('prefers-reduced-motion'),
-        media: query,
-        onchange: null,
-        addEventListener: () => undefined,
-        removeEventListener: () => undefined,
-        addListener: () => undefined,
-        removeListener: () => undefined,
-        dispatchEvent: () => false,
-      }),
-    );
+    vi.spyOn(window, 'matchMedia').mockImplementation((query: string): MediaQueryList => ({
+      matches: query.includes('prefers-reduced-motion'),
+      media: query,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    }));
     const { getByTestId } = render(<Probe />);
     expect(getByTestId('probe')).toHaveAttribute('data-revealed', 'yes');
   });

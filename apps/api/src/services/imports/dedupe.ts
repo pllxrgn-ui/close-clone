@@ -41,7 +41,11 @@ const FREE_EMAIL_DOMAINS = new Set([
 const SCHEME_RE = /^[a-z][a-z0-9+.-]*:\/\//i;
 
 function normalizeHost(host: string): string | null {
-  const h = host.trim().toLowerCase().replace(/\.$/, '').replace(/^www\./, '');
+  const h = host
+    .trim()
+    .toLowerCase()
+    .replace(/\.$/, '')
+    .replace(/^www\./, '');
   if (h === '' || !h.includes('.')) return null;
   return h;
 }

@@ -199,7 +199,12 @@ async function main(): Promise<number> {
   const pool = new pg.Pool({ connectionString: config.databaseUrl, options: '-c timezone=UTC' });
   const db = drizzle(pool);
   try {
-    return await runCli(argv, db, (line) => console.log(line), (line) => console.error(line));
+    return await runCli(
+      argv,
+      db,
+      (line) => console.log(line),
+      (line) => console.error(line),
+    );
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     return 1;

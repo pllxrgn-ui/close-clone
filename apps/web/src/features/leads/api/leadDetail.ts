@@ -14,10 +14,16 @@ import { apiRequest } from '../../../api/client.ts';
  */
 
 export function listLeadContacts(leadId: string, signal?: AbortSignal): Promise<Contact[]> {
-  return apiRequest<Contact[]>('/contacts', signal ? { query: { leadId }, signal } : { query: { leadId } });
+  return apiRequest<Contact[]>(
+    '/contacts',
+    signal ? { query: { leadId }, signal } : { query: { leadId } },
+  );
 }
 
-export function listLeadOpportunities(leadId: string, signal?: AbortSignal): Promise<Opportunity[]> {
+export function listLeadOpportunities(
+  leadId: string,
+  signal?: AbortSignal,
+): Promise<Opportunity[]> {
   return apiRequest<Opportunity[]>(
     '/opportunities',
     signal ? { query: { leadId }, signal } : { query: { leadId } },

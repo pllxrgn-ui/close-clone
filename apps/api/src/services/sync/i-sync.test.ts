@@ -76,7 +76,11 @@ afterEach(async () => {
 });
 
 async function runScenario(scenario: Scenario): Promise<CanonicalDump> {
-  const provider = new MockEmailProvider({ address: ADDRESS, backfillPageSize: 2, historyPageSize: 2 });
+  const provider = new MockEmailProvider({
+    address: ADDRESS,
+    backfillPageSize: 2,
+    historyPageSize: 2,
+  });
   const userId = await seedUser(ctx.db, `${scenario.name || 'anon'}@example.com`);
   const encrypted = makeCipher().encrypt(provider.mintTokens());
   const accountId = await seedAccount(ctx.db, {

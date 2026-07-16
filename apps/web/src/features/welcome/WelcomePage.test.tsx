@@ -27,18 +27,16 @@ function renderWelcome(): RenderResult {
 
 /** Point matchMedia at a fixed reduced-motion answer for this test. */
 function stubReducedMotion(matches: boolean): void {
-  vi.spyOn(window, 'matchMedia').mockImplementation(
-    (query: string): MediaQueryList => ({
-      matches: query.includes('prefers-reduced-motion') ? matches : false,
-      media: query,
-      onchange: null,
-      addEventListener: () => undefined,
-      removeEventListener: () => undefined,
-      addListener: () => undefined,
-      removeListener: () => undefined,
-      dispatchEvent: () => false,
-    }),
-  );
+  vi.spyOn(window, 'matchMedia').mockImplementation((query: string): MediaQueryList => ({
+    matches: query.includes('prefers-reduced-motion') ? matches : false,
+    media: query,
+    onchange: null,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+    addListener: () => undefined,
+    removeListener: () => undefined,
+    dispatchEvent: () => false,
+  }));
 }
 
 const AXE_OPTIONS: axe.RunOptions = { rules: { 'color-contrast': { enabled: false } } };

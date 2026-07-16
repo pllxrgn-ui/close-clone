@@ -53,9 +53,7 @@ export async function findCandidateLeadIds(
   const own = await accountAddress(exec, accountId);
   const needles = [
     ...new Set(
-      participants
-        .map((p) => p.trim().toLowerCase())
-        .filter((p) => p.length > 0 && p !== own),
+      participants.map((p) => p.trim().toLowerCase()).filter((p) => p.length > 0 && p !== own),
     ),
   ];
   if (needles.length === 0) return [];

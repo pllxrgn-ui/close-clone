@@ -54,7 +54,12 @@ export function registerAdminExportRoutes(app: FastifyInstance, deps: AdminExpor
   app.post('/api/v1/admin/exports', { preHandler: deps.adminGuard }, async (request, reply) => {
     const parsed = bodySchema.safeParse(request.body ?? {});
     if (!parsed.success) {
-      return sendError(reply, 'VALIDATION_FAILED', 'invalid export request', parsed.error.flatten());
+      return sendError(
+        reply,
+        'VALIDATION_FAILED',
+        'invalid export request',
+        parsed.error.flatten(),
+      );
     }
 
     const actorHint = (request as RequestWithActor).actor;

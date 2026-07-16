@@ -73,13 +73,11 @@ describe('imports table (migration 0010)', () => {
 
   test('created_by FK is enforced (restrict)', async () => {
     await expect(
-      ctx.db
-        .insert(imports)
-        .values({
-          createdBy: '00000000-0000-4000-8000-0000000000ff',
-          filename: 'f.csv',
-          fileRef: 'r',
-        }),
+      ctx.db.insert(imports).values({
+        createdBy: '00000000-0000-4000-8000-0000000000ff',
+        filename: 'f.csv',
+        fileRef: 'r',
+      }),
     ).rejects.toThrow();
   });
 });

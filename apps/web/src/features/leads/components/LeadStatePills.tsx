@@ -18,7 +18,12 @@ interface LeadStatePillsProps {
   className?: string;
 }
 
-export function LeadStatePills({ lead, now, max = 3, className }: LeadStatePillsProps): JSX.Element | null {
+export function LeadStatePills({
+  lead,
+  now,
+  max = 3,
+  className,
+}: LeadStatePillsProps): JSX.Element | null {
   const states = deriveLeadStates(lead, now);
   if (states.length === 0) return null;
   const shown = states.slice(0, max);
@@ -28,7 +33,12 @@ export function LeadStatePills({ lead, now, max = 3, className }: LeadStatePills
       {shown.map((key) => {
         const meta = LEAD_STATE[key];
         return (
-          <StatusPill key={key} tone={meta.tone} dot {...(meta.lamp ? { className: 'lead-pill--lamp' } : {})}>
+          <StatusPill
+            key={key}
+            tone={meta.tone}
+            dot
+            {...(meta.lamp ? { className: 'lead-pill--lamp' } : {})}
+          >
             {meta.label}
           </StatusPill>
         );

@@ -58,7 +58,9 @@ export function LeadOpportunitiesCard({
           {opportunities.map((opp) => (
             <li key={opp.id} className="opp-row">
               <div className="opp-row__top">
-                <span className="opp-row__value">{formatMoneyCents(opp.valueCents, opp.currency)}</span>
+                <span className="opp-row__value">
+                  {formatMoneyCents(opp.valueCents, opp.currency)}
+                </span>
                 <StatusPill tone={statusTone(opp.status)}>{opp.status}</StatusPill>
               </div>
               <div className="opp-row__meta">

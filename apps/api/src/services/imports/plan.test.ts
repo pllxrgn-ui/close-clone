@@ -143,7 +143,10 @@ describe('buildPlan — existing-lead match + action', () => {
   const row: CsvRecord = ['Acme', 'https://acme.com', 'alice@acme.com', 'Alice', ''];
 
   test('skip: matched row writes nothing', async () => {
-    const plan = await buildPlan(recordsOf([row]), deps({ existing, dedupe: cfg({ action: 'skip' }) }));
+    const plan = await buildPlan(
+      recordsOf([row]),
+      deps({ existing, dedupe: cfg({ action: 'skip' }) }),
+    );
     expect(plan.rows[0]?.outcome).toBe('dedupe');
     expect(plan.rows[0]?.action).toBe('skip');
     expect(plan.rows[0]?.targetLeadId).toBe('EXIST-1');
@@ -159,7 +162,11 @@ describe('buildPlan — existing-lead match + action', () => {
     expect(plan.rows[0]?.action).toBe('create-anyway');
     expect(plan.rows[0]?.matchType).toBe('email');
     expect(plan.rows[0]?.targetLeadId).not.toBe('EXIST-1');
-    expect(plan.counts).toMatchObject({ leadsCreated: 1, dedupeCreateAnyway: 1, matchedByEmail: 1 });
+    expect(plan.counts).toMatchObject({
+      leadsCreated: 1,
+      dedupeCreateAnyway: 1,
+      matchedByEmail: 1,
+    });
   });
 
   test('merge-fields on an email match attaches to the lead WITHOUT a duplicate contact', async () => {
@@ -278,7 +285,10 @@ describe('buildPlan — errors and empties', () => {
 
   test('blank rows are counted as empty, not errors', async () => {
     const plan = await buildPlan(
-      recordsOf([['', '', '', '', ''], ['Acme', '', '', '', '']]),
+      recordsOf([
+        ['', '', '', '', ''],
+        ['Acme', '', '', '', ''],
+      ]),
       deps({ existing: fakeIndex({}) }),
     );
     expect(plan.rows[0]?.outcome).toBe('empty');

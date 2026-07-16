@@ -1,11 +1,7 @@
 import { eq, sql } from 'drizzle-orm';
 import type { RawEmail } from '@switchboard/shared/providers';
 import { emailAccounts, type Db } from '../../db/index.ts';
-import {
-  loadAccount,
-  type BackfillCheckpoint,
-  type SyncEngineDeps,
-} from './engine-deps.ts';
+import { loadAccount, type BackfillCheckpoint, type SyncEngineDeps } from './engine-deps.ts';
 import { ingestMessage } from './ingest.ts';
 
 /**
@@ -86,7 +82,12 @@ export async function backfillStep(
         .update(emailAccounts)
         .set({ backfillCheckpoint: null, historyCursor: page.historyId, updatedAt: sql`now()` })
         .where(eq(emailAccounts.id, accountId));
-      await deps.state.transition(accountId, 'LIVE', completionCause(options.dedupeOnly ?? false), tx);
+      await deps.state.transition(
+        accountId,
+        'LIVE',
+        completionCause(options.dedupeOnly ?? false),
+        tx,
+      );
     } else {
       const checkpoint: BackfillCheckpoint = { pageToken: nextToken, importedCount };
       await tx

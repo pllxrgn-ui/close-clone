@@ -6,7 +6,7 @@ The shared deployment is the **web app in demo mode**: the full UI (landing → 
 
 Workflow `.github/workflows/pages.yml` builds and deploys on every push to `main`.
 
-**One-time click (yours):** repo → Settings → Pages → *Build and deployment* → Source: **GitHub Actions**. That's it.
+**One-time click (yours):** repo → Settings → Pages → _Build and deployment_ → Source: **GitHub Actions**. That's it.
 
 Demo URL after the first deploy: **https://itguns.github.io/close-clone/** (share `…/close-clone/welcome` as the front door). Deep links work (SPA 404 fallback); the app is built with `VITE_BASE=/close-clone/`.
 

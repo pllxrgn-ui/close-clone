@@ -31,10 +31,7 @@ import {
  */
 
 /** Resolves best existing-lead fuzzy matches for a batch of candidate names. */
-export type FuzzyResolver = (
-  names: string[],
-  threshold: number,
-) => Promise<Map<string, string>>;
+export type FuzzyResolver = (names: string[], threshold: number) => Promise<Map<string, string>>;
 
 export interface PlanDeps {
   mapping: ImportMapping;
@@ -158,7 +155,11 @@ export async function buildPlan(
     for (const d of domains) if (!inFileDomain.has(d)) inFileDomain.set(d, leadId);
   };
 
-  const findMatch = (email: string | null, domains: string[], leadName: string | null): Match | null => {
+  const findMatch = (
+    email: string | null,
+    domains: string[],
+    leadName: string | null,
+  ): Match | null => {
     if (dedupe.matchOn.email && email !== null) {
       const hit = existing.matchByEmail(email);
       if (hit !== null) return { leadId: hit, matchType: 'email' };

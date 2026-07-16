@@ -99,14 +99,24 @@ describe('ingest → thread match', () => {
   test('single candidate lead → thread matched to it', async () => {
     const lead = await seedLead(ctx.db, 'Acme');
     await seedContact(ctx.db, lead, ['a@ext.test']);
-    await ingest(ctx.db, deps, accountId, makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Deal' }));
+    await ingest(
+      ctx.db,
+      deps,
+      accountId,
+      makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Deal' }),
+    );
     const [thread] = await threadsFor(ctx.db, accountId);
     expect(thread!.triageStatus).toBe('matched');
     expect(thread!.leadId).toBe(lead);
   });
 
   test('no candidate → ambiguous, queued for triage', async () => {
-    await ingest(ctx.db, deps, accountId, makeRaw({ rfcMessageId: '<a@x>', from: 'stranger@nowhere.test' }));
+    await ingest(
+      ctx.db,
+      deps,
+      accountId,
+      makeRaw({ rfcMessageId: '<a@x>', from: 'stranger@nowhere.test' }),
+    );
     const [thread] = await threadsFor(ctx.db, accountId);
     expect(thread!.triageStatus).toBe('ambiguous');
     expect(thread!.leadId).toBeNull();
@@ -149,13 +159,23 @@ describe('latch (protects human decisions + written activities)', () => {
     await seedContact(ctx.db, l1, ['a@ext.test']);
     await seedContact(ctx.db, l2, ['b@ext.test']);
     // A resolves to exactly L1 → matched L1.
-    await ingest(ctx.db, deps, accountId, makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Deal' }));
+    await ingest(
+      ctx.db,
+      deps,
+      accountId,
+      makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Deal' }),
+    );
     // B links into the same thread and would introduce L2 — but the latch holds.
     await ingest(
       ctx.db,
       deps,
       accountId,
-      makeRaw({ rfcMessageId: '<b@x>', from: 'b@ext.test', subject: 'Re: Deal', references: ['<a@x>'] }),
+      makeRaw({
+        rfcMessageId: '<b@x>',
+        from: 'b@ext.test',
+        subject: 'Re: Deal',
+        references: ['<a@x>'],
+      }),
     );
     const threads = await threadsFor(ctx.db, accountId);
     expect(threads).toHaveLength(1);
@@ -165,7 +185,12 @@ describe('latch (protects human decisions + written activities)', () => {
 
   test('an ignored thread is never auto-matched by a later message', async () => {
     // First message: unknown sender → ambiguous thread.
-    await ingest(ctx.db, deps, accountId, makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Intro' }));
+    await ingest(
+      ctx.db,
+      deps,
+      accountId,
+      makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Intro' }),
+    );
     const [amb] = await threadsFor(ctx.db, accountId);
     await ctx.db
       .update(emailThreads)
@@ -174,7 +199,12 @@ describe('latch (protects human decisions + written activities)', () => {
     // Now a contact exists for that sender, and a sibling message joins the thread.
     const lead = await seedLead(ctx.db, 'Acme');
     await seedContact(ctx.db, lead, ['a@ext.test']);
-    await ingest(ctx.db, deps, accountId, makeRaw({ rfcMessageId: '<b@x>', from: 'a@ext.test', subject: 'Re: Intro' }));
+    await ingest(
+      ctx.db,
+      deps,
+      accountId,
+      makeRaw({ rfcMessageId: '<b@x>', from: 'a@ext.test', subject: 'Re: Intro' }),
+    );
     const threads = await threadsFor(ctx.db, accountId);
     expect(threads).toHaveLength(1);
     expect(threads[0]!.triageStatus).toBe('ignored'); // stays ignored, not auto-matched
@@ -183,12 +213,22 @@ describe('latch (protects human decisions + written activities)', () => {
 
   test('an ambiguous thread promotes to matched once a single lead resolves', async () => {
     // Message from an unknown sender → ambiguous.
-    await ingest(ctx.db, deps, accountId, makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Intro' }));
+    await ingest(
+      ctx.db,
+      deps,
+      accountId,
+      makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Intro' }),
+    );
     expect((await threadsFor(ctx.db, accountId))[0]!.triageStatus).toBe('ambiguous');
     // The contact is created; a sibling message joins the thread and resolves L1.
     const lead = await seedLead(ctx.db, 'Acme');
     await seedContact(ctx.db, lead, ['a@ext.test']);
-    await ingest(ctx.db, deps, accountId, makeRaw({ rfcMessageId: '<b@x>', from: 'a@ext.test', subject: 'Re: Intro' }));
+    await ingest(
+      ctx.db,
+      deps,
+      accountId,
+      makeRaw({ rfcMessageId: '<b@x>', from: 'a@ext.test', subject: 'Re: Intro' }),
+    );
     const threads = await threadsFor(ctx.db, accountId);
     expect(threads).toHaveLength(1);
     expect(threads[0]!.triageStatus).toBe('matched');

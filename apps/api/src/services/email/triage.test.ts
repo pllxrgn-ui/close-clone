@@ -64,7 +64,12 @@ describe('listAmbiguousThreads', () => {
       ctx.db,
       deps,
       accountId,
-      makeRaw({ rfcMessageId: '<multi@x>', from: 'a@ext.test', cc: ['b@ext.test'], subject: 'Multi' }),
+      makeRaw({
+        rfcMessageId: '<multi@x>',
+        from: 'a@ext.test',
+        cc: ['b@ext.test'],
+        subject: 'Multi',
+      }),
     );
 
     const page = await listAmbiguousThreads(ctx.db);
@@ -144,7 +149,11 @@ describe('resolveThreadToLead', () => {
     const lead = await seedLead(ctx.db, 'Acme');
     await resolveThreadToLead(ctx.db, { threadId: thread, leadId: lead, actorId: actor });
 
-    const again = await resolveThreadToLead(ctx.db, { threadId: thread, leadId: lead, actorId: actor });
+    const again = await resolveThreadToLead(ctx.db, {
+      threadId: thread,
+      leadId: lead,
+      actorId: actor,
+    });
     expect(again.alreadyResolved).toBe(true);
     expect(again.activitiesWritten).toBe(0);
     expect(await activitiesFor(ctx.db, lead)).toHaveLength(1);
@@ -156,7 +165,11 @@ describe('resolveThreadToLead', () => {
     await ignoreThread(ctx.db, { threadId: thread, actorId: actor });
     const lead = await seedLead(ctx.db, 'Acme');
 
-    const result = await resolveThreadToLead(ctx.db, { threadId: thread, leadId: lead, actorId: actor });
+    const result = await resolveThreadToLead(ctx.db, {
+      threadId: thread,
+      leadId: lead,
+      actorId: actor,
+    });
     expect(result.triageStatus).toBe('matched');
     expect((await threadsFor(ctx.db, accountId))[0]!.leadId).toBe(lead);
   });
@@ -223,7 +236,11 @@ describe('resolveThreadToLead', () => {
 describe('ignoreThread', () => {
   test('marks an ambiguous thread ignored and audits it', async () => {
     const thread = await ambiguousThread('<a@x>', 'Spam');
-    const result = await ignoreThread(ctx.db, { threadId: thread, actorId: actor, reason: 'newsletter' });
+    const result = await ignoreThread(ctx.db, {
+      threadId: thread,
+      actorId: actor,
+      reason: 'newsletter',
+    });
     expect(result.triageStatus).toBe('ignored');
     expect(result.alreadyIgnored).toBe(false);
 

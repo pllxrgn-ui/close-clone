@@ -288,7 +288,9 @@ describe('runExport — edges and failure paths', () => {
     expect(byName(manifest, 'notes').rows).toBe(0);
     expect(await countLines(join(out, 'notes.jsonl'))).toBe(0);
     // csv still has exactly its header line.
-    const csv = readFileSync(join(out, 'notes.csv'), 'utf8').split('\n').filter((l) => l.length > 0);
+    const csv = readFileSync(join(out, 'notes.csv'), 'utf8')
+      .split('\n')
+      .filter((l) => l.length > 0);
     expect(csv).toHaveLength(1);
     expect(csv[0]?.startsWith('id,')).toBe(true);
   });
@@ -324,7 +326,9 @@ describe('runExport — edges and failure paths', () => {
   test('a bad destination (parent is a file) rejects', async () => {
     const filePath = join(dir, 'iamafile');
     writeFileSync(filePath, 'not a directory');
-    await expect(runExport(ctx.db, { outDir: join(filePath, 'sub'), format: 'jsonl' })).rejects.toThrow();
+    await expect(
+      runExport(ctx.db, { outDir: join(filePath, 'sub'), format: 'jsonl' }),
+    ).rejects.toThrow();
   });
 });
 

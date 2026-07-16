@@ -76,7 +76,8 @@ export function parseGmailPush(rawBody: string): ParsedGmailPush {
     throw new InvalidPushError('decoded notification is not JSON');
   }
   const notification = gmailNotificationSchema.safeParse(dataJson);
-  if (!notification.success) throw new InvalidPushError('notification missing emailAddress/historyId');
+  if (!notification.success)
+    throw new InvalidPushError('notification missing emailAddress/historyId');
 
   return {
     eventId: envelope.data.message.messageId,
@@ -135,10 +136,7 @@ export interface PersistResult {
  * Persist a verified push into `webhook_inbox` (unique `provider_event_id`).
  * Duplicate deliveries conflict and no-op; the caller fast-200s regardless.
  */
-export async function persistGmailPush(
-  db: Db,
-  parsed: ParsedGmailPush,
-): Promise<PersistResult> {
+export async function persistGmailPush(db: Db, parsed: ParsedGmailPush): Promise<PersistResult> {
   const inserted = await db
     .insert(webhookInbox)
     .values({

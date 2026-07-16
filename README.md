@@ -9,7 +9,7 @@
 - **Leads, contacts, opportunities** with typed custom fields, on an append-only activity timeline (the product's spine — every touch exactly once, ordered, attributed)
 - **Smart Views** — saved dynamic filters in a small query DSL (`last_contacted < 7d ago and owner in (me)`) compiled to parameterized SQL; visual builder and raw-DSL editor share one AST and can never diverge (round-trip property-tested)
 - **Gmail-model email sync engine** — history-id incremental sync as a resumable state machine; replay/reorder/duplicate any input and the state is byte-identical (property-tested with 32 seeds)
-- **Sequence engine with proven never-events** — a step *never* sends twice (transactional claim), *never* after a reply or bounce (re-checked inside the send transaction, raced adversarially), *never* to a suppressed/DNC address, *never* outside the window or over the cap — 15 adversarial interleaving properties, 8–16 workers racing every claim
+- **Sequence engine with proven never-events** — a step _never_ sends twice (transactional claim), _never_ after a reply or bounce (re-checked inside the send transaction, raced adversarially), _never_ to a suppressed/DNC address, _never_ outside the window or over the cap — 15 adversarial interleaving properties, 8–16 workers racing every claim
 - **Telephony adapter layer** — mock provider with scripted call-lifecycle webhooks; signature verification pinned to Twilio's published test vector (real Twilio adapter is next phase)
 - **CSV import** — streaming parse, typed mapping, dedupe (domain + email + trigram fuzzy name), dry-run preview, idempotent resumable commit; 10k rows in ~36s
 - **Reporting** — rep activity, currency-aware funnel, sequence performance

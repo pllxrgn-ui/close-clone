@@ -71,7 +71,10 @@ async function seedDims(): Promise<typeof dims> {
   };
 }
 
-async function seedLead(name: string, denorm?: Partial<typeof leads.$inferInsert>): Promise<string> {
+async function seedLead(
+  name: string,
+  denorm?: Partial<typeof leads.$inferInsert>,
+): Promise<string> {
   const [row] = await ctx.db
     .insert(leads)
     .values({ name, ownerId: dims.userId, statusId: dims.statusId, ...denorm })
@@ -87,8 +90,16 @@ async function seedContact(leadId: string, email: string): Promise<string> {
   return row?.id ?? '';
 }
 
-async function count(db: TestDb['db'], table: PgTable, col: PgColumn, value: string): Promise<number> {
-  const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(table).where(eq(col, value));
+async function count(
+  db: TestDb['db'],
+  table: PgTable,
+  col: PgColumn,
+  value: string,
+): Promise<number> {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(table)
+    .where(eq(col, value));
   return row?.n ?? 0;
 }
 
@@ -213,7 +224,9 @@ describe('merge-leads', () => {
       .insert(opportunities)
       .values({ leadId: loser, contactId: lc, valueCents: 5 })
       .returning({ id: opportunities.id });
-    await ctx.db.insert(activities).values({ leadId: loser, contactId: lc, type: 'sms_sent', occurredAt: T0 });
+    await ctx.db
+      .insert(activities)
+      .values({ leadId: loser, contactId: lc, type: 'sms_sent', occurredAt: T0 });
 
     const result = await mergeLeads(ctx.db, { winnerId: winner, loserId: loser });
 
@@ -225,7 +238,10 @@ describe('merge-leads', () => {
     // The merged-away contact is soft-deleted; its children re-point to the survivor.
     const [lcRow] = await ctx.db.select().from(contacts).where(eq(contacts.id, lc));
     expect(lcRow?.deletedAt).not.toBeNull();
-    const [oppRow] = await ctx.db.select().from(opportunities).where(eq(opportunities.id, opp?.id ?? ''));
+    const [oppRow] = await ctx.db
+      .select()
+      .from(opportunities)
+      .where(eq(opportunities.id, opp?.id ?? ''));
     expect(oppRow?.contactId).toBe(wc);
     const [actRow] = await ctx.db
       .select()
@@ -269,7 +285,9 @@ describe('merge-leads', () => {
 
   test('refuses to merge a lead into itself', async () => {
     const l = await seedLead('Self');
-    await expect(mergeLeads(ctx.db, { winnerId: l, loserId: l })).rejects.toBeInstanceOf(SameLeadError);
+    await expect(mergeLeads(ctx.db, { winnerId: l, loserId: l })).rejects.toBeInstanceOf(
+      SameLeadError,
+    );
   });
 
   test('refuses when a lead is missing', async () => {
@@ -402,7 +420,12 @@ describe('hard-delete-lead', () => {
 });
 
 describe('runCli exit codes', () => {
-  function sinks(): { out: string[]; err: string[]; outFn: (s: string) => void; errFn: (s: string) => void } {
+  function sinks(): {
+    out: string[];
+    err: string[];
+    outFn: (s: string) => void;
+    errFn: (s: string) => void;
+  } {
     const out: string[] = [];
     const err: string[] = [];
     return { out, err, outFn: (s) => out.push(s), errFn: (s) => err.push(s) };

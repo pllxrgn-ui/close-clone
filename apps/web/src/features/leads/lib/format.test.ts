@@ -51,8 +51,7 @@ describe('formatRelativeTime', () => {
 describe('formatDayLabel', () => {
   // Local-constructed dates keep the calendar-day comparison tz-independent.
   const localNow = new Date(2026, 6, 15, 12, 0, 0);
-  const at = (y: number, m: number, d: number, h = 9): string =>
-    new Date(y, m, d, h).toISOString();
+  const at = (y: number, m: number, d: number, h = 9): string => new Date(y, m, d, h).toISOString();
 
   test('today / yesterday / weekday / absolute buckets', () => {
     expect(formatDayLabel(at(2026, 6, 15), localNow)).toBe('Today');

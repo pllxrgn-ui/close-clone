@@ -33,7 +33,11 @@ function statusTone(label: string): StatusTone {
   return 'neutral';
 }
 
-const NEXT_ACTIONS: ReadonlyArray<{ id: string; label: string; icon: (p: { size?: number }) => JSX.Element }> = [
+const NEXT_ACTIONS: ReadonlyArray<{
+  id: string;
+  label: string;
+  icon: (p: { size?: number }) => JSX.Element;
+}> = [
   { id: 'call', label: 'Call', icon: PhoneIcon },
   { id: 'email', label: 'Email', icon: MailIcon },
   { id: 'sms', label: 'SMS', icon: MessageIcon },
@@ -86,7 +90,11 @@ export function LeadHeader({ lead, statusLabel, ownerName }: LeadHeaderProps): J
         </div>
       </div>
 
-      <div className="lead-header__actions" role="group" aria-label="Lead actions (available in Phase 4)">
+      <div
+        className="lead-header__actions"
+        role="group"
+        aria-label="Lead actions (available in Phase 4)"
+      >
         {NEXT_ACTIONS.map((action) => {
           const Icon = action.icon;
           return (

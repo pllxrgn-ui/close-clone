@@ -106,7 +106,8 @@ export class GmailEmailProvider implements EmailProvider {
     this.transport = config.transport ?? fetchTransport;
     this.now = config.now ?? (() => new Date());
     this.messageIdFactory =
-      config.messageIdFactory ?? (() => `<${randomUUID()}@${this.address.split('@')[1] ?? 'mail'}>`);
+      config.messageIdFactory ??
+      (() => `<${randomUUID()}@${this.address.split('@')[1] ?? 'mail'}>`);
   }
 
   // --- OAuth ----------------------------------------------------------------
@@ -149,7 +150,9 @@ export class GmailEmailProvider implements EmailProvider {
     if (json.access_token === undefined || json.refresh_token === undefined) {
       throw new GmailApiError(res.status, 'token response missing access/refresh token');
     }
-    const expiresAt = new Date(this.now().getTime() + (json.expires_in ?? 3600) * 1000).toISOString();
+    const expiresAt = new Date(
+      this.now().getTime() + (json.expires_in ?? 3600) * 1000,
+    ).toISOString();
     return oauthTokensSchema.parse({
       accessToken: json.access_token,
       refreshToken: json.refresh_token,
@@ -272,7 +275,8 @@ export class GmailEmailProvider implements EmailProvider {
   private async currentHistoryId(tokens: OAuthTokens): Promise<string> {
     const res = await this.get(tokens, `${API_BASE}/profile`);
     const json = this.parseOk(res) as { historyId?: string };
-    if (json.historyId === undefined) throw new GmailApiError(res.status, 'profile missing historyId');
+    if (json.historyId === undefined)
+      throw new GmailApiError(res.status, 'profile missing historyId');
     return json.historyId;
   }
 
@@ -326,7 +330,10 @@ interface GmailHistoryRecord {
   id?: string;
   messagesAdded?: { message: { id: string; threadId: string; labelIds?: string[] } }[];
   messagesDeleted?: { message: { id: string; threadId: string } }[];
-  labelsAdded?: { message: { id: string; threadId: string; labelIds?: string[] }; labelIds: string[] }[];
+  labelsAdded?: {
+    message: { id: string; threadId: string; labelIds?: string[] };
+    labelIds: string[];
+  }[];
   labelsRemoved?: {
     message: { id: string; threadId: string; labelIds?: string[] };
     labelIds: string[];
@@ -419,7 +426,8 @@ export function coalesceHistory(
     if (s.added) {
       // New message: surfaces once (final labels) iff still present; an
       // add-then-delete within the page coalesces away.
-      if (s.present) messagesAdded.push({ providerMessageId: id, threadId: s.threadId, labels: s.labels });
+      if (s.present)
+        messagesAdded.push({ providerMessageId: id, threadId: s.threadId, labels: s.labels });
       continue;
     }
     if (s.existed && !s.present) {

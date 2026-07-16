@@ -56,7 +56,10 @@ export function parseArgs(argv: readonly string[], opts: ParseOptions = {}): Par
 }
 
 /** Read a flag as a non-empty string, or `undefined` if absent/boolean/empty. */
-export function flagString(flags: Record<string, string | boolean>, name: string): string | undefined {
+export function flagString(
+  flags: Record<string, string | boolean>,
+  name: string,
+): string | undefined {
   const value = flags[name];
   if (typeof value === 'string' && value.length > 0) return value;
   return undefined;

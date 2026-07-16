@@ -43,7 +43,9 @@ async function seed(db: Db): Promise<void> {
     { entity: 'lead', key: 'industry', label: 'Industry', type: 'text' },
     { entity: 'lead', key: 'employees', label: 'Employees', type: 'number' },
   ]);
-  await db.insert(suppressions).values({ kind: 'email', value: 'sup@suppco.com', source: 'manual' });
+  await db
+    .insert(suppressions)
+    .values({ kind: 'email', value: 'sup@suppco.com', source: 'manual' });
 }
 
 function buildApp(overrides: Partial<ImportRouteDeps> = {}): FastifyInstance {
@@ -170,7 +172,8 @@ describe('imports — auth + RBAC (C8)', () => {
 });
 
 describe('imports — dry-run → commit (full flow)', () => {
-  const csv = 'Company,Website,Email\nAcme,https://acme.com,a@acme.com\nGlobex,globex.io,b@globex.io\n';
+  const csv =
+    'Company,Website,Email\nAcme,https://acme.com,a@acme.com\nGlobex,globex.io,b@globex.io\n';
 
   async function dryRun(app: FastifyInstance, id: string, mapping: unknown = MAPPING) {
     return app.inject({

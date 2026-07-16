@@ -20,7 +20,7 @@ Open http://localhost:5173/welcome — in a normal browser window, dark OS theme
 1. **The front door** (`/welcome`): let the board ignite — grid etches in, six state lamps light in sequence, headline sets. Scroll the three feature acts (live components, not screenshots). Point out: "every word and pixel here is ours."
 2. **Sign in** → dev-login (stands in for company SSO, which is the next phase).
 3. **The leads board** (`/leads`): 5,000 real rows streaming from the API — dense, virtualized, instant. The color IS information: jade = new reply, amber = overdue, red = do-not-contact. "A glance reads like a status board."
-4. **Smart Views** (sidebar): click *Overdue follow-ups*, then *High-value opportunities* — each is a saved query in our own DSL, compiled to SQL live by the engine. Open `/views/new`: build a filter visually, flip to the Raw DSL tab — same query both ways, round-trip guaranteed by 41 tests.
+4. **Smart Views** (sidebar): click _Overdue follow-ups_, then _High-value opportunities_ — each is a saved query in our own DSL, compiled to SQL live by the engine. Open `/views/new`: build a filter visually, flip to the Raw DSL tab — same query both ways, round-trip guaranteed by 41 tests.
 5. **Keyboard-first**: press `Ctrl+K` — palette opens in 0ms (deliberately — it's used hundreds of times a day). Type a lead name → Enter. Press `?` — the full shortcut map with the state legend. `J/K` walk rows.
 6. **A lead page**: the timeline — every call, email, SMS, status change as one stream. "The timeline never lies: every touch exactly once, ordered, attributed."
 
@@ -29,7 +29,7 @@ Open http://localhost:5173/welcome — in a normal browser window, dark OS theme
 7. **Scale**: `curl http://localhost:3000/api/v1/dev/ping` → 5,000 leads, 62,792 activities loaded in ~15s on a laptop, p95 reads measured in single-digit milliseconds.
 8. **The never-events** (the compliance spine): run
    `pnpm --filter @switchboard/api exec vitest run src/services/sequences/send-safety.property.test.ts`
-   — 15 adversarial properties proving: a sequence email can never send twice (8–16 workers racing one claim), never after a reply (even one arriving *during* the send), never to a suppressed or DNC address, never over the daily cap, never outside the window. "These aren't features, they're proofs — 917 tests total."
+   — 15 adversarial properties proving: a sequence email can never send twice (8–16 workers racing one claim), never after a reply (even one arriving _during_ the send), never to a suppressed or DNC address, never over the daily cap, never outside the window. "These aren't features, they're proofs — 917 tests total."
 9. **Real import**: show `POST /api/v1/imports` → dry-run → commit on a 10k-row CSV (36s, exact dedupe report) if asked about migration.
 10. **Close**: architecture slide is [ARCHITECTURE.md](ARCHITECTURE.md) §1; roadmap = Phase 3 telephony (mock already proven against Twilio's own signature vectors), inbox UI, SSO, deploy. Shareable preview: the Vercel URL (`/welcome`) in demo-data mode.
 

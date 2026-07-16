@@ -1,15 +1,7 @@
 import { and, asc, eq, ilike, isNull, or, sql, type SQL } from 'drizzle-orm';
 import type { PgTable } from 'drizzle-orm/pg-core';
 
-import {
-  activities,
-  leads,
-  notes,
-  opportunities,
-  tasks,
-  users,
-  type Db,
-} from '../db/index.ts';
+import { activities, leads, notes, opportunities, tasks, users, type Db } from '../db/index.ts';
 
 /**
  * `switchboard-admin user-lookup <emailOrName>` (Task 5g). Resolves users by
@@ -42,7 +34,10 @@ export interface UserLookupResult {
 }
 
 async function countWhere(db: Db, table: PgTable, where: SQL | undefined): Promise<number> {
-  const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(table).where(where);
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(table)
+    .where(where);
   return row?.n ?? 0;
 }
 
@@ -68,7 +63,11 @@ export async function userLookup(db: Db, query: string): Promise<UserLookupResul
       isActive: u.isActive,
       timezone: u.timezone,
       counts: {
-        leadsOwned: await countWhere(db, leads, and(eq(leads.ownerId, u.id), isNull(leads.deletedAt))),
+        leadsOwned: await countWhere(
+          db,
+          leads,
+          and(eq(leads.ownerId, u.id), isNull(leads.deletedAt)),
+        ),
         opportunitiesOwned: await countWhere(db, opportunities, eq(opportunities.ownerId, u.id)),
         activities: await countWhere(db, activities, eq(activities.userId, u.id)),
         tasksAssigned: await countWhere(db, tasks, eq(tasks.assigneeId, u.id)),

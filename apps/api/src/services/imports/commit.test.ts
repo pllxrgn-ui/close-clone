@@ -127,7 +127,12 @@ describe('commitImport — fresh commit', () => {
     const id = await insertImport(
       ctx.db,
       planOf([
-        createRow(1, { name: 'Acme', url: 'https://acme.com', email: 'a@acme.com', custom: { tier: 'Gold' } }),
+        createRow(1, {
+          name: 'Acme',
+          url: 'https://acme.com',
+          email: 'a@acme.com',
+          custom: { tier: 'Gold' },
+        }),
         createRow(2, { name: 'Globex', email: 'b@globex.io' }),
         createRow(3, { name: 'Initech' }),
       ]),
@@ -157,7 +162,10 @@ describe('commitImport — fresh commit', () => {
 
 describe('commitImport — idempotency (CONFLICT, never duplicate rows)', () => {
   test('re-committing a committed import throws AlreadyCommittedError and writes nothing new', async () => {
-    const id = await insertImport(ctx.db, planOf([createRow(1, { name: 'Acme', email: 'a@acme.com' })]));
+    const id = await insertImport(
+      ctx.db,
+      planOf([createRow(1, { name: 'Acme', email: 'a@acme.com' })]),
+    );
     await commitImport(ctx.db, id);
     expect(await count(ctx.db, 'leads')).toBe(1);
 
@@ -196,7 +204,9 @@ describe('commitImport — idempotency (CONFLICT, never duplicate rows)', () => 
       .insert(imports)
       .values({ createdBy: USER, filename: 'f.csv', fileRef: 'r', status: 'uploaded' })
       .returning({ id: imports.id });
-    await expect(commitImport(ctx.db, row?.id ?? '')).rejects.toBeInstanceOf(ImportNotCommittableError);
+    await expect(commitImport(ctx.db, row?.id ?? '')).rejects.toBeInstanceOf(
+      ImportNotCommittableError,
+    );
   });
 });
 
@@ -250,7 +260,9 @@ describe('commitImport — crash/resume from checkpoint', () => {
 describe('commitImport — merge-fields', () => {
   test('fills empty lead fields + attaches a contact without emitting lead_created', async () => {
     const existingLeadId = randomUUID();
-    await ctx.db.insert(leads).values({ id: existingLeadId, name: 'Acme', url: null, custom: { a: 1 } });
+    await ctx.db
+      .insert(leads)
+      .values({ id: existingLeadId, name: 'Acme', url: null, custom: { a: 1 } });
 
     const mergeRow: RowPlan = {
       rowIndex: 1,

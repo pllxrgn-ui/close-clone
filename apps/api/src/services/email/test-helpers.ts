@@ -45,7 +45,10 @@ export async function seedLead(db: Db, name = 'Acme'): Promise<string> {
 }
 
 export async function softDeleteLead(db: Db, leadId: string): Promise<void> {
-  await db.update(leads).set({ deletedAt: sql`now()` }).where(eq(leads.id, leadId));
+  await db
+    .update(leads)
+    .set({ deletedAt: sql`now()` })
+    .where(eq(leads.id, leadId));
 }
 
 export async function seedContact(
@@ -66,7 +69,11 @@ export async function seedContact(
   return rows[0]!.id;
 }
 
-export async function seedAccount(db: Db, userId: string, address = 'rep@mock.test'): Promise<string> {
+export async function seedAccount(
+  db: Db,
+  userId: string,
+  address = 'rep@mock.test',
+): Promise<string> {
   const rows = await db
     .insert(emailAccounts)
     .values({ userId, address, provider: 'mock', syncStatus: 'LIVE' })
@@ -161,11 +168,16 @@ export async function threadsFor(db: Db, accountId: string): Promise<ThreadSnaps
   }));
 }
 
-export async function activitiesFor(db: Db, leadId: string): Promise<
-  { type: string; occurredAt: string; emailMessageId: string | null }[]
-> {
+export async function activitiesFor(
+  db: Db,
+  leadId: string,
+): Promise<{ type: string; occurredAt: string; emailMessageId: string | null }[]> {
   const rows = await db
-    .select({ type: activities.type, occurredAt: activities.occurredAt, payload: activities.payload })
+    .select({
+      type: activities.type,
+      occurredAt: activities.occurredAt,
+      payload: activities.payload,
+    })
     .from(activities)
     .where(eq(activities.leadId, leadId))
     .orderBy(asc(activities.occurredAt), asc(activities.type));
@@ -182,7 +194,11 @@ export async function activitiesFor(db: Db, leadId: string): Promise<
 export async function leadTouch(
   db: Db,
   leadId: string,
-): Promise<{ lastEmailAt: string | null; lastInboundAt: string | null; lastContactedAt: string | null }> {
+): Promise<{
+  lastEmailAt: string | null;
+  lastInboundAt: string | null;
+  lastContactedAt: string | null;
+}> {
   const rows = await db
     .select({
       lastEmailAt: leads.lastEmailAt,

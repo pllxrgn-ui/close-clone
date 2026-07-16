@@ -1,11 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { render } from '@testing-library/react';
-import {
-  COLUMN_DEFS,
-  DEFAULT_COLUMN_KEYS,
-  compareByColumn,
-  resolveColumns,
-} from './columns.tsx';
+import { COLUMN_DEFS, DEFAULT_COLUMN_KEYS, compareByColumn, resolveColumns } from './columns.tsx';
 import type { ColumnCtx } from './columns.tsx';
 import { REF_NOW, daysAgo, hoursAgo, makeLead } from '../test/factories.ts';
 
@@ -55,7 +50,11 @@ describe('resolveColumns', () => {
 
 describe('compareByColumn', () => {
   test('sorts by name ascending and descending', () => {
-    const leads = [makeLead({ name: 'Cedar' }), makeLead({ name: 'Apex' }), makeLead({ name: 'Bright' })];
+    const leads = [
+      makeLead({ name: 'Cedar' }),
+      makeLead({ name: 'Apex' }),
+      makeLead({ name: 'Bright' }),
+    ];
     const asc = [...leads].sort(compareByColumn(COLUMN_DEFS.name!, 'asc', ctx));
     expect(asc.map((l) => l.name)).toEqual(['Apex', 'Bright', 'Cedar']);
     const desc = [...leads].sort(compareByColumn(COLUMN_DEFS.name!, 'desc', ctx));
@@ -77,9 +76,7 @@ describe('compareByColumn', () => {
 
 describe('cell rendering', () => {
   test('owner cell shows initials and name', () => {
-    const { container } = render(
-      <>{COLUMN_DEFS.owner!.render(makeLead({ ownerId: 'x' }), ctx)}</>,
-    );
+    const { container } = render(<>{COLUMN_DEFS.owner!.render(makeLead({ ownerId: 'x' }), ctx)}</>);
     expect(container.textContent).toContain('Ben Reyes');
     expect(container.textContent).toContain('BR');
   });

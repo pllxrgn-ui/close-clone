@@ -5,11 +5,7 @@
  * without a queue — 2e's QueueDriver wires the wake-ups.
  */
 
-export {
-  SyncStateService,
-  isLegalTransition,
-  type TransitionResult,
-} from './state.ts';
+export { SyncStateService, isLegalTransition, type TransitionResult } from './state.ts';
 export {
   SyncError,
   AccountNotFoundError,

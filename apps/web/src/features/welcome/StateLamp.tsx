@@ -40,10 +40,7 @@ export function StateLamp({
   }
 
   return (
-    <span
-      className={cx('sb-welcome__lamp', `sb-welcome__lamp--${state}`, className)}
-      style={style}
-    >
+    <span className={cx('sb-welcome__lamp', `sb-welcome__lamp--${state}`, className)} style={style}>
       <span className="sb-welcome__lamp-dot" aria-hidden="true" />
       <span className="sb-welcome__lamp-word">{word}</span>
     </span>

@@ -114,7 +114,10 @@ export interface HardDeleteResult {
 const LIVE_STATES = ['active', 'paused'] as const;
 
 async function countBy(db: Db, table: PgTable, col: PgColumn, value: string): Promise<number> {
-  const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(table).where(eq(col, value));
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(table)
+    .where(eq(col, value));
   return row?.n ?? 0;
 }
 

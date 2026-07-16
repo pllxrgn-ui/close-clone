@@ -56,7 +56,12 @@ describe('pure helpers', () => {
 
 describe('RFC 5322 linkage', () => {
   test('In-Reply-To joins the parent thread', async () => {
-    await ingest(ctx.db, deps, accountId, makeRaw({ rfcMessageId: '<a@x>', threadId: 'p-1', subject: 'Intro' }));
+    await ingest(
+      ctx.db,
+      deps,
+      accountId,
+      makeRaw({ rfcMessageId: '<a@x>', threadId: 'p-1', subject: 'Intro' }),
+    );
     await ingest(
       ctx.db,
       deps,
@@ -69,12 +74,22 @@ describe('RFC 5322 linkage', () => {
   });
 
   test('References joins even when subject and participants differ', async () => {
-    await ingest(ctx.db, deps, accountId, makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Alpha' }));
     await ingest(
       ctx.db,
       deps,
       accountId,
-      makeRaw({ rfcMessageId: '<b@x>', from: 'zzz@other.test', subject: 'Totally Different', references: ['<a@x>'] }),
+      makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Alpha' }),
+    );
+    await ingest(
+      ctx.db,
+      deps,
+      accountId,
+      makeRaw({
+        rfcMessageId: '<b@x>',
+        from: 'zzz@other.test',
+        subject: 'Totally Different',
+        references: ['<a@x>'],
+      }),
     );
     const threads = await threadsFor(ctx.db, accountId);
     expect(threads).toHaveLength(1);
@@ -99,15 +114,30 @@ describe('RFC 5322 linkage', () => {
   });
 
   test('a bridging message MERGES two previously separate threads', async () => {
-    await ingest(ctx.db, deps, accountId, makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Alpha' }));
-    await ingest(ctx.db, deps, accountId, makeRaw({ rfcMessageId: '<c@x>', from: 'c@ext.test', subject: 'Gamma' }));
+    await ingest(
+      ctx.db,
+      deps,
+      accountId,
+      makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Alpha' }),
+    );
+    await ingest(
+      ctx.db,
+      deps,
+      accountId,
+      makeRaw({ rfcMessageId: '<c@x>', from: 'c@ext.test', subject: 'Gamma' }),
+    );
     expect(await threadsFor(ctx.db, accountId)).toHaveLength(2);
     // B references BOTH — the two threads collapse into one.
     await ingest(
       ctx.db,
       deps,
       accountId,
-      makeRaw({ rfcMessageId: '<b@x>', from: 'b@ext.test', subject: 'Re: Alpha', references: ['<a@x>', '<c@x>'] }),
+      makeRaw({
+        rfcMessageId: '<b@x>',
+        from: 'b@ext.test',
+        subject: 'Re: Alpha',
+        references: ['<a@x>', '<c@x>'],
+      }),
     );
     const threads = await threadsFor(ctx.db, accountId);
     expect(threads).toHaveLength(1);
@@ -117,22 +147,52 @@ describe('RFC 5322 linkage', () => {
 
 describe('subject + participant fallback', () => {
   test('same normalized subject AND participant set groups without RFC linkage', async () => {
-    await ingest(ctx.db, deps, accountId, makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Intro' }));
-    await ingest(ctx.db, deps, accountId, makeRaw({ rfcMessageId: '<b@x>', from: 'a@ext.test', subject: 'Re: Intro' }));
+    await ingest(
+      ctx.db,
+      deps,
+      accountId,
+      makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Intro' }),
+    );
+    await ingest(
+      ctx.db,
+      deps,
+      accountId,
+      makeRaw({ rfcMessageId: '<b@x>', from: 'a@ext.test', subject: 'Re: Intro' }),
+    );
     const threads = await threadsFor(ctx.db, accountId);
     expect(threads).toHaveLength(1);
     expect(threads[0]!.subjectNorm).toBe('intro');
   });
 
   test('same subject but DIFFERENT participants stays separate', async () => {
-    await ingest(ctx.db, deps, accountId, makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Intro' }));
-    await ingest(ctx.db, deps, accountId, makeRaw({ rfcMessageId: '<b@x>', from: 'b@ext.test', subject: 'Intro' }));
+    await ingest(
+      ctx.db,
+      deps,
+      accountId,
+      makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Intro' }),
+    );
+    await ingest(
+      ctx.db,
+      deps,
+      accountId,
+      makeRaw({ rfcMessageId: '<b@x>', from: 'b@ext.test', subject: 'Intro' }),
+    );
     expect(await threadsFor(ctx.db, accountId)).toHaveLength(2);
   });
 
   test('same participants but DIFFERENT subject stays separate', async () => {
-    await ingest(ctx.db, deps, accountId, makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Intro' }));
-    await ingest(ctx.db, deps, accountId, makeRaw({ rfcMessageId: '<b@x>', from: 'a@ext.test', subject: 'Pricing' }));
+    await ingest(
+      ctx.db,
+      deps,
+      accountId,
+      makeRaw({ rfcMessageId: '<a@x>', from: 'a@ext.test', subject: 'Intro' }),
+    );
+    await ingest(
+      ctx.db,
+      deps,
+      accountId,
+      makeRaw({ rfcMessageId: '<b@x>', from: 'a@ext.test', subject: 'Pricing' }),
+    );
     expect(await threadsFor(ctx.db, accountId)).toHaveLength(2);
   });
 });
@@ -140,8 +200,23 @@ describe('subject + participant fallback', () => {
 describe('determinism + provider-thread folding', () => {
   test('provider_thread_id folds to LEAST across a fallback-grouped thread', async () => {
     // Two messages the provider split (different thread ids) but that fallback-group.
-    await ingest(ctx.db, deps, accountId, makeRaw({ rfcMessageId: '<a@x>', threadId: 't-zzz', from: 'a@ext.test', subject: 'Intro' }));
-    await ingest(ctx.db, deps, accountId, makeRaw({ rfcMessageId: '<b@x>', threadId: 't-aaa', from: 'a@ext.test', subject: 'Re: Intro' }));
+    await ingest(
+      ctx.db,
+      deps,
+      accountId,
+      makeRaw({ rfcMessageId: '<a@x>', threadId: 't-zzz', from: 'a@ext.test', subject: 'Intro' }),
+    );
+    await ingest(
+      ctx.db,
+      deps,
+      accountId,
+      makeRaw({
+        rfcMessageId: '<b@x>',
+        threadId: 't-aaa',
+        from: 'a@ext.test',
+        subject: 'Re: Intro',
+      }),
+    );
     const threads = await threadsFor(ctx.db, accountId);
     expect(threads).toHaveLength(1);
     expect(threads[0]!.providerThreadId).toBe('t-aaa'); // least of {t-aaa, t-zzz}
@@ -150,9 +225,20 @@ describe('determinism + provider-thread folding', () => {
   test('final grouping is identical regardless of arrival order', async () => {
     const raws = [
       makeRaw({ rfcMessageId: '<a@x>', threadId: 't-1', from: 'a@ext.test', subject: 'Intro' }),
-      makeRaw({ rfcMessageId: '<b@x>', threadId: 't-1b', from: 'a@ext.test', subject: 'Re: Intro' }),
+      makeRaw({
+        rfcMessageId: '<b@x>',
+        threadId: 't-1b',
+        from: 'a@ext.test',
+        subject: 'Re: Intro',
+      }),
       makeRaw({ rfcMessageId: '<c@x>', threadId: 't-2', from: 'c@ext.test', subject: 'Quote' }),
-      makeRaw({ rfcMessageId: '<d@x>', threadId: 't-3', from: 'd@ext.test', subject: 'Demo', references: ['<c@x>'] }),
+      makeRaw({
+        rfcMessageId: '<d@x>',
+        threadId: 't-3',
+        from: 'd@ext.test',
+        subject: 'Demo',
+        references: ['<c@x>'],
+      }),
     ];
 
     // Order 1: natural.
@@ -164,7 +250,8 @@ describe('determinism + provider-thread folding', () => {
     try {
       const u2 = await seedUser(ctx2.db, { email: 'rep-shuffle@example.com' });
       const acc2 = await seedAccount(ctx2.db, u2);
-      for (const r of [raws[3]!, raws[1]!, raws[2]!, raws[0]!]) await ingest(ctx2.db, deps, acc2, r);
+      for (const r of [raws[3]!, raws[1]!, raws[2]!, raws[0]!])
+        await ingest(ctx2.db, deps, acc2, r);
       const reversed = shape(await threadsFor(ctx2.db, acc2));
       expect(reversed).toEqual(natural);
     } finally {

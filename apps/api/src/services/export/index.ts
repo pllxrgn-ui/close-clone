@@ -16,11 +16,7 @@ export {
   type ExportManifest,
 } from './exporter.ts';
 
-export {
-  EXPORT_ENTITIES,
-  type ExportEntity,
-  type CustomEntity,
-} from './entities.ts';
+export { EXPORT_ENTITIES, type ExportEntity, type CustomEntity } from './entities.ts';
 
 export {
   csvField,

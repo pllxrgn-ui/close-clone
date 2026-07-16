@@ -9,44 +9,48 @@ A patch-bay for deals on a live board. Graphite instrument surfaces and condense
 ## 2. Tokens (source of truth: `apps/web/src/styles/tokens.css`)
 
 ### Surfaces & ink (dark / light)
-| Token | Dark | Light |
-|---|---|---|
-| `--bg` (app) | `#141719` | `#ECEDEB` |
-| `--panel` | `#1B1F23` | `#F7F7F5` |
+
+| Token            | Dark      | Light     |
+| ---------------- | --------- | --------- |
+| `--bg` (app)     | `#141719` | `#ECEDEB` |
+| `--panel`        | `#1B1F23` | `#F7F7F5` |
 | `--panel-raised` | `#22272C` | `#FFFFFF` |
-| `--line` | `#30363C` | `#D4D6D3` |
-| `--ink` | `#E8EBEC` | `#1B1E20` |
-| `--ink-dim` | `#8C949C` | `#5A6065` |
-| `--focus` | `#56C8FF` | `#0B7FC4` |
+| `--line`         | `#30363C` | `#D4D6D3` |
+| `--ink`          | `#E8EBEC` | `#1B1E20` |
+| `--ink-dim`      | `#8C949C` | `#5A6065` |
+| `--focus`        | `#56C8FF` | `#0B7FC4` |
 
 ### State (the entire color budget; AA on both grounds)
-| Token | Dark | Light | Meaning |
-|---|---|---|---|
-| `--state-reply` | `#2EE6A8` | `#0E7A57` | new inbound / needs answer |
-| `--state-overdue` | `#FFB224` | `#8F5B00` | overdue task / SLA breach |
-| `--state-seq` | `#B18CFF` | `#5A3EA6` | in sequence / automated touch |
-| `--state-dnc` | `#FF4F66` | `#B01E33` | DNC / suppressed — hard stop |
-| `--state-live` | `#56C8FF` | `#0B7FC4` | live call / active selection |
-| `--state-idle` | `#4A5258` | `#9AA0A3` | no signal |
+
+| Token             | Dark      | Light     | Meaning                       |
+| ----------------- | --------- | --------- | ----------------------------- |
+| `--state-reply`   | `#2EE6A8` | `#0E7A57` | new inbound / needs answer    |
+| `--state-overdue` | `#FFB224` | `#8F5B00` | overdue task / SLA breach     |
+| `--state-seq`     | `#B18CFF` | `#5A3EA6` | in sequence / automated touch |
+| `--state-dnc`     | `#FF4F66` | `#B01E33` | DNC / suppressed — hard stop  |
+| `--state-live`    | `#56C8FF` | `#0B7FC4` | live call / active selection  |
+| `--state-idle`    | `#4A5258` | `#9AA0A3` | no signal                     |
 
 Glow (`box-shadow: 0 0 8px currentColor`) is reserved for lamps whose state demands attention (reply, live); overdue/seq/dnc are flat. Light theme: lamps are solid dots, no glow — printed, not lit.
 
 ### Geometry & density
+
 Radii: 2px (inputs, buttons), 0px (panels, rows — square jacks). Row height 36px dense default / 44px comfortable toggle. Spacing scale 4/8/12/16/24/32. Grid texture (C's 44px etched grid) appears ONLY on the landing hero and board/section headers — never behind data.
 
 ## 3. Type
 
-| Role | Face (self-hosted; no CDN) | Fallback until fonts land |
-|---|---|---|
-| Display (big numbers, hero, section heads) | **IBM Plex Sans Condensed** 600/700 | Arial Narrow |
-| Body / UI | **Inter** 400/500/650 | Segoe UI / system-ui |
-| Data (ids, timestamps, amounts, kbd) | **JetBrains Mono** 400/600 | Consolas |
+| Role                                       | Face (self-hosted; no CDN)          | Fallback until fonts land |
+| ------------------------------------------ | ----------------------------------- | ------------------------- |
+| Display (big numbers, hero, section heads) | **IBM Plex Sans Condensed** 600/700 | Arial Narrow              |
+| Body / UI                                  | **Inter** 400/500/650               | Segoe UI / system-ui      |
+| Data (ids, timestamps, amounts, kbd)       | **JetBrains Mono** 400/600          | Consolas                  |
 
 `font-variant-numeric: tabular-nums` wherever digits align. Wide-tracked uppercase (`.14–.28em`) for section labels and state words only. Body measure ≤ 65ch in prose surfaces.
 
 ## 4. Motion law (product register)
 
 Normative, from emil-design-eng — violations are review-blockers:
+
 - **Never animate keyboard-initiated actions.** Command palette, `J/K` navigation, shortcut-driven view switches: 0ms, ever. (Raycast rule.)
 - Only `transform` + `opacity`; no casual layout-property animation (use grid-rows/FLIP for expansion).
 - Curves: `--ease-out: cubic-bezier(0.23,1,0.32,1)`; `--ease-in-out: cubic-bezier(0.77,0,0.175,1)`. Never `ease-in`, never bounce/elastic.

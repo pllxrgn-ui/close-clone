@@ -161,9 +161,7 @@ export function LeadsSurface({ viewId }: LeadsSurfaceProps): JSX.Element {
 
   // ── Table-area status flags ───────────────────────────────────────────────
   const refLoading = usersQuery.isLoading || statusesQuery.isLoading;
-  const dataError = viewId
-    ? (activeViewQuery.error ?? previewQuery.error)
-    : allLeadsQuery.error;
+  const dataError = viewId ? (activeViewQuery.error ?? previewQuery.error) : allLeadsQuery.error;
   const dataLoading = viewId
     ? activeViewQuery.isLoading || previewQuery.isLoading
     : allLeadsQuery.isLoading;
@@ -234,9 +232,7 @@ export function LeadsSurface({ viewId }: LeadsSurfaceProps): JSX.Element {
               description={errorMessage(dataError)}
               actions={
                 <Button
-                  onClick={() =>
-                    void (viewId ? previewQuery.refetch() : allLeadsQuery.refetch())
-                  }
+                  onClick={() => void (viewId ? previewQuery.refetch() : allLeadsQuery.refetch())}
                 >
                   Retry
                 </Button>
@@ -268,7 +264,9 @@ export function LeadsSurface({ viewId }: LeadsSurfaceProps): JSX.Element {
               sort={sort}
               onSortChange={(key) =>
                 setSort((s) =>
-                  s?.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' },
+                  s?.key === key
+                    ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' }
+                    : { key, dir: 'asc' },
                 )
               }
               selectedIds={selected}

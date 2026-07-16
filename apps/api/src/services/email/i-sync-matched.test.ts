@@ -95,7 +95,11 @@ type Scenario = (p: MockEmailProvider, e: SyncEngineDeps, id: string) => Promise
 async function runScenario(scenario: Scenario): Promise<Dump> {
   const ctx: TestDb = await createTestDb();
   try {
-    const provider = new MockEmailProvider({ address: ADDRESS, backfillPageSize: 2, historyPageSize: 2 });
+    const provider = new MockEmailProvider({
+      address: ADDRESS,
+      backfillPageSize: 2,
+      historyPageSize: 2,
+    });
     const userId = await seedUser(ctx.db, `${scenario.name || 'anon'}@example.com`);
     const leadId = await seedLead(ctx.db, `Lead-${scenario.name}`);
     await seedContact(ctx.db, leadId, [CONTACT]);
@@ -146,7 +150,11 @@ async function batched(p: MockEmailProvider, e: SyncEngineDeps, id: string): Pro
   await incrementalPull(e, id);
 }
 
-async function pushDuringBackfill(p: MockEmailProvider, e: SyncEngineDeps, id: string): Promise<void> {
+async function pushDuringBackfill(
+  p: MockEmailProvider,
+  e: SyncEngineDeps,
+  id: string,
+): Promise<void> {
   inject(p, MSGS[0]!);
   inject(p, MSGS[1]!);
   inject(p, MSGS[2]!); // present before backfill
@@ -166,13 +174,19 @@ describe('I-SYNC with real matching: activities are exactly-once and order-indep
     // The baseline actually matched (not silently ambiguous): 3 threads, all
     // matched to the lead, and one email_received per message.
     expect(baseline.threads).toHaveLength(3);
-    expect(baseline.threads.every((t) => (t as { matched_to_lead: boolean }).matched_to_lead)).toBe(true);
+    expect(baseline.threads.every((t) => (t as { matched_to_lead: boolean }).matched_to_lead)).toBe(
+      true,
+    );
     expect(baseline.activities).toHaveLength(4);
-    expect(baseline.activities.every((a) => (a as { type: string }).type === 'email_received')).toBe(true);
+    expect(
+      baseline.activities.every((a) => (a as { type: string }).type === 'email_received'),
+    ).toBe(true);
 
     for (const scenario of [replayHeavy, batched, pushDuringBackfill]) {
       const got = await runScenario(scenario);
-      expect(got, `scenario ${scenario.name} must match the clean matched baseline`).toEqual(baseline);
+      expect(got, `scenario ${scenario.name} must match the clean matched baseline`).toEqual(
+        baseline,
+      );
     }
   }, 120_000);
 });

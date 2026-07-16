@@ -6,7 +6,11 @@ import { ApiError } from '../../../api/index.ts';
 import { getLead, getLeadTimeline } from '../../../api/leads.ts';
 import { listLeadStatuses, listUsers } from '../../../api/reference.ts';
 import { Button, EmptyState, Spinner } from '../../../ui/index.ts';
-import { listLeadContacts, listLeadOpportunities, listOpportunityStages } from '../api/leadDetail.ts';
+import {
+  listLeadContacts,
+  listLeadOpportunities,
+  listOpportunityStages,
+} from '../api/leadDetail.ts';
 import { LeadHeader } from './LeadHeader.tsx';
 import { Timeline } from './Timeline.tsx';
 import { LeadContactsCard } from './LeadContactsCard.tsx';
@@ -46,7 +50,10 @@ export function LeadDetail({ leadId }: LeadDetailProps): JSX.Element {
   const timelineQuery = useInfiniteQuery({
     queryKey: ['lead-timeline', leadId],
     queryFn: ({ pageParam }) =>
-      getLeadTimeline(leadId, pageParam ? { cursor: pageParam, limit: TIMELINE_PAGE } : { limit: TIMELINE_PAGE }),
+      getLeadTimeline(
+        leadId,
+        pageParam ? { cursor: pageParam, limit: TIMELINE_PAGE } : { limit: TIMELINE_PAGE },
+      ),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.nextCursor,
   });
@@ -86,7 +93,9 @@ export function LeadDetail({ leadId }: LeadDetailProps): JSX.Element {
       <div className="lead-detail">
         <EmptyState
           title={notFound ? 'Lead not found' : 'Couldn’t load this lead'}
-          description={notFound ? 'It may have been merged or deleted.' : describeError(leadQuery.error)}
+          description={
+            notFound ? 'It may have been merged or deleted.' : describeError(leadQuery.error)
+          }
           actions={
             notFound ? (
               <Link className="sb-btn" to="/leads">
@@ -106,7 +115,11 @@ export function LeadDetail({ leadId }: LeadDetailProps): JSX.Element {
 
   return (
     <div className="lead-detail">
-      <LeadHeader lead={lead} statusLabel={statusLabel(lead.statusId)} ownerName={userName(lead.ownerId)} />
+      <LeadHeader
+        lead={lead}
+        statusLabel={statusLabel(lead.statusId)}
+        ownerName={userName(lead.ownerId)}
+      />
 
       <div className="lead-detail__body">
         <main className="lead-detail__center" aria-label="Activity timeline">

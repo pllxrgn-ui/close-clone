@@ -89,7 +89,9 @@ export interface DryRunInput {
 /** Parse the raw request bodies for dry-run (mapping + optional dedupe config). */
 export function parseDryRunBody(body: unknown): DryRunInput {
   const shape = importMappingSchema.parse((body as { mapping?: unknown } | null)?.mapping);
-  const dedupe = dedupeConfigSchema.parse((body as { dedupeConfig?: unknown } | null)?.dedupeConfig ?? {});
+  const dedupe = dedupeConfigSchema.parse(
+    (body as { dedupeConfig?: unknown } | null)?.dedupeConfig ?? {},
+  );
   return { mapping: shape, dedupe };
 }
 

@@ -11,18 +11,16 @@ import {
 
 /** Point window.matchMedia at a fixed answer for the reduced-motion query. */
 function stubReducedMotion(matches: boolean): void {
-  vi.spyOn(window, 'matchMedia').mockImplementation(
-    (query: string): MediaQueryList => ({
-      matches: query.includes('prefers-reduced-motion') ? matches : false,
-      media: query,
-      onchange: null,
-      addEventListener: () => undefined,
-      removeEventListener: () => undefined,
-      addListener: () => undefined,
-      removeListener: () => undefined,
-      dispatchEvent: () => false,
-    }),
-  );
+  vi.spyOn(window, 'matchMedia').mockImplementation((query: string): MediaQueryList => ({
+    matches: query.includes('prefers-reduced-motion') ? matches : false,
+    media: query,
+    onchange: null,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+    addListener: () => undefined,
+    removeListener: () => undefined,
+    dispatchEvent: () => false,
+  }));
 }
 
 beforeEach(() => {
