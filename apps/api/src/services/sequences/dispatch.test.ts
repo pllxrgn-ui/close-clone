@@ -6,7 +6,6 @@ import { enrollContacts } from './enrollment.ts';
 import { processIntent } from './dispatch.ts';
 import { registerSequenceWorker } from './worker.ts';
 import {
-  activityTypes,
   countActivities,
   enrollmentState,
   intentState,

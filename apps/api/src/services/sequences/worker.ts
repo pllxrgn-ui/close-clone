@@ -11,7 +11,7 @@ import { SEND_JOB_NAME } from './job-names.ts';
  * No enums / namespaces / parameter properties (host type-stripping constraint).
  */
 
-export interface SequenceWorkerDeps extends DispatchDeps {}
+export type SequenceWorkerDeps = DispatchDeps;
 
 /** Register the queue processor. Idempotent (driver keeps the last processor). */
 export function registerSequenceWorker(deps: SequenceWorkerDeps): void {

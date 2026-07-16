@@ -130,7 +130,7 @@ export async function seedAccount(
 
 export async function seedTemplate(
   db: Db,
-  ownerId: string,
+  ownerId?: string,
   opts: { subject?: string; body?: string } = {},
 ): Promise<string> {
   const rows = await db
@@ -140,7 +140,7 @@ export async function seedTemplate(
       channel: 'email',
       subject: opts.subject ?? 'Hi {{contact.name}}',
       body: opts.body ?? 'Hello {{lead.name}}',
-      ownerId,
+      ...(ownerId !== undefined ? { ownerId } : {}),
       shared: false,
     })
     .returning({ id: templates.id });

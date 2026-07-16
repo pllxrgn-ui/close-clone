@@ -10,7 +10,7 @@ import type { QueueJob } from './driver.ts';
 
 describe('InProcessQueueDriver (manual mode)', () => {
   test('does not fire a delayed job until its due time', async () => {
-    let clock = 1000;
+    const clock = 1000;
     const d = new InProcessQueueDriver({ now: () => clock });
     const seen: string[] = [];
     d.process(async (job) => {
@@ -39,7 +39,7 @@ describe('InProcessQueueDriver (manual mode)', () => {
   });
 
   test('runs due jobs in fireAt order', async () => {
-    let clock = 0;
+    const clock = 0;
     const d = new InProcessQueueDriver({ now: () => clock });
     const order: string[] = [];
     d.process(async (job: QueueJob) => {
@@ -53,7 +53,7 @@ describe('InProcessQueueDriver (manual mode)', () => {
   });
 
   test('a job re-enqueued with a fresh id after firing runs again', async () => {
-    let clock = 0;
+    const clock = 0;
     const d = new InProcessQueueDriver({ now: () => clock });
     let runs = 0;
     d.process(async () => {

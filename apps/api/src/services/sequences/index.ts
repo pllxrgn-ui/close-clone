@@ -79,4 +79,22 @@ export {
   type SendingWindow,
 } from './window.ts';
 
+export {
+  createSequence,
+  getSequence,
+  listSequences,
+  updateSequence,
+  enrollmentsForSequence,
+  intentSummary,
+  type CreateSequenceInput,
+  type UpdateSequenceInput,
+  type ListSequencesOptions,
+  type ListSequencesResult,
+  type SequenceWithSteps,
+  type SequenceRow,
+  type SequenceStepRow,
+  type StepInput,
+  type StepType,
+} from './crud.ts';
+
 export { SEND_JOB_NAME, wakeupJobId } from './job-names.ts';

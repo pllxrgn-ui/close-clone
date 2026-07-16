@@ -8,6 +8,8 @@ import { registerTemplateRoutes } from './templates.ts';
 import { registerSnippetRoutes } from './snippets.ts';
 import { registerEmailThreadRoutes } from './email-threads.ts';
 import { registerEmailSendRoutes, type EmailSendRouteDeps } from './email-send.ts';
+import { registerSequenceRoutes, type SequenceRouteDeps } from './sequences.ts';
+import { registerUnsubscribeRoutes, type UnsubscribeRouteDeps } from './unsubscribe.ts';
 
 /**
  * REST route registration (CONTRACTS §C7). This is the repo's single entry point
@@ -27,6 +29,10 @@ export interface RouteDeps {
   email?: EmailRouteDeps;
   /** Per-account send-from deps (providerFor + cipher); `db` is reused from above. */
   emailSend?: Omit<EmailSendRouteDeps, 'db'>;
+  /** Sequence engine deps (enroll uses `queue` + `now`); `db` reused from above. */
+  sequences?: Omit<SequenceRouteDeps, 'db'>;
+  /** Public one-click unsubscribe (needs the List-Unsubscribe token secret). */
+  unsubscribe?: Omit<UnsubscribeRouteDeps, 'db'>;
 }
 
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
@@ -43,6 +49,12 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       cipher: deps.emailSend.cipher,
     });
   }
+  if (deps.sequences !== undefined) {
+    registerSequenceRoutes(app, { db: deps.db, queue: deps.sequences.queue, now: deps.sequences.now });
+  }
+  if (deps.unsubscribe !== undefined) {
+    registerUnsubscribeRoutes(app, { db: deps.db, secret: deps.unsubscribe.secret });
+  }
 }
 
 export { registerEmailSyncRoutes, type EmailRouteDeps } from './email-sync.ts';
@@ -51,4 +63,6 @@ export { registerTemplateRoutes, type TemplateRouteDeps } from './templates.ts';
 export { registerSnippetRoutes, type SnippetRouteDeps } from './snippets.ts';
 export { registerEmailThreadRoutes, type EmailThreadRouteDeps } from './email-threads.ts';
 export { registerEmailSendRoutes, type EmailSendRouteDeps } from './email-send.ts';
+export { registerSequenceRoutes, type SequenceRouteDeps } from './sequences.ts';
+export { registerUnsubscribeRoutes, type UnsubscribeRouteDeps } from './unsubscribe.ts';
 export { sendError, ERROR_STATUS, type ErrorCode, type ErrorEnvelope } from './http.ts';

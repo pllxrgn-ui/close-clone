@@ -127,8 +127,13 @@ describe('reply during the claim window (phase B)', () => {
     let paused = false;
     const wrappingFor = (identity: { address: string; provider: 'gmail' | 'mock' }): EmailProvider => {
       const real = realFor(identity);
-      return {
-        ...real,
+      const wrapper: EmailProvider = {
+        getAuthUrl: (hint, uri) => real.getAuthUrl(hint, uri),
+        exchangeCode: (code, uri) => real.exchangeCode(code, uri),
+        listHistory: (tokens, cursor) => real.listHistory(tokens, cursor),
+        listMessages: (tokens, pageToken) => real.listMessages(tokens, pageToken),
+        getMessage: (tokens, id) => real.getMessage(tokens, id),
+        watch: (tokens, cb) => real.watch(tokens, cb),
         send: async (tokens, draft: OutboundEmail, key: string) => {
           if (!paused) {
             paused = true;
@@ -136,7 +141,8 @@ describe('reply during the claim window (phase B)', () => {
           }
           return real.send(tokens, draft, key);
         },
-      } as EmailProvider;
+      };
+      return wrapper;
     };
     const deps: DispatchDeps = { ...h.deps, providerFor: wrappingFor };
 
