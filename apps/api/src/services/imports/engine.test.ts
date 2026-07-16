@@ -210,7 +210,7 @@ describe('engine — 10k-row scale + latency', () => {
       expect(await count(ctx.db, 'activities')).toBe(EXPECTED_10K.leadsCreated * 2);
 
       const total = tCommit - t0;
-      // eslint-disable-next-line no-console
+       
       console.log(
         `[10k] dry-run ${Math.round(tDry - t0)}ms · commit ${Math.round(tCommit - tDry)}ms · total ${Math.round(total)}ms`,
       );
