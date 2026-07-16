@@ -32,7 +32,7 @@ describe('SequencesList', () => {
     expect(within(row).getByText('6')).toBeInTheDocument(); // active
     expect(within(row).getByText('2')).toBeInTheDocument(); // paused
     // Archived sequence is still listed.
-    expect(screen.getByRole('button', { name: /Cold intro/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Win-back 2024/ })).toBeInTheDocument();
   });
 });
 

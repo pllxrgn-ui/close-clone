@@ -10,6 +10,17 @@
  * were left unseeded by W1), so this feature seeds its own — derived from real
  * fixture leads/contacts/users where relationships matter (enrollments), matching
  * the "build your own seed derived from it" fence.
+ *
+ * Sequence IDENTITY (id + name + status) mirrors the admin reference sequences
+ * (features/admin/mocks/adminStore.ts → seedSequences). At MSW merge the admin
+ * `GET /sequences` handler is registered before this feature's (see mocks/
+ * browser.ts + server.ts), so first-match-wins makes ADMIN the source of the
+ * sequence LIST the UI renders; the step ladder, per-step enrollments, and the
+ * detail roster are served only from here. Keeping the ids aligned means that
+ * whichever `/sequences` handler answers, the steps/enrollments this store seeds
+ * line up with the sequences actually displayed. (Before this alignment the demo
+ * showed every sequence as "0 steps · 0 active · 0 paused" — the seeded rows were
+ * keyed to orphaned ids no surface ever asked for.)
  */
 import type {
   Sequence,
@@ -111,6 +122,8 @@ function seedSnippets(id: () => string): Snippet[] {
 }
 
 interface SeqSeed {
+  /** Fixed id — must match the admin reference sequence (see file header). */
+  id: string;
   name: string;
   status: Sequence['status'];
   steps: Array<
@@ -121,8 +134,16 @@ interface SeqSeed {
   paused: number;
 }
 
+/** Pause reasons cycled across a sequence's paused enrollments (index 0 = reply). */
+const PAUSE_REASONS = ['reply', 'manual', 'bounce'] as const;
+
+// Ids/names/statuses mirror the admin reference sequences (see file header). Each
+// sequence carries a realistic 3–5 step cadence (email + call_task + sms, delays
+// 0/48/96/168h) with at least one review-gated step, plus a handful of active +
+// paused enrollments (the first paused is always a reply-pause — the demo's story).
 const SEQUENCE_SEEDS: readonly SeqSeed[] = [
   {
+    id: 'seq-onboarding',
     name: 'Onboarding',
     status: 'active',
     active: 6,
@@ -134,34 +155,55 @@ const SEQUENCE_SEEDS: readonly SeqSeed[] = [
     ],
   },
   {
-    name: 'Renewal outreach',
+    id: 'seq-outbound-ent',
+    name: 'Outbound — Enterprise',
     status: 'active',
-    active: 4,
-    paused: 1,
-    steps: [
-      { type: 'email', delayHours: 0, requiresReview: false, templateName: 'Renewal check-in' },
-      { type: 'email', delayHours: 72, requiresReview: false, templateName: 'Follow-up nudge' },
-      { type: 'sms', delayHours: 120, requiresReview: false },
-    ],
-  },
-  {
-    name: 'Win-back',
-    status: 'active',
-    active: 3,
-    paused: 0,
+    active: 5,
+    paused: 2,
     steps: [
       { type: 'email', delayHours: 0, requiresReview: false, templateName: 'Intro — first touch' },
+      { type: 'email', delayHours: 48, requiresReview: false, templateName: 'Follow-up nudge' },
+      { type: 'call_task', delayHours: 96, requiresReview: false },
+      { type: 'sms', delayHours: 120, requiresReview: false },
       { type: 'email', delayHours: 168, requiresReview: true, templateName: 'Proposal recap' },
     ],
   },
   {
-    name: 'Cold intro (archived)',
+    id: 'seq-reengage',
+    name: 'Re-engagement',
+    status: 'active',
+    active: 4,
+    paused: 1,
+    steps: [
+      { type: 'email', delayHours: 0, requiresReview: false, templateName: 'Follow-up nudge' },
+      { type: 'sms', delayHours: 48, requiresReview: false },
+      { type: 'call_task', delayHours: 96, requiresReview: false },
+      { type: 'email', delayHours: 168, requiresReview: true, templateName: 'Renewal check-in' },
+    ],
+  },
+  {
+    id: 'seq-trial',
+    name: 'Trial nurture',
+    status: 'active',
+    active: 5,
+    paused: 2,
+    steps: [
+      { type: 'email', delayHours: 0, requiresReview: false, templateName: 'Intro — first touch' },
+      { type: 'email', delayHours: 48, requiresReview: false, templateName: 'Follow-up nudge' },
+      { type: 'call_task', delayHours: 120, requiresReview: false },
+      { type: 'email', delayHours: 168, requiresReview: true, templateName: 'Proposal recap' },
+    ],
+  },
+  {
+    id: 'seq-winback-2024',
+    name: 'Win-back 2024',
     status: 'archived',
     active: 0,
     paused: 0,
     steps: [
       { type: 'email', delayHours: 0, requiresReview: false, templateName: 'Intro — first touch' },
       { type: 'email', delayHours: 96, requiresReview: false, templateName: 'Follow-up nudge' },
+      { type: 'email', delayHours: 168, requiresReview: true, templateName: 'Proposal recap' },
     ],
   },
 ];
@@ -196,7 +238,7 @@ function buildInitialState(): CommsState {
   let candidateCursor = 0;
 
   for (const seed of SEQUENCE_SEEDS) {
-    const seqId = id();
+    const seqId = seed.id;
     sequences.push({
       id: seqId,
       name: seed.name,
@@ -219,7 +261,7 @@ function buildInitialState(): CommsState {
         updatedAt: iso(-90),
       });
     });
-    const enroll = (state: 'active' | 'paused'): void => {
+    const enroll = (state: 'active' | 'paused', pausedReason: string | null): void => {
       const cand = candidates[candidateCursor % candidates.length];
       candidateCursor += 1;
       if (!cand) return;
@@ -231,13 +273,17 @@ function buildInitialState(): CommsState {
         emailAccountId: null,
         enrolledBy: owner,
         state,
-        pausedReason: state === 'paused' ? 'reply' : null,
+        pausedReason,
         createdAt: iso(-14),
         updatedAt: state === 'paused' ? iso(-2) : iso(-14),
       });
     };
-    for (let i = 0; i < seed.active; i += 1) enroll('active');
-    for (let i = 0; i < seed.paused; i += 1) enroll('paused');
+    for (let i = 0; i < seed.active; i += 1) enroll('active', null);
+    // First paused enrollment is always a reply-pause so every active sequence's
+    // roster carries a live "Paused · reply" example for the compliance story.
+    for (let i = 0; i < seed.paused; i += 1) {
+      enroll('paused', PAUSE_REASONS[i % PAUSE_REASONS.length] ?? 'reply');
+    }
   }
 
   // Seed a couple of globally suppressed addresses (unsubscribe/bounce) so the
