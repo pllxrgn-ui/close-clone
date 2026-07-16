@@ -6,16 +6,16 @@
 
 ## 0) Source-of-truth docs (these actually exist — read them, don't assume)
 
-| Doc | Role | You may edit? |
-|---|---|---|
-| `ARCHITECTURE.md` | System design: sync state machine, sequence scheduler, webhook paths, deploy topology. | Orchestrator only |
-| `CONTRACTS.md` | **Law.** Every cross-module fact: Drizzle schema, DSL grammar, activity taxonomy, sync state machine, the §4.3 never-events, REST/WS shapes, provider interfaces, error taxonomy. Currently **v1.3.0**. | Orchestrator only, **additive + versioned**, logged in `DECISIONS.md` |
-| `DESIGN.md` | Frontend visual identity ("Operator Grid"), tokens, motion law, craft bar. | Orchestrator only |
-| `DECISIONS.md` | Every autonomous judgment call, numbered (D-001…), with rationale. Append here. | Yes — append |
-| `STATUS.md` | Current phase, what's done, what remains. | Yes — keep current |
-| `RECOVERY.md` | Resume playbook after a disconnect/new session ("continue where we left off" = execute it). | Yes — keep current |
-| `HUMAN_TODO.md` | Things only a human can do (accounts, legal sign-off, Docker host, GitHub Pages switch). | Yes — append |
-| `DEMO.md` / `DEPLOY-PREVIEW.md` / `deploy/WIRING.md` | Demo walkthrough, deploy-the-preview steps, production composition checklist. | Yes |
+| Doc                                                  | Role                                                                                                                                                                                                    | You may edit?                                                         |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `ARCHITECTURE.md`                                    | System design: sync state machine, sequence scheduler, webhook paths, deploy topology.                                                                                                                  | Orchestrator only                                                     |
+| `CONTRACTS.md`                                       | **Law.** Every cross-module fact: Drizzle schema, DSL grammar, activity taxonomy, sync state machine, the §4.3 never-events, REST/WS shapes, provider interfaces, error taxonomy. Currently **v1.3.0**. | Orchestrator only, **additive + versioned**, logged in `DECISIONS.md` |
+| `DESIGN.md`                                          | Frontend visual identity ("Operator Grid"), tokens, motion law, craft bar.                                                                                                                              | Orchestrator only                                                     |
+| `DECISIONS.md`                                       | Every autonomous judgment call, numbered (D-001…), with rationale. Append here.                                                                                                                         | Yes — append                                                          |
+| `STATUS.md`                                          | Current phase, what's done, what remains.                                                                                                                                                               | Yes — keep current                                                    |
+| `RECOVERY.md`                                        | Resume playbook after a disconnect/new session ("continue where we left off" = execute it).                                                                                                             | Yes — keep current                                                    |
+| `HUMAN_TODO.md`                                      | Things only a human can do (accounts, legal sign-off, Docker host, GitHub Pages switch).                                                                                                                | Yes — append                                                          |
+| `DEMO.md` / `DEPLOY-PREVIEW.md` / `deploy/WIRING.md` | Demo walkthrough, deploy-the-preview steps, production composition checklist.                                                                                                                           | Yes                                                                   |
 
 There is **no** `REFERENCE.md` and **no** `BUILD_GUIDE.md` in this repo (an older CLAUDE.md referenced those — it was wrong). The ORM is **Drizzle**, not Prisma.
 
@@ -35,7 +35,7 @@ MVP is **built, merged, verified in-browser, and deployed** (GitHub Pages demo, 
 
 ## 4) Golden rules (read every time)
 
-- **Compliance rails are non-negotiable and live in the engine layer.** Every send/dial checks suppression, DNC, window, cap, consent — re-checked *inside* the send transaction (`apps/api/src/services/sequences/dispatch.ts`), never only at scheduling time. The internal API has no privileged bypass (I-RAIL-API).
+- **Compliance rails are non-negotiable and live in the engine layer.** Every send/dial checks suppression, DNC, window, cap, consent — re-checked _inside_ the send transaction (`apps/api/src/services/sequences/dispatch.ts`), never only at scheduling time. The internal API has no privileged bypass (I-RAIL-API).
 - **`CONTRACTS.md` is the interface.** Additive changes only; bump the version and log the change in `DECISIONS.md` before/with the code. Never silently change a route, DTO, table, event, or error code.
 - **Prove it or it isn't done.** Ship the acceptance tests. No green, no done. Verify user-facing changes in a real browser (mock mode) — green unit tests have hidden real breakage before (D-029).
 - **No secrets in code or logs.** Env vars per `CONTRACTS.md`/`.env.example`. Tokens hashed (api) / encrypted at rest (oauth); logs redacted; secrets excluded from exports.
