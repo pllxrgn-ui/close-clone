@@ -4,7 +4,11 @@
 
 **Wave A readiness: MERGED to main** (07-16) — SSO+RBAC, API tokens/webhooks/rate-limits, observability, deploy kit. api suite now **1,260 green**. Security headers wired into server.ts; the infra-gated production composition (real healthz, global OIDC guards, BullMQ webhook worker) is documented in deploy/WIRING.md and deferred to the deploy step per verify-before-completion (D-031).
 
-**Wave B: in progress** — 5d Playwright E2E (rep-loop + surfaces, mock mode, CI-wired) in the `e2e-suite` worktree; 5h security review read-only on main. **Remaining to "all done":** act on security findings · Phase 3 real integrations (3b–3g, mock-first) · final coherence pass.
+**Wave B:** 5h security review + 3 fixes ✅ (23c113a; no critical, core certified solid, 1271 api tests; report docs/security/2026-07-16-review.md). 5d Playwright E2E still building in the `e2e-suite` worktree.
+
+**Phase 3 (mock-first): in progress** on `phase3-integrations` worktree — Twilio adapter + signature-verified ingress → sequential dialer/voicemail/recording (§4.5 default-OFF + consent) → SMS (STOP + quiet hours) → AI call summaries/drafting/NL→SmartView (confirm-before-commit, I-AI). Real Twilio/Deepgram/Haiku = HUMAN_TODO (accounts); adapters unit-tested vs synthetic fixtures.
+
+**Remaining to "all done":** merge E2E + Phase 3 (with QA) · final whole-codebase coherence pass.
 **Orchestrator:** Fable 5 · **Implementers:** Opus 4.8 subagents · **Mode:** MOCK_MODE-first (no external accounts present)
 
 ## The three constraints most likely to break this build, and the de-risk plan
