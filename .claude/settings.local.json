@@ -76,7 +76,8 @@
       "Bash(pnpm --filter @switchboard/api lint)",
       "Bash(pnpm --filter @switchboard/api test)",
       "Bash(git commit -m ' *)",
-      "Bash(git commit -q -m 'chore: CONTRACTS 1.0.2 \\(UTC anchoring\\), repo prettier pass, run-state updates *)"
+      "Bash(git commit -q -m 'chore: CONTRACTS 1.0.2 \\(UTC anchoring\\), repo prettier pass, run-state updates *)",
+      "Bash(grep -n \"^#\\\\{1,3\\\\} \" CONTRACTS.md)"
     ]
   }
 }

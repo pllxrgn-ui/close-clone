@@ -32,6 +32,14 @@ import type { LeadMatcher } from './matcher.ts';
 export interface IngestDeps {
   /** Thread → lead matcher (default `AmbiguousLeadMatcher`; production wires the real one). */
   matcher: LeadMatcher;
+  /**
+   * Seam (task 2e): fired ON the ingest transaction when a FIRST-SIGHTING INBOUND
+   * message is matched to a lead. The sequence engine wires this to pause that
+   * lead's active enrollments (reply → `sequence_paused`, CONTRACTS §C6 I-SEND-2).
+   * Optional so sync-only callers (and the 2c suites) are unaffected. Runs on the
+   * caller's `exec` so the pause commits atomically with the inbound write.
+   */
+  onInboundMatched?: (exec: Db, ctx: { leadId: string; threadId: string }) => Promise<void>;
 }
 
 export interface IngestResult {
@@ -99,6 +107,10 @@ export async function ingestMessage(
   // that were ambiguous at their own ingest and are now covered by a lead.
   if (decision.leadId !== null) {
     await materializeThreadActivities(exec, threadId, decision.leadId);
+    // Reply seam (task 2e): a human inbound reply pauses the lead's sequences.
+    if (raw.direction === 'in' && deps.onInboundMatched !== undefined) {
+      await deps.onInboundMatched(exec, { leadId: decision.leadId, threadId });
+    }
   }
   return { inserted: true, threadId };
 }
