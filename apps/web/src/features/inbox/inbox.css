@@ -1,0 +1,371 @@
+/*
+ * Inbox surface styles — Operator Grid. All color comes from tokens.css (state is
+ * the entire budget; chrome stays achromatic), square panels/rows, 2px controls,
+ * condensed display numerals for the stats, monospace for timestamps. Selection is
+ * INSTANT (no background transition) so J/K never animates; only the action
+ * reveal + composer use opacity, and only where hover is real.
+ */
+
+.sb-inbox {
+  padding: var(--space-6) var(--space-7) var(--space-10);
+  max-width: 1080px;
+}
+
+/* ── Header strip ─────────────────────────────────────────────────────────── */
+.sb-inbox__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-6);
+}
+.sb-inbox__heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.sb-inbox__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-display-sm);
+  font-weight: var(--fw-display-strong);
+  line-height: 1;
+}
+.sb-inbox__lede {
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+}
+.sb-inbox__stats {
+  margin-bottom: 0;
+}
+.sb-inbox__stat {
+  min-width: 92px;
+}
+.sb-inbox__stat-value--overdue {
+  color: var(--state-overdue);
+}
+.sb-inbox__stat-value--done {
+  color: var(--state-reply);
+}
+
+/* ── Sections ─────────────────────────────────────────────────────────────── */
+.sb-inbox__queue {
+  border: 1px solid var(--border-0);
+  border-radius: var(--radius-2);
+  overflow: hidden;
+}
+.sb-inbox__section + .sb-inbox__section {
+  border-top: 1px solid var(--border-0);
+}
+.sb-inbox__section-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border-0);
+}
+.sb-inbox__section-label {
+  color: var(--ink-2);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+}
+.sb-inbox__section-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 var(--space-2);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-variant-numeric: tabular-nums;
+  border-radius: var(--radius-1);
+}
+.sb-inbox__rows {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Row ──────────────────────────────────────────────────────────────────── */
+.sb-inbox__row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-3);
+  min-height: 52px;
+  background: var(--surface-0);
+  border-bottom: 1px solid var(--border-0);
+  /* No background transition: J/K selection must be 0ms. */
+}
+.sb-inbox__rows > .sb-inbox__row:last-child {
+  border-bottom: none;
+}
+.sb-inbox__row[data-active='true'] {
+  background: var(--accent-weak-bg);
+}
+.sb-inbox__row-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--space-3) 0;
+  cursor: default;
+}
+.sb-inbox__row-body:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus);
+  outline-offset: -2px;
+}
+.sb-inbox__row-line1 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.sb-inbox__lead {
+  color: var(--ink-0);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sb-inbox__kind-icon {
+  display: inline-flex;
+  color: var(--ink-3);
+  flex: none;
+}
+.sb-inbox__row-line2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.sb-inbox__who {
+  color: var(--ink-1);
+  flex: none;
+}
+.sb-inbox__dot {
+  color: var(--ink-3);
+  flex: none;
+}
+.sb-inbox__what {
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Row meta (visual only) ───────────────────────────────────────────────── */
+.sb-inbox__row-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+  flex: none;
+  padding-right: var(--space-3);
+  text-align: right;
+}
+.sb-inbox__time {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+.sb-inbox__chip {
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+}
+.sb-inbox__chip--reply {
+  color: var(--state-reply);
+}
+.sb-inbox__chip--overdue {
+  color: var(--state-overdue);
+}
+.sb-inbox__chip--seq {
+  color: var(--state-seq);
+}
+
+/* ── Row actions (primary always shown; secondary revealed on active/hover) ── */
+.sb-inbox__row-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+  padding-right: var(--space-4);
+}
+.sb-inbox__act {
+  flex: none;
+}
+.sb-inbox__act--reveal {
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.sb-inbox__row[data-active='true'] .sb-inbox__act--reveal {
+  opacity: 1;
+}
+@media (hover: hover) and (pointer: fine) {
+  .sb-inbox__row:hover {
+    background: var(--surface-1);
+  }
+  .sb-inbox__row:hover .sb-inbox__act--reveal {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sb-inbox__act--reveal {
+    transition: none;
+  }
+}
+
+/* ── Loading / zero states ────────────────────────────────────────────────── */
+.sb-inbox__loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border: 1px solid var(--border-0);
+  padding: var(--space-3);
+}
+.sb-inbox__loading-row {
+  width: 100%;
+}
+.sb-inbox__zero {
+  border: 1px solid var(--border-0);
+  border-radius: var(--radius-2);
+  padding: var(--space-8) var(--space-5);
+}
+
+/* ── Composer drawer (right-aligned over the shared Modal) ─────────────────── */
+.sb-overlay.sb-inbox-drawer__scrim {
+  justify-content: flex-end;
+  align-items: stretch;
+  padding: 0;
+}
+.sb-modal.sb-inbox-drawer {
+  width: min(460px, 100vw);
+  height: 100%;
+  max-height: 100%;
+  border-radius: 0;
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+  border-left: 1px solid var(--line-strong);
+}
+.sb-inbox-composer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.sb-inbox-composer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-0);
+}
+.sb-inbox-composer__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.sb-inbox-composer__chan {
+  display: inline-flex;
+  color: var(--ink-2);
+}
+.sb-inbox-composer__title-text {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
+}
+.sb-inbox-composer__lead {
+  color: var(--ink-1);
+}
+.sb-inbox-composer__fields {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  overflow-y: auto;
+}
+.sb-inbox-composer__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sb-inbox-composer__field--grow {
+  flex: 1;
+  min-height: 0;
+}
+.sb-inbox-composer__label {
+  color: var(--ink-2);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+}
+.sb-inbox-composer__to {
+  color: var(--ink-1);
+  font-size: var(--fs-sm);
+}
+.sb-inbox-composer__body {
+  flex: 1;
+  width: 100%;
+  min-height: 160px;
+  padding: var(--space-3);
+  resize: none;
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-1);
+  background: var(--surface-inset);
+  color: var(--ink-0);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-base);
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.sb-inbox-composer__body:focus {
+  outline: none;
+  border-color: var(--focus);
+}
+.sb-inbox-composer__body::placeholder {
+  color: var(--ink-3);
+}
+.sb-inbox-composer__error {
+  color: var(--state-dnc);
+  font-size: var(--fs-sm);
+}
+.sb-inbox-composer__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border-0);
+  background: var(--surface-1);
+}
+.sb-inbox-composer__hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink-3);
+  font-size: var(--fs-micro);
+}
+.sb-inbox-composer__foot-actions {
+  display: flex;
+  gap: var(--space-3);
+}
