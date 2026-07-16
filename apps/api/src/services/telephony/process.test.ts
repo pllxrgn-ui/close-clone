@@ -225,9 +225,9 @@ describe('unknown number', () => {
       .from(webhookInbox)
       .where(eq(webhookInbox.provider, 'twilio'));
     expect(errored.length).toBeGreaterThan(0);
-    expect(errored.every((r) => r.processedAt !== null && r.error === 'no_contact_for_number')).toBe(
-      true,
-    );
+    expect(
+      errored.every((r) => r.processedAt !== null && r.error === 'no_contact_for_number'),
+    ).toBe(true);
   });
 });
 

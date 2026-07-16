@@ -92,7 +92,11 @@ export interface ActivityRowLite {
 
 export async function activitiesFor(db: Db, leadId: string): Promise<ActivityRowLite[]> {
   const rows = await db
-    .select({ type: activities.type, occurredAt: activities.occurredAt, payload: activities.payload })
+    .select({
+      type: activities.type,
+      occurredAt: activities.occurredAt,
+      payload: activities.payload,
+    })
     .from(activities)
     .where(eq(activities.leadId, leadId))
     .orderBy(asc(activities.occurredAt), asc(activities.type), asc(activities.id));

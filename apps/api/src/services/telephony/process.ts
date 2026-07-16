@@ -88,45 +88,50 @@ export async function processTwilioInboxRow(
   deps: TelephonyProcessDeps,
   inboxId: string,
 ): Promise<ProcessResult> {
-  const outcome = await deps.db.transaction(async (txRaw): Promise<
-    { alreadyProcessed: true } | ({ alreadyProcessed: false; channel: TwilioChannel } & ChannelOutcome)
-  > => {
-    const tx = txRaw as Db;
-    // Atomic claim — a second processor gets 0 rows and bails.
-    const claimed = await tx
-      .update(webhookInbox)
-      .set({ processedAt: sql`now()`, updatedAt: sql`now()` })
-      .where(
-        and(
-          eq(webhookInbox.id, inboxId),
-          eq(webhookInbox.provider, 'twilio'),
-          isNull(webhookInbox.processedAt),
-        ),
-      )
-      .returning({ raw: webhookInbox.raw });
-    const claim = claimed[0];
-    if (claim === undefined) return { alreadyProcessed: true };
-
-    const decoded = rawInboxSchema.parse(claim.raw);
-    let result: ChannelOutcome;
-    if (decoded.channel === 'voice') {
-      // The TwiML routing decision is served synchronously by the route; the
-      // stored voice request is retained for audit/replay only.
-      result = { activity: null, error: null, confirmation: null };
-    } else if (decoded.channel === 'status') {
-      result = await processStatus(tx, decoded.params, decoded.receivedAt);
-    } else {
-      result = await processSms(tx, deps, decoded.params, decoded.receivedAt);
-    }
-
-    if (result.error !== null) {
-      await tx
+  const outcome = await deps.db.transaction(
+    async (
+      txRaw,
+    ): Promise<
+      | { alreadyProcessed: true }
+      | ({ alreadyProcessed: false; channel: TwilioChannel } & ChannelOutcome)
+    > => {
+      const tx = txRaw as Db;
+      // Atomic claim — a second processor gets 0 rows and bails.
+      const claimed = await tx
         .update(webhookInbox)
-        .set({ error: result.error, updatedAt: sql`now()` })
-        .where(eq(webhookInbox.id, inboxId));
-    }
-    return { alreadyProcessed: false, channel: decoded.channel, ...result };
-  });
+        .set({ processedAt: sql`now()`, updatedAt: sql`now()` })
+        .where(
+          and(
+            eq(webhookInbox.id, inboxId),
+            eq(webhookInbox.provider, 'twilio'),
+            isNull(webhookInbox.processedAt),
+          ),
+        )
+        .returning({ raw: webhookInbox.raw });
+      const claim = claimed[0];
+      if (claim === undefined) return { alreadyProcessed: true };
+
+      const decoded = rawInboxSchema.parse(claim.raw);
+      let result: ChannelOutcome;
+      if (decoded.channel === 'voice') {
+        // The TwiML routing decision is served synchronously by the route; the
+        // stored voice request is retained for audit/replay only.
+        result = { activity: null, error: null, confirmation: null };
+      } else if (decoded.channel === 'status') {
+        result = await processStatus(tx, decoded.params, decoded.receivedAt);
+      } else {
+        result = await processSms(tx, deps, decoded.params, decoded.receivedAt);
+      }
+
+      if (result.error !== null) {
+        await tx
+          .update(webhookInbox)
+          .set({ error: result.error, updatedAt: sql`now()` })
+          .where(eq(webhookInbox.id, inboxId));
+      }
+      return { alreadyProcessed: false, channel: decoded.channel, ...result };
+    },
+  );
 
   if (outcome.alreadyProcessed) {
     return {
@@ -287,7 +292,11 @@ export function classifyTerminal(
 
   if (status === 'completed') {
     if (direction === 'inbound' && isMachineVoicemail) {
-      return { activity: 'voicemail_received', callStatus: 'voicemail', recordingRef: recordingUrl };
+      return {
+        activity: 'voicemail_received',
+        callStatus: 'voicemail',
+        recordingRef: recordingUrl,
+      };
     }
     if (durationS !== undefined && durationS > 0) {
       return { activity: 'call_logged', callStatus: 'completed', durationS };
@@ -354,7 +363,12 @@ async function processSms(
       contactId: match.contactId,
       type: 'sms_opt_out',
       occurredAt: receivedAt,
-      payload: { number: from, keyword, channel: 'sms', ...(smsId !== null ? { smsMessageId: smsId } : {}) },
+      payload: {
+        number: from,
+        keyword,
+        channel: 'sms',
+        ...(smsId !== null ? { smsMessageId: smsId } : {}),
+      },
     });
     return {
       activity: 'sms_opt_out',

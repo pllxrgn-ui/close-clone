@@ -108,7 +108,7 @@ export async function dialCall(deps: DialDeps, input: DialInput): Promise<DialOu
 
   // Contact — resolve the dial target + contact-level DNC.
   let toNumber = input.to ?? null;
-  let contactId: string | null = input.contactId ?? null;
+  const contactId: string | null = input.contactId ?? null;
   if (input.contactId !== undefined) {
     const contactRows = await deps.db
       .select({ dnc: contacts.dnc, phones: contacts.phones, leadId: contacts.leadId })

@@ -106,8 +106,7 @@ export async function resolveInboundRouting(
   });
   for (const userId of group) tiers.push({ kind: 'ring_group', userId });
 
-  const primary: RoutingPlan['primary'] =
-    tiers[0]?.kind ?? 'voicemail';
+  const primary: RoutingPlan['primary'] = tiers[0]?.kind ?? 'voicemail';
   return {
     leadId: match?.leadId ?? null,
     contactId: match?.contactId ?? null,

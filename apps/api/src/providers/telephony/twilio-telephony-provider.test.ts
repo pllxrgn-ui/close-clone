@@ -27,9 +27,10 @@ interface Recorded {
   requests: TwilioTransportRequest[];
 }
 
-function scriptedTransport(
-  responder: (req: TwilioTransportRequest) => TwilioTransportResponse,
-): { transport: TwilioTransport; recorded: Recorded } {
+function scriptedTransport(responder: (req: TwilioTransportRequest) => TwilioTransportResponse): {
+  transport: TwilioTransport;
+  recorded: Recorded;
+} {
   const recorded: Recorded = { requests: [] };
   const transport: TwilioTransport = {
     request(req: TwilioTransportRequest): Promise<TwilioTransportResponse> {
@@ -40,7 +41,10 @@ function scriptedTransport(
   return { transport, recorded };
 }
 
-const ok = (body: unknown): TwilioTransportResponse => ({ status: 201, body: JSON.stringify(body) });
+const ok = (body: unknown): TwilioTransportResponse => ({
+  status: 201,
+  body: JSON.stringify(body),
+});
 
 const REP = '+15617770123';
 const LEAD = '+13055550147';
@@ -222,9 +226,9 @@ describe('verifyWebhook', () => {
 
   test('rejects when the signature header is missing', () => {
     const { provider } = makeProvider(() => ok({ sid: 'CA1' }));
-    expect(provider.verifyWebhook({}, 'CallSid=CA1', 'https://switchboard.test/wh/twilio/status')).toBe(
-      false,
-    );
+    expect(
+      provider.verifyWebhook({}, 'CallSid=CA1', 'https://switchboard.test/wh/twilio/status'),
+    ).toBe(false);
   });
 });
 
