@@ -180,11 +180,11 @@ export async function buildTwilioFixtureFiles(): Promise<TwilioFixtureFile[]> {
   return streams.flatMap((s) => s.files);
 }
 
-/** Absolute path to the committed `fixtures/twilio/` corpus (resolved from repo root). */
+/** Absolute path to the committed `fixtures/webhooks/twilio/` corpus (resolved from repo root). */
 export function twilioFixturesDir(): string {
   // this file: <root>/apps/api/src/providers/telephony/twilio-fixtures.ts
   const here = dirname(fileURLToPath(import.meta.url));
-  return resolve(here, '../../../../../fixtures/twilio');
+  return resolve(here, '../../../../../fixtures/webhooks/twilio');
 }
 
 /** Serialize an envelope the way the corpus is stored (matches Prettier's JSON). */

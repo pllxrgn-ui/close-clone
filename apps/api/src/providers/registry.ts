@@ -1,6 +1,7 @@
-import type { EmailProvider } from '@switchboard/shared/providers';
+import type { EmailProvider, TelephonyProvider } from '@switchboard/shared/providers';
 import { MockEmailProvider } from './mock/mock-email-provider.ts';
 import { GmailEmailProvider } from './email/gmail-email-provider.ts';
+import { createMockTelephonyProvider } from './telephony/index.ts';
 import type { Clock, IdSource } from './mock/clock.ts';
 
 /**
@@ -33,6 +34,8 @@ export interface GmailBindingConfig {
 
 export interface ProviderRegistry {
   email: EmailProvider;
+  /** Bound under mockMode; the real Twilio adapter arrives with task 3b. */
+  telephony?: TelephonyProvider;
 }
 
 export interface RegistryConfig {
@@ -52,7 +55,13 @@ export function createProviderRegistry(
   mockOverrides: MockRegistryOverrides = {},
 ): ProviderRegistry {
   if (config.mockMode) {
-    return { email: new MockEmailProvider(mockOverrides) };
+    return {
+      email: new MockEmailProvider(mockOverrides),
+      telephony: createMockTelephonyProvider({
+        ...(mockOverrides.clock !== undefined ? { clock: mockOverrides.clock } : {}),
+        ...(mockOverrides.ids !== undefined ? { ids: mockOverrides.ids } : {}),
+      }),
+    };
   }
   if (config.gmail === undefined) {
     throw new Error(

@@ -48,13 +48,12 @@ afterAll(async () => {
 });
 
 describe('migration chain 0000→0003', () => {
-  test('all four migrations are journaled as applied', async () => {
+  test('all six migrations are journaled as applied', async () => {
     const { rows } = await ctx.client.query<{ n: number }>(
       `SELECT count(*)::int AS n FROM drizzle.__drizzle_migrations`,
     );
-    // Bumped 3 → 4 by Task 1e's migration 0003 (pg_trgm + global-search indexes).
-    // Bumped 4 → 5 by Task 5b's migration 0011 (audit_log append-only trigger).
-    expect(rows[0]?.n).toBe(5);
+    // 0000-0003 (core) + 0010 (imports, Task 4f) + 0011 (audit append-only, Task 5b).
+    expect(rows[0]?.n).toBe(6);
   });
 });
 

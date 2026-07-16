@@ -10,6 +10,10 @@ import { registerEmailThreadRoutes } from './email-threads.ts';
 import { registerEmailSendRoutes, type EmailSendRouteDeps } from './email-send.ts';
 import { registerSequenceRoutes, type SequenceRouteDeps } from './sequences.ts';
 import { registerUnsubscribeRoutes, type UnsubscribeRouteDeps } from './unsubscribe.ts';
+import { registerReportsRoutes } from './reports.ts';
+import { registerImportRoutes, type ImportRouteDeps } from './imports.ts';
+import { registerAdminAuditRoutes, type AdminAuditRouteDeps } from './admin-audit.ts';
+import { registerAdminExportRoutes, type AdminExportRouteDeps } from './admin-export.ts';
 
 /**
  * REST route registration (CONTRACTS §C7). This is the repo's single entry point
@@ -33,6 +37,12 @@ export interface RouteDeps {
   sequences?: Omit<SequenceRouteDeps, 'db'>;
   /** Public one-click unsubscribe (needs the List-Unsubscribe token secret). */
   unsubscribe?: Omit<UnsubscribeRouteDeps, 'db'>;
+  /** CSV import resource (storage + identity seam; RBAC preHandler optional). */
+  imports?: Omit<ImportRouteDeps, 'db'>;
+  /** Admin audit-log reads (requires the admin RBAC preHandler; 5a supplies the real one). */
+  adminAudit?: Omit<AdminAuditRouteDeps, 'db'>;
+  /** Admin data export (admin RBAC preHandler + optional exportsRoot). */
+  adminExport?: Omit<AdminExportRouteDeps, 'db'>;
 }
 
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
@@ -58,6 +68,16 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   }
   if (deps.unsubscribe !== undefined) {
     registerUnsubscribeRoutes(app, { db: deps.db, secret: deps.unsubscribe.secret });
+  }
+  registerReportsRoutes(app, { db: deps.db });
+  if (deps.imports !== undefined) {
+    registerImportRoutes(app, { db: deps.db, ...deps.imports });
+  }
+  if (deps.adminAudit !== undefined) {
+    registerAdminAuditRoutes(app, { db: deps.db, ...deps.adminAudit });
+  }
+  if (deps.adminExport !== undefined) {
+    registerAdminExportRoutes(app, { db: deps.db, ...deps.adminExport });
   }
 }
 

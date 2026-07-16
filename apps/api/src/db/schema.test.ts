@@ -36,6 +36,7 @@ const EXPECTED_TABLES = [
   'email_accounts',
   'email_messages',
   'email_threads',
+  'imports',
   'lead_statuses',
   'leads',
   'notes',
@@ -88,7 +89,7 @@ async function seedContact(leadId: string): Promise<string> {
 }
 
 describe('migrations apply cleanly from empty', () => {
-  test('all 30 C1 tables exist in the public schema', async () => {
+  test('all 31 C1 tables exist in the public schema', async () => {
     const rows = await ctx.db.execute<{ table_name: string }>(
       sql`select table_name from information_schema.tables where table_schema = 'public' order by table_name`,
     );
