@@ -3,7 +3,13 @@ import type { Opportunity, OpportunityStage } from '@switchboard/shared';
 import { buildBoard } from './board.ts';
 
 function stage(id: string, label: string, sortOrder: number): OpportunityStage {
-  return { id, label, sortOrder, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' };
+  return {
+    id,
+    label,
+    sortOrder,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  };
 }
 
 function opp(id: string, partial: Partial<Opportunity>): Opportunity {

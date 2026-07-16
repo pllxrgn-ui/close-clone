@@ -1,0 +1,435 @@
+/*
+ * Pipeline board — "Operator Grid". Achromatic chrome; color is spent on STATE
+ * only (won → reply/green, lost → idle/dim, overdue close date → overdue/amber,
+ * drop target + focus → the cyan). Square panels/columns (radius 0), 2px on the
+ * card controls, dense rows, display numerals (tabular) for money, a mono face
+ * for dates/percent/monograms, wide-tracked uppercase labels. Motion is
+ * transform/opacity only, law curves, all < 300ms; the won/lost flash is a
+ * brief color pulse. Reduced motion keeps color, drops movement. Tokens carry
+ * both themes + the AA guarantees.
+ */
+
+.pl-surface {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+/* ── Board header ──────────────────────────────────────────────────────────── */
+.pl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--line);
+  background:
+    linear-gradient(0deg, var(--panel), var(--panel)) padding-box,
+    repeating-linear-gradient(
+        0deg,
+        var(--line) 0,
+        var(--line) 1px,
+        transparent 1px,
+        transparent var(--etch-size)
+      )
+      border-box;
+}
+.pl-header__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.pl-header__icon {
+  color: var(--ink-dim);
+}
+.pl-header__h1 {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-display-strong);
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+.pl-header__count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--ink-dim);
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--line);
+}
+
+.pl-header__metrics {
+  display: flex;
+  gap: var(--space-8);
+  margin: 0;
+}
+.pl-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pl-metric__label {
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--ink-faint);
+}
+.pl-metric__value {
+  font-family: var(--font-display);
+  font-size: var(--fs-display-sm);
+  font-weight: var(--fw-display-strong);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--lh-tight);
+  color: var(--ink);
+}
+.pl-metric__value--dim {
+  color: var(--ink-mid);
+}
+
+/* ── Money sets (per-currency, never summed across) ────────────────────────── */
+.pl-money-set {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.pl-money {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pl-money--empty {
+  color: var(--ink-faint);
+}
+
+/* ── Board / horizontal column track ───────────────────────────────────────── */
+.pl-board {
+  display: flex;
+  gap: var(--space-4);
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-5) var(--space-6);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-gutter: stable;
+}
+
+/* ── Column ────────────────────────────────────────────────────────────────── */
+.pl-col {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 288px;
+  width: 288px;
+  min-height: 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+}
+.pl-col__head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+.pl-col__name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--ink-mid);
+  min-width: 0;
+}
+.pl-col__terminal-icon {
+  flex: none;
+}
+.pl-col__count {
+  justify-self: end;
+  min-width: 22px;
+  padding: 1px 6px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--ink-dim);
+  background: var(--panel-inset);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-1);
+}
+.pl-col__sums {
+  grid-column: 1 / -1;
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-display);
+  color: var(--ink);
+}
+
+.pl-col--won .pl-col__name {
+  color: var(--state-reply);
+}
+.pl-col--lost .pl-col__name {
+  color: var(--ink-dim);
+}
+
+.pl-col__cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: var(--space-3);
+  list-style: none;
+  overflow-y: auto;
+}
+
+/* Drop target while dragging */
+.pl-col.is-drop-target {
+  border-color: var(--focus);
+  box-shadow: inset 0 0 0 1px var(--focus);
+}
+.pl-col.is-drop-target .pl-col__cards {
+  background: var(--sel-bg);
+}
+
+/* Empty-column hint — quiet drop target, never blank */
+.pl-col__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin: var(--space-3);
+  padding: var(--space-6) var(--space-4);
+  color: var(--ink-faint);
+  font-size: var(--fs-sm);
+  text-align: center;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-1);
+}
+
+/* ── Card ──────────────────────────────────────────────────────────────────── */
+.pl-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'head  head'
+    'value value'
+    'meta  meta';
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--panel-raised);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--line-strong);
+  border-radius: var(--radius-1);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  transition:
+    transform var(--dur) var(--ease-out),
+    box-shadow var(--dur) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+.pl-card:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus);
+  outline-offset: var(--focus-ring-offset);
+}
+.pl-card.is-active {
+  background: var(--sel-bg);
+  border-left-color: var(--focus);
+}
+.pl-card--won {
+  border-left-color: var(--state-reply);
+}
+.pl-card--lost {
+  border-left-color: var(--state-idle);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pl-card:hover {
+    border-color: var(--line-strong);
+    background: var(--panel-hover);
+  }
+  .pl-card:hover .pl-card__grip {
+    opacity: 1;
+  }
+}
+
+.pl-card.is-dragging {
+  cursor: grabbing;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0.95;
+  box-shadow: var(--shadow-2);
+  border-color: var(--focus);
+  transition: none;
+}
+
+.pl-card__grip {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  color: var(--ink-faint);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.pl-card__head {
+  grid-area: head;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.pl-card__name {
+  font-size: var(--fs-base);
+  font-weight: var(--fw-semibold);
+  color: var(--ink);
+  line-height: var(--lh-tight);
+  overflow-wrap: anywhere;
+}
+.pl-card__pill {
+  flex: none;
+}
+
+.pl-card__value {
+  grid-area: value;
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-display-strong);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.pl-card__meta {
+  grid-area: meta;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.pl-card__conf {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.pl-card__conf-bar {
+  width: 40px;
+  height: 4px;
+  background: var(--panel-inset);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+.pl-card__conf-fill {
+  display: block;
+  height: 100%;
+  background: var(--ink-dim);
+}
+.pl-card__conf-num {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+}
+.pl-card__date {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+}
+.pl-card__date.is-overdue {
+  color: var(--state-overdue);
+}
+.pl-card__owner {
+  margin-left: auto;
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-pill);
+  background: var(--panel-inset);
+  border: 1px solid var(--line-strong);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: var(--fw-medium);
+  color: var(--ink-mid);
+}
+
+/* Won/Lost flash — color/opacity only, single short pulse */
+.pl-card--flash-won {
+  animation: pl-flash-won var(--dur) var(--ease-out);
+}
+.pl-card--flash-lost {
+  animation: pl-flash-lost var(--dur) var(--ease-out);
+}
+@keyframes pl-flash-won {
+  0% {
+    background: var(--state-won-bg);
+    border-color: var(--state-reply);
+  }
+  100% {
+    background: var(--panel-raised);
+    border-color: var(--line);
+  }
+}
+@keyframes pl-flash-lost {
+  0% {
+    background: var(--state-lost-bg);
+    border-color: var(--line-strong);
+  }
+  100% {
+    background: var(--panel-raised);
+    border-color: var(--line);
+  }
+}
+
+/* ── Loading skeleton ──────────────────────────────────────────────────────── */
+.pl-col--skeleton {
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+.pl-col__skeleton-head {
+  margin-bottom: var(--space-2);
+}
+.pl-col__skeleton-card {
+  border-radius: var(--radius-1);
+}
+
+/* ── Screen-reader move announcements ──────────────────────────────────────── */
+.pl-sr-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Reduced motion: keep color, drop movement ─────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .pl-card,
+  .pl-card__grip {
+    transition-property: border-color, background-color, opacity;
+  }
+  .pl-card--flash-won,
+  .pl-card--flash-lost {
+    animation-duration: 1ms;
+  }
+}

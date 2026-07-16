@@ -44,7 +44,11 @@ export interface FormatMoneyOptions {
 }
 
 /** Format integer cents as localized currency. Compact by default for the grid. */
-export function formatMoney(cents: number, currency: string, opts: FormatMoneyOptions = {}): string {
+export function formatMoney(
+  cents: number,
+  currency: string,
+  opts: FormatMoneyOptions = {},
+): string {
   const compact = opts.compact ?? true;
   return new Intl.NumberFormat('en-US', {
     style: 'currency',

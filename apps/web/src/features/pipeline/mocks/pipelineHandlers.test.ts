@@ -8,7 +8,13 @@ import { resetStore } from '../data/store.ts';
 import { pipelineHandlers } from './pipelineHandlers.ts';
 
 function stage(id: string, label: string, sortOrder: number): OpportunityStage {
-  return { id, label, sortOrder, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' };
+  return {
+    id,
+    label,
+    sortOrder,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  };
 }
 function opp(id: string, stageId: string, currency: string): Opportunity {
   return {
@@ -28,7 +34,11 @@ function opp(id: string, stageId: string, currency: string): Opportunity {
   };
 }
 
-const STAGES = [stage('disc', 'Discovery', 0), stage('prop', 'Proposal', 1), stage('won', 'Closed Won', 2)];
+const STAGES = [
+  stage('disc', 'Discovery', 0),
+  stage('prop', 'Proposal', 1),
+  stage('won', 'Closed Won', 2),
+];
 
 beforeEach(() => {
   resetStore({

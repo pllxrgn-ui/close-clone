@@ -1,11 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import type { Opportunity } from '@switchboard/shared';
-import {
-  getOpportunity,
-  listOpportunities,
-  listStages,
-  patchOpportunity,
-} from '../data/store.ts';
+import { getOpportunity, listOpportunities, listStages, patchOpportunity } from '../data/store.ts';
 import type { OpportunityPatch } from '../data/store.ts';
 
 /*

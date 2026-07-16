@@ -1,9 +1,21 @@
 import { describe, expect, test } from 'vitest';
 import type { OpportunityStage } from '@switchboard/shared';
-import { adjacentStage, sortStages, statusForStage, terminalKind, terminalStage } from './stages.ts';
+import {
+  adjacentStage,
+  sortStages,
+  statusForStage,
+  terminalKind,
+  terminalStage,
+} from './stages.ts';
 
 function stage(id: string, label: string, sortOrder: number): OpportunityStage {
-  return { id, label, sortOrder, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' };
+  return {
+    id,
+    label,
+    sortOrder,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  };
 }
 
 const STAGES: OpportunityStage[] = [

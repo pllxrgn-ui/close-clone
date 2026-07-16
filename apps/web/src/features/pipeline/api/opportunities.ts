@@ -1,4 +1,4 @@
-import type { Opportunity, OpportunityStage } from '@switchboard/shared';
+import type { Lead, Opportunity, OpportunityStage } from '@switchboard/shared';
 import { apiRequest } from '../../../api/client.ts';
 import type { Page } from '../../../api/client.ts';
 
@@ -30,6 +30,24 @@ export async function fetchAllOpportunities(signal?: AbortSignal): Promise<Oppor
 
 export function listOpportunityStages(signal?: AbortSignal): Promise<OpportunityStage[]> {
   return apiRequest<OpportunityStage[]>('/opportunity-stages', { ...(signal ? { signal } : {}) });
+}
+
+/**
+ * Lead id → name, joined client-side (the board shows the company on each card).
+ * The real API returns opportunities without a lead label, so the UI resolves it
+ * from `GET /leads` exactly as it will against Postgres.
+ */
+export async function fetchLeadNames(signal?: AbortSignal): Promise<Map<string, string>> {
+  const names = new Map<string, string>();
+  let cursor: string | undefined;
+  do {
+    const query: Record<string, string | number | undefined> = { limit: OPPORTUNITIES_PAGE };
+    if (cursor !== undefined) query.cursor = cursor;
+    const page = await apiRequest<Page<Lead>>('/leads', { query, ...(signal ? { signal } : {}) });
+    for (const lead of page.items) names.set(lead.id, lead.name);
+    cursor = page.nextCursor;
+  } while (cursor !== undefined);
+  return names;
 }
 
 export interface MoveOpportunityInput {
