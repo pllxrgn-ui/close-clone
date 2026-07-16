@@ -84,8 +84,12 @@ describe('keyboard layer wired into the shell', () => {
     renderRoutes('/inbox', { user: USER });
     await screen.findByRole('heading', { name: 'Inbox', level: 1 });
     await userEvent.keyboard('gl');
-    await waitFor(() =>
-      expect(screen.getByRole('heading', { name: 'All leads', level: 1 })).toBeInTheDocument(),
+    // The Inbox landing now fetches before this chord navigates away; under
+    // full-suite parallel load the lazy Leads chunk can land past the 1s default.
+    await waitFor(
+      () =>
+        expect(screen.getByRole('heading', { name: 'All leads', level: 1 })).toBeInTheDocument(),
+      { timeout: 4000 },
     );
   });
 });

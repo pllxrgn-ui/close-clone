@@ -10,6 +10,7 @@ import type { Command, CommandGroupName } from './commands.ts';
 import { useCommsCommands } from '../features/comms/index.ts';
 import { useAdminCommands } from '../features/admin/index.ts';
 import { usePipelineCommands } from '../features/pipeline/index.ts';
+import { useInboxCommands } from '../features/inbox/index.ts';
 
 interface OptionVM {
   command: Command;
@@ -83,11 +84,13 @@ export function CommandPalette({
   const commsCommands = useCommsCommands(onClose);
   const adminCommands = useAdminCommands(onClose);
   const pipelineCommands = usePipelineCommands(onClose);
+  const inboxCommands = useInboxCommands(onClose);
   const staticCommands = [
     ...useStaticCommands(onClose),
     ...commsCommands,
     ...adminCommands,
     ...pipelineCommands,
+    ...inboxCommands,
   ];
   const leadCommands = useLeadCommands(debouncedQuery, onClose);
 

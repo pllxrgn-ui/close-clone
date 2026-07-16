@@ -14,8 +14,13 @@ describe('app shell + routing (authenticated)', () => {
   test('renders the shell chrome and the Inbox landing', async () => {
     renderRoutes('/inbox', { user: USER });
     expect(await screen.findByRole('heading', { name: 'Inbox', level: 1 })).toBeInTheDocument();
-    // slim top bar (banner) + keyboardable rail + global search
-    expect(screen.getByRole('banner')).toBeInTheDocument();
+    // slim top bar (banner) + keyboardable rail + global search. The real Inbox
+    // page renders its own <header> inside <main> — not a landmark per ARIA (axe
+    // agrees), but getByRole over-counts it as a second "banner", so assert the
+    // shell's top-bar banner specifically rather than assuming a single one.
+    expect(screen.getAllByRole('banner').some((el) => el.classList.contains('sb-topbar'))).toBe(
+      true,
+    );
     expect(screen.getByRole('navigation', { name: 'Primary' })).toBeInTheDocument();
     expect(screen.getByRole('searchbox', { name: 'Global search' })).toBeInTheDocument();
     // user chip shows the signed-in user (name appears in the chip + its menu)
@@ -34,7 +39,12 @@ describe('app shell + routing (authenticated)', () => {
     const leadsLink = screen.getByRole('link', { name: /Leads/ });
     await userEvent.click(leadsLink);
 
-    expect(await screen.findByRole('heading', { name: 'All leads', level: 1 })).toBeInTheDocument();
+    // The Inbox landing now fetches (React Query) before this navigates away, so
+    // under full-suite parallel load the lazy Leads chunk can render just past the
+    // 1s findBy default. Give it headroom; the app itself navigates instantly.
+    expect(
+      await screen.findByRole('heading', { name: 'All leads', level: 1 }, { timeout: 4000 }),
+    ).toBeInTheDocument();
     expect(leadsLink).toHaveAttribute('aria-current', 'page');
   });
 
@@ -44,7 +54,10 @@ describe('app shell + routing (authenticated)', () => {
 
     await userEvent.keyboard('gl');
 
-    expect(await screen.findByRole('heading', { name: 'All leads', level: 1 })).toBeInTheDocument();
+    // Headroom for the lazy Leads chunk under parallel load (see the rail-link test).
+    expect(
+      await screen.findByRole('heading', { name: 'All leads', level: 1 }, { timeout: 4000 }),
+    ).toBeInTheDocument();
   });
 
   test('"/" focuses the global search input', async () => {

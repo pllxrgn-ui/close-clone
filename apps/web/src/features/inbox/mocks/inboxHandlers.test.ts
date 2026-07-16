@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from 'vitest';
+import { http, HttpResponse } from 'msw';
 import { server } from '../../../mocks/server.ts';
 import { ApiError, apiRequest } from '../../../api/index.ts';
 import { inboxHandlers } from './inboxHandlers.ts';
@@ -124,9 +125,16 @@ describe('POST /emails/send (reply)', () => {
     expect(statsAfter.doneToday).toBe(statsBefore.doneToday + 1);
   });
 
-  test('missing body → 400 VALIDATION_FAILED', async () => {
+  test('missing body on an inbox thread → 400 VALIDATION_FAILED', async () => {
+    // The threadId must be one the inbox store OWNS, otherwise the (now cooperative)
+    // handler returns undefined and the request falls through to comms instead of
+    // 400ing. With an owned thread but no body, the genuine-malformed rail holds.
+    const reply: ReplyItem = firstOfKind((await getInboxQueue()).items, 'reply');
     await expect(
-      apiRequest('/emails/send', { method: 'POST', body: { threadId: 'x', to: 'a@b.test' } }),
+      apiRequest('/emails/send', {
+        method: 'POST',
+        body: { threadId: reply.threadId, to: reply.toAddress },
+      }),
     ).rejects.toMatchObject({ code: 'VALIDATION_FAILED', status: 400 });
   });
 
@@ -166,11 +174,24 @@ describe('PATCH /tasks/:id (complete)', () => {
     expect(statsAfter.doneToday).toBe(statsBefore.doneToday + 1);
   });
 
-  test('unknown task id → 404 NOT_FOUND', async () => {
-    await expect(completeTask('does-not-exist')).rejects.toMatchObject({
-      code: 'NOT_FOUND',
-      status: 404,
+  test('a task id the inbox does not own falls through (no 404 shadow)', async () => {
+    // PATCH /tasks/:id is shared with core tasks CRUD. The inbox must NOT answer for
+    // a task it does not hold — it returns undefined so the request reaches the real
+    // owner. Prove it with a downstream sentinel registered AFTER the inbox handlers:
+    // if inbox 404-shadowed (the old bug), the sentinel would never be reached.
+    let reachedDownstream = false;
+    server.use(
+      ...inboxHandlers,
+      http.patch('*/api/v1/tasks/:id', () => {
+        reachedDownstream = true;
+        return HttpResponse.json({ ok: true });
+      }),
+    );
+    await apiRequest('/tasks/not-an-inbox-task', {
+      method: 'PATCH',
+      body: { completedAt: ago(0) },
     });
+    expect(reachedDownstream).toBe(true);
   });
 });
 

@@ -79,11 +79,20 @@ export const inboxHandlers = [
 
   // ── Reply (C7 send routes) ──────────────────────────────────────────────────
   http.post(api('/emails/send'), async ({ request }) => {
-    const body = await readJson(request);
+    // Cooperative shadowing (see file header; mirrors the admin-enroll precedent,
+    // commit 3dd5cdd): this route is ALSO the comms COMPOSER's send path. Probe a
+    // CLONE so the original body stays unconsumed for the comms handler that
+    // answers next, and own the request ONLY when it targets a thread the inbox
+    // store holds — an inbox reply. Anything else (a composer send, or any send
+    // with no inbox threadId) returns undefined to fall through to comms.
+    const body = await readJson(request.clone());
     const threadId = body?.threadId;
+    if (typeof threadId !== 'string' || !getInboxStore().threads.has(threadId)) {
+      return undefined;
+    }
     const to = body?.to;
     const text = body?.body;
-    if (typeof threadId !== 'string' || typeof to !== 'string' || typeof text !== 'string') {
+    if (typeof to !== 'string' || typeof text !== 'string') {
       return errorJson(400, 'VALIDATION_FAILED', 'threadId, to and body are required');
     }
     try {
@@ -107,11 +116,16 @@ export const inboxHandlers = [
   }),
 
   http.post(api('/sms/send'), async ({ request }) => {
-    const body = await readJson(request);
+    // Same cooperative shadowing as /emails/send: own only inbox-thread replies,
+    // otherwise fall through (probe a clone so the body survives pass-through).
+    const body = await readJson(request.clone());
     const threadId = body?.threadId;
+    if (typeof threadId !== 'string' || !getInboxStore().threads.has(threadId)) {
+      return undefined;
+    }
     const to = body?.to;
     const text = body?.body;
-    if (typeof threadId !== 'string' || typeof to !== 'string' || typeof text !== 'string') {
+    if (typeof to !== 'string' || typeof text !== 'string') {
       return errorJson(400, 'VALIDATION_FAILED', 'threadId, to and body are required');
     }
     try {
@@ -136,9 +150,12 @@ export const inboxHandlers = [
   // ── Complete task (C7 tasks CRUD) ───────────────────────────────────────────
   http.patch(api('/tasks/:id'), async ({ params, request }) => {
     const id = String(params.id);
-    // Only own inbox-known tasks; other task PATCHes fall through to their owner.
+    // Only own inbox-known tasks; other task PATCHes fall through (return undefined)
+    // to their owner rather than 404-shadowing a task the inbox does not hold. The
+    // ownership probe reads params only, so the body stays unconsumed for the next
+    // handler on pass-through.
     if (!getInboxStore().tasks.has(id)) {
-      return errorJson(404, 'NOT_FOUND', 'Task not found');
+      return undefined;
     }
     const body = await readJson(request);
     const completedAt = typeof body?.completedAt === 'string' ? body.completedAt : nowIso();

@@ -15,7 +15,7 @@ const LoginPage = lazy(() =>
   import('../auth/LoginPage.tsx').then((m) => ({ default: m.LoginPage })),
 );
 const InboxPage = lazy(() =>
-  import('../pages/InboxPage.tsx').then((m) => ({ default: m.InboxPage })),
+  import('../features/inbox/index.ts').then((m) => ({ default: m.InboxRoutePage })),
 );
 const LeadsPage = lazy(() =>
   import('../features/leads/index.ts').then((m) => ({ default: m.LeadsRoutePage })),
