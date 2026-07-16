@@ -198,7 +198,9 @@ const F_STAGES = [
   { id: 'sl', label: 'Closed Lost', sortOrder: 3 },
 ];
 
-function opp(o: Partial<FunnelOppSeed> & Pick<FunnelOppSeed, 'currency' | 'stageId' | 'status'>): FunnelOppSeed {
+function opp(
+  o: Partial<FunnelOppSeed> & Pick<FunnelOppSeed, 'currency' | 'stageId' | 'status'>,
+): FunnelOppSeed {
   return {
     id: `${o.currency}-${o.stageId}-${Math.random()}`,
     valueCents: 0,
@@ -212,9 +214,27 @@ const F_OPPS: FunnelOppSeed[] = [
   opp({ currency: 'USD', stageId: 's0', status: 'active', valueCents: 100_000, confidence: 50 }),
   opp({ currency: 'USD', stageId: 's0', status: 'active', valueCents: 100_000, confidence: 50 }),
   opp({ currency: 'USD', stageId: 's1', status: 'active', valueCents: 500_000, confidence: 40 }),
-  opp({ currency: 'USD', stageId: 'sw', status: 'won', valueCents: 300_000, closeDate: '2026-07-10' }),
-  opp({ currency: 'USD', stageId: 'sw', status: 'won', valueCents: 300_000, closeDate: '2026-07-01' }),
-  opp({ currency: 'USD', stageId: 'sl', status: 'lost', valueCents: 200_000, closeDate: '2026-06-20' }),
+  opp({
+    currency: 'USD',
+    stageId: 'sw',
+    status: 'won',
+    valueCents: 300_000,
+    closeDate: '2026-07-10',
+  }),
+  opp({
+    currency: 'USD',
+    stageId: 'sw',
+    status: 'won',
+    valueCents: 300_000,
+    closeDate: '2026-07-01',
+  }),
+  opp({
+    currency: 'USD',
+    stageId: 'sl',
+    status: 'lost',
+    valueCents: 200_000,
+    closeDate: '2026-06-20',
+  }),
   opp({ currency: 'EUR', stageId: 's0', status: 'active', valueCents: 100_000, confidence: 30 }),
 ];
 
@@ -224,7 +244,11 @@ const F_CHANGES: StageChangeSeed[] = [
   { opportunityId: 'x', currency: 'USD', from: 's1', to: 'sw', occurredAt: '2026-07-08T12:00:00Z' },
 ];
 
-function cell(rows: FunnelStageRow[], currency: string, stageId: string): FunnelStageRow | undefined {
+function cell(
+  rows: FunnelStageRow[],
+  currency: string,
+  stageId: string,
+): FunnelStageRow | undefined {
   return rows.find((r) => r.currency === currency && r.stageId === stageId);
 }
 
@@ -347,7 +371,9 @@ function seqEvents(): SequenceEventSeed[] {
     reason?: SequenceEventSeed['reason'],
   ): void => {
     for (let k = 0; k < count; k += 1) {
-      out.push(reason ? { enrollmentId, type, reason, occurredAt } : { enrollmentId, type, occurredAt });
+      out.push(
+        reason ? { enrollmentId, type, reason, occurredAt } : { enrollmentId, type, occurredAt },
+      );
     }
   };
   // Alpha (all in-range)

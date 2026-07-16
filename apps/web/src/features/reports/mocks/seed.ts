@@ -17,7 +17,11 @@
 import type { OpportunityStage, User } from '@switchboard/shared';
 import { db } from '../../../mocks/fixtures.ts';
 import { MS_PER_DAY, REPORT_NOW } from '../lib/range.ts';
+import { stageKind } from '../lib/stages.ts';
 import type { SequenceStatus } from '../types.ts';
+
+export { stageKind } from '../lib/stages.ts';
+export type { StageKind } from '../lib/stages.ts';
 
 // ── Raw record shapes (a thin analogue of the C1/C4 rows the API scans) ───────
 
@@ -104,11 +108,66 @@ export interface RepDailyProfile {
 
 /** Per-rep, per-day counts (constant across the window → totals are days × count). */
 export const REP_PROFILES: readonly RepDailyProfile[] = [
-  { callsOut: 6, callsIn: 2, callsMissed: 1, voicemails: 1, emailsOut: 8, emailsIn: 4, smsOut: 2, smsIn: 1, notes: 3, tasks: 2 },
-  { callsOut: 3, callsIn: 1, callsMissed: 1, voicemails: 0, emailsOut: 10, emailsIn: 5, smsOut: 1, smsIn: 1, notes: 2, tasks: 1 },
-  { callsOut: 4, callsIn: 2, callsMissed: 0, voicemails: 1, emailsOut: 5, emailsIn: 3, smsOut: 3, smsIn: 2, notes: 1, tasks: 2 },
-  { callsOut: 2, callsIn: 1, callsMissed: 1, voicemails: 1, emailsOut: 6, emailsIn: 2, smsOut: 1, smsIn: 0, notes: 2, tasks: 1 },
-  { callsOut: 5, callsIn: 1, callsMissed: 0, voicemails: 0, emailsOut: 4, emailsIn: 2, smsOut: 0, smsIn: 1, notes: 1, tasks: 3 },
+  {
+    callsOut: 6,
+    callsIn: 2,
+    callsMissed: 1,
+    voicemails: 1,
+    emailsOut: 8,
+    emailsIn: 4,
+    smsOut: 2,
+    smsIn: 1,
+    notes: 3,
+    tasks: 2,
+  },
+  {
+    callsOut: 3,
+    callsIn: 1,
+    callsMissed: 1,
+    voicemails: 0,
+    emailsOut: 10,
+    emailsIn: 5,
+    smsOut: 1,
+    smsIn: 1,
+    notes: 2,
+    tasks: 1,
+  },
+  {
+    callsOut: 4,
+    callsIn: 2,
+    callsMissed: 0,
+    voicemails: 1,
+    emailsOut: 5,
+    emailsIn: 3,
+    smsOut: 3,
+    smsIn: 2,
+    notes: 1,
+    tasks: 2,
+  },
+  {
+    callsOut: 2,
+    callsIn: 1,
+    callsMissed: 1,
+    voicemails: 1,
+    emailsOut: 6,
+    emailsIn: 2,
+    smsOut: 1,
+    smsIn: 0,
+    notes: 2,
+    tasks: 1,
+  },
+  {
+    callsOut: 5,
+    callsIn: 1,
+    callsMissed: 0,
+    voicemails: 0,
+    emailsOut: 4,
+    emailsIn: 2,
+    smsOut: 0,
+    smsIn: 1,
+    notes: 1,
+    tasks: 3,
+  },
 ];
 
 /** Outbound call outcomes cycled per call, with a fixed talk duration each (s). */
@@ -140,7 +199,8 @@ function utcDayStartMs(date: Date): number {
 
 function dayIso(dayOffset: number, secondOffset: number): string {
   // 14:00Z anchor keeps every event comfortably inside its UTC calendar day.
-  const ms = utcDayStartMs(REPORT_NOW) - dayOffset * MS_PER_DAY + 14 * 3_600_000 + secondOffset * 1000;
+  const ms =
+    utcDayStartMs(REPORT_NOW) - dayOffset * MS_PER_DAY + 14 * 3_600_000 + secondOffset * 1000;
   return new Date(ms).toISOString();
 }
 
@@ -158,12 +218,24 @@ function buildActivity(reps: User[]): { activityEvents: ActivityEventSeed[]; cal
         const outcome = OUT_OUTCOMES[k % OUT_OUTCOMES.length] ?? 'connected';
         const dur = OUT_DUR[k % OUT_DUR.length] ?? 0;
         const occurredAt = at();
-        activityEvents.push({ userId: rep.id, type: 'call_logged', occurredAt, direction: 'outbound', outcome });
+        activityEvents.push({
+          userId: rep.id,
+          type: 'call_logged',
+          occurredAt,
+          direction: 'outbound',
+          outcome,
+        });
         calls.push({ userId: rep.id, startedAt: occurredAt, durationS: dur });
       }
       for (let k = 0; k < p.callsIn; k += 1) {
         const occurredAt = at();
-        activityEvents.push({ userId: rep.id, type: 'call_logged', occurredAt, direction: 'inbound', outcome: 'connected' });
+        activityEvents.push({
+          userId: rep.id,
+          type: 'call_logged',
+          occurredAt,
+          direction: 'inbound',
+          outcome: 'connected',
+        });
         calls.push({ userId: rep.id, startedAt: occurredAt, durationS: IN_DUR });
       }
       for (let k = 0; k < p.callsMissed; k += 1) {
@@ -210,15 +282,6 @@ const STAGE_VALUE_UNITS = [8_000, 15_000, 30_000, 22_000, 12_000];
 const STAGE_VALUE_STEP = 500;
 const STAGE_CONFIDENCE = [20, 45, 70, 100, 0];
 
-export type StageKind = 'open' | 'won' | 'lost';
-
-/** Classify a stage from its label — won/lost are the two terminal columns. */
-export function stageKind(label: string): StageKind {
-  if (/won/i.test(label)) return 'won';
-  if (/lost/i.test(label)) return 'lost';
-  return 'open';
-}
-
 function dateOnly(dayOffset: number): string {
   return new Date(utcDayStartMs(REPORT_NOW) - dayOffset * MS_PER_DAY).toISOString().slice(0, 10);
 }
@@ -234,7 +297,8 @@ function buildFunnel(stages: OpportunityStage[]): {
     const counts = FUNNEL_COUNTS[currency] ?? [];
     ordered.forEach((stage, i) => {
       const kind = stageKind(stage.label);
-      const status: FunnelOppSeed['status'] = kind === 'won' ? 'won' : kind === 'lost' ? 'lost' : 'active';
+      const status: FunnelOppSeed['status'] =
+        kind === 'won' ? 'won' : kind === 'lost' ? 'lost' : 'active';
       const count = counts[i] ?? 0;
       const baseUnits = STAGE_VALUE_UNITS[i] ?? 10_000;
       const baseConf = STAGE_CONFIDENCE[i] ?? 50;
@@ -302,11 +366,61 @@ export interface SequenceSpec {
 
 /** Reply rates span every meter band: 22.5%, 11.25%, 3.1%, 0 (no sends), 17.8%. */
 export const SEQ_SPEC: readonly SequenceSpec[] = [
-  { name: 'Cold Outreach — Q3', status: 'active', sends: 120, replies: 27, bounces: 6, unsubscribes: 3, finishes: 40, active: 52, paused: 14 },
-  { name: 'Demo Follow-up', status: 'active', sends: 80, replies: 9, bounces: 2, unsubscribes: 1, finishes: 33, active: 20, paused: 8 },
-  { name: 'Renewal Nudge', status: 'active', sends: 64, replies: 2, bounces: 5, unsubscribes: 4, finishes: 30, active: 12, paused: 9 },
-  { name: 'Win-back', status: 'archived', sends: 0, replies: 0, bounces: 0, unsubscribes: 0, finishes: 0, active: 0, paused: 0 },
-  { name: 'Onboarding', status: 'active', sends: 45, replies: 8, bounces: 1, unsubscribes: 0, finishes: 22, active: 18, paused: 3 },
+  {
+    name: 'Cold Outreach — Q3',
+    status: 'active',
+    sends: 120,
+    replies: 27,
+    bounces: 6,
+    unsubscribes: 3,
+    finishes: 40,
+    active: 52,
+    paused: 14,
+  },
+  {
+    name: 'Demo Follow-up',
+    status: 'active',
+    sends: 80,
+    replies: 9,
+    bounces: 2,
+    unsubscribes: 1,
+    finishes: 33,
+    active: 20,
+    paused: 8,
+  },
+  {
+    name: 'Renewal Nudge',
+    status: 'active',
+    sends: 64,
+    replies: 2,
+    bounces: 5,
+    unsubscribes: 4,
+    finishes: 30,
+    active: 12,
+    paused: 9,
+  },
+  {
+    name: 'Win-back',
+    status: 'archived',
+    sends: 0,
+    replies: 0,
+    bounces: 0,
+    unsubscribes: 0,
+    finishes: 0,
+    active: 0,
+    paused: 0,
+  },
+  {
+    name: 'Onboarding',
+    status: 'active',
+    sends: 45,
+    replies: 8,
+    bounces: 1,
+    unsubscribes: 0,
+    finishes: 22,
+    active: 18,
+    paused: 3,
+  },
 ];
 
 function buildSequences(): {
@@ -350,7 +464,9 @@ function buildSequences(): {
         const enrollmentId = enrollmentIds[n % enrollmentIds.length] ?? `enr-${i}-a-0`;
         // Spread across the last 30 days so a narrow range genuinely sees fewer.
         const occurredAt = dayIso(n % 30, 0);
-        sequenceEvents.push(reason ? { enrollmentId, type, reason, occurredAt } : { enrollmentId, type, occurredAt });
+        sequenceEvents.push(
+          reason ? { enrollmentId, type, reason, occurredAt } : { enrollmentId, type, occurredAt },
+        );
         n += 1;
       }
     };

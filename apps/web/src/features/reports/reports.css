@@ -1,0 +1,451 @@
+/*
+ * Reports surface — "Operator Grid". Chrome is achromatic; color is spent on
+ * STATE (the calls leader in --state-live, funnel won/lost in reply/dnc, reply-
+ * rate meter across reply/overdue/idle). Square panels (radius 0), 2px controls,
+ * dense rows, wide-tracked uppercase section labels, the display face + tabular-
+ * nums for every metric, mono for aligned data. Motion is transform/opacity only
+ * (<300ms, --ease-out); reduced motion keeps color/opacity and drops movement.
+ * All colors are tokens, so both themes and the AA guarantees hold.
+ */
+
+.rpt {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  background: var(--surface-0);
+  color: var(--ink-0);
+  overflow-y: auto;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────────── */
+.rpt__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-5);
+  padding: var(--space-6) var(--space-7) var(--space-4);
+}
+.rpt__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: var(--fw-display-strong);
+  font-size: var(--fs-xl);
+  letter-spacing: 0.01em;
+  color: var(--ink-0);
+}
+.rpt__sub {
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+
+/* ── Tabs ───────────────────────────────────────────────────────────────────── */
+.rpt-tabs {
+  display: flex;
+  gap: var(--space-1);
+  padding: 0 var(--space-7);
+  border-bottom: 1px solid var(--border-0);
+}
+.rpt-tab {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+.rpt-tab[aria-selected='true'] {
+  color: var(--ink-0);
+  border-bottom-color: var(--focus);
+}
+@media (hover: hover) and (pointer: fine) {
+  .rpt-tab:hover {
+    color: var(--ink-0);
+  }
+}
+.rpt-tab:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus);
+  outline-offset: -2px;
+  border-radius: var(--radius-1);
+}
+
+/* ── Panel + toolbar ────────────────────────────────────────────────────────── */
+.rpt-panel {
+  padding: var(--space-5) var(--space-7) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+.rpt-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.rpt-toolbar__caption {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+/* Data updates in place on re-query — dim, don't reflow (opacity is reduced-motion safe). */
+.rpt-live[data-busy='true'] {
+  opacity: 0.55;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.rpt-live {
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+/* ── Segmented range control ────────────────────────────────────────────────── */
+.rpt-seg {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  background: var(--surface-inset);
+  border: 1px solid var(--border-0);
+  border-radius: var(--radius-1);
+}
+.rpt-seg__btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.06em;
+  padding: var(--space-2) var(--space-4);
+  min-height: var(--control-h-sm);
+  border-radius: var(--radius-1);
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .rpt-seg__btn:hover {
+    color: var(--ink-0);
+  }
+}
+.rpt-seg__btn[aria-pressed='true'] {
+  background: var(--surface-2);
+  color: var(--ink-0);
+}
+.rpt-seg__btn:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* ── Stat tiles ─────────────────────────────────────────────────────────────── */
+.rpt-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1px;
+  background: var(--border-0);
+  border: 1px solid var(--border-0);
+}
+.rpt-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface-1);
+}
+.rpt-tile__num {
+  font-family: var(--font-display);
+  font-weight: var(--fw-display-strong);
+  font-size: var(--fs-display-sm);
+  line-height: var(--lh-tight);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-0);
+}
+.rpt-tile__label {
+  font-size: 10px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* ── Two-column body (table + chart) ───────────────────────────────────────── */
+.rpt-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .rpt-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.rpt-card {
+  border: 1px solid var(--border-0);
+  background: var(--surface-1);
+  min-width: 0;
+}
+.rpt-card__label {
+  display: block;
+  padding: var(--space-3) var(--space-4);
+  font-size: 10px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  border-bottom: 1px solid var(--border-0);
+}
+
+/* ── Tables ─────────────────────────────────────────────────────────────────── */
+.rpt-table-wrap {
+  overflow-x: auto;
+}
+.rpt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+.rpt-table th,
+.rpt-table td {
+  padding: 0 var(--space-4);
+  height: var(--row-h);
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border-0);
+}
+.rpt-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.rpt-table thead th {
+  font-size: 10px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  height: var(--control-h);
+  position: sticky;
+  top: 0;
+  background: var(--surface-1);
+}
+.rpt-table td {
+  color: var(--ink-1);
+}
+.rpt-table .is-num,
+.rpt-table th.is-num {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-0);
+}
+.rpt-table .is-dim {
+  color: var(--ink-3);
+}
+/* Weighted pipeline value — the display face carries the big number (tabular). */
+.rpt-table td.is-display {
+  text-align: right;
+  font-family: var(--font-display);
+  font-weight: var(--fw-display);
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-0);
+}
+.rpt-table__name {
+  font-weight: var(--fw-medium);
+  color: var(--ink-0);
+  white-space: normal;
+}
+.rpt-table tfoot td {
+  height: var(--row-h);
+  border-top: 1px solid var(--border-1);
+  color: var(--ink-2);
+  font-weight: var(--fw-semibold);
+}
+
+/* ── Horizontal bar comparison ──────────────────────────────────────────────── */
+.rpt-bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  margin: 0;
+  list-style: none;
+}
+.rpt-bar {
+  display: grid;
+  grid-template-columns: minmax(72px, auto) 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+.rpt-bar__label {
+  font-size: var(--fs-sm);
+  color: var(--ink-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rpt-bar__track {
+  height: 10px;
+  background: var(--surface-inset);
+  border: 1px solid var(--border-0);
+  border-radius: var(--radius-1);
+  overflow: hidden;
+}
+.rpt-bar__fill {
+  display: block;
+  height: 100%;
+  background: var(--ink-faint);
+  transform-origin: left center;
+  transition: transform var(--dur) var(--ease-out);
+}
+.rpt-bar--leader .rpt-bar__fill {
+  background: var(--state-live);
+}
+.rpt-bar__val {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-0);
+  min-width: 3ch;
+  text-align: right;
+}
+
+/* ── Funnel band ────────────────────────────────────────────────────────────── */
+.rpt-funnelgroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.rpt-funnel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+.rpt-funnel__row {
+  display: flex;
+  justify-content: center;
+}
+.rpt-funnel__seg {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  height: 34px;
+  padding: 0 var(--space-4);
+  background: var(--line-strong);
+  border: 1px solid var(--border-1);
+  color: var(--ink-0);
+  min-width: 96px;
+}
+.rpt-funnel__seg--won {
+  background: var(--state-reply);
+  border-color: var(--state-reply);
+  color: var(--bg);
+}
+.rpt-funnel__seg--lost {
+  background: var(--state-dnc);
+  border-color: var(--state-dnc);
+  color: var(--bg);
+}
+.rpt-funnel__seg-label {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rpt-funnel__seg-count {
+  font-family: var(--font-mono);
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Reply-rate meter ───────────────────────────────────────────────────────── */
+.rpt-meter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 128px;
+}
+.rpt-meter__track {
+  flex: 1;
+  height: 8px;
+  background: var(--surface-inset);
+  border: 1px solid var(--border-0);
+  border-radius: var(--radius-1);
+  overflow: hidden;
+}
+.rpt-meter__fill {
+  display: block;
+  height: 100%;
+  background: var(--state-idle);
+  transition: transform var(--dur) var(--ease-out);
+  transform-origin: left center;
+}
+.rpt-meter--high .rpt-meter__fill {
+  background: var(--state-reply);
+}
+.rpt-meter--mid .rpt-meter__fill {
+  background: var(--state-overdue);
+}
+.rpt-meter--low .rpt-meter__fill {
+  background: var(--state-idle);
+}
+.rpt-meter__val {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-0);
+  min-width: 5ch;
+  text-align: right;
+}
+
+/* ── Skeletons / empty ──────────────────────────────────────────────────────── */
+.rpt-skel-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1px;
+  background: var(--border-0);
+  border: 1px solid var(--border-0);
+}
+.rpt-skel-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface-1);
+}
+.rpt-skel-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+.rpt-error {
+  padding: var(--space-5);
+  border: 1px solid var(--state-dnc);
+  background: var(--state-dnc-bg);
+  color: var(--ink-0);
+  font-size: var(--fs-sm);
+}
+
+/* Reduced motion: keep color/opacity, drop movement. */
+@media (prefers-reduced-motion: reduce) {
+  .rpt-bar__fill,
+  .rpt-meter__fill,
+  .rpt-funnel__seg,
+  .rpt-tab,
+  .rpt-seg__btn,
+  .rpt-live {
+    transition: none;
+  }
+}

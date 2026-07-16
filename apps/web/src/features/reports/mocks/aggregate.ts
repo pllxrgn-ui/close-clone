@@ -15,12 +15,15 @@
  */
 import type { OpportunityStage, User } from '@switchboard/shared';
 import { resolveRange } from '../lib/range.ts';
+import { emptyActivityRow } from '../lib/totals.ts';
 import type {
   ActivityGroupBy,
   ActivityReportRow,
   FunnelStageRow,
   SequenceReportRow,
 } from '../types.ts';
+
+export { sumActivityRows } from '../lib/totals.ts';
 import type {
   ActivityEventSeed,
   CallSeed,
@@ -63,25 +66,6 @@ export interface AggregateActivityParams {
   to: string;
   userId?: string;
   groupBy?: ActivityGroupBy;
-}
-
-function emptyActivityRow(bucket: string): ActivityReportRow {
-  return {
-    bucket,
-    callsLogged: 0,
-    callsInbound: 0,
-    callsOutbound: 0,
-    callsByOutcome: {},
-    callsMissed: 0,
-    voicemails: 0,
-    emailsSent: 0,
-    emailsReceived: 0,
-    smsSent: 0,
-    smsReceived: 0,
-    notesAdded: 0,
-    tasksCompleted: 0,
-    talkTimeSeconds: 0,
-  };
 }
 
 export function aggregateActivity(params: AggregateActivityParams): ActivityReportRow[] {
@@ -176,29 +160,6 @@ export function aggregateActivity(params: AggregateActivityParams): ActivityRepo
   return out;
 }
 
-/** Org totals across activity rows (drives the stat tiles). */
-export function sumActivityRows(rows: readonly ActivityReportRow[]): ActivityReportRow {
-  const total = emptyActivityRow('__total__');
-  for (const r of rows) {
-    total.callsLogged += r.callsLogged;
-    total.callsInbound += r.callsInbound;
-    total.callsOutbound += r.callsOutbound;
-    total.callsMissed += r.callsMissed;
-    total.voicemails += r.voicemails;
-    total.emailsSent += r.emailsSent;
-    total.emailsReceived += r.emailsReceived;
-    total.smsSent += r.smsSent;
-    total.smsReceived += r.smsReceived;
-    total.notesAdded += r.notesAdded;
-    total.tasksCompleted += r.tasksCompleted;
-    total.talkTimeSeconds += r.talkTimeSeconds;
-    for (const [k, v] of Object.entries(r.callsByOutcome)) {
-      total.callsByOutcome[k] = (total.callsByOutcome[k] ?? 0) + v;
-    }
-  }
-  return total;
-}
-
 // ── Funnel ───────────────────────────────────────────────────────────────────
 
 export interface AggregateFunnelParams {
@@ -265,7 +226,9 @@ export function aggregateFunnel(params: AggregateFunnelParams): FunnelStageRow[]
     return a;
   };
   const inClose = (closeDate: string): boolean =>
-    closeFrom === null || closeToExcl === null || (closeDate >= closeFrom && closeDate < closeToExcl);
+    closeFrom === null ||
+    closeToExcl === null ||
+    (closeDate >= closeFrom && closeDate < closeToExcl);
 
   for (const opp of opps) {
     if (currency !== undefined && opp.currency !== currency) continue;

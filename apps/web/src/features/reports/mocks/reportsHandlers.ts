@@ -10,11 +10,7 @@
  */
 import { http, HttpResponse } from 'msw';
 import type { Page } from '../../../api/client.ts';
-import {
-  aggregateActivity,
-  aggregateFunnel,
-  aggregateSequences,
-} from './aggregate.ts';
+import { aggregateActivity, aggregateFunnel, aggregateSequences } from './aggregate.ts';
 import { reportSeed } from './seed.ts';
 import { ReportRangeError } from '../lib/range.ts';
 import type { ActivityGroupBy } from '../types.ts';
@@ -122,7 +118,9 @@ export const reportsHandlers = [
         ...(from && to ? { from, to } : {}),
         ...(currency ? { currency: currency.toUpperCase() } : {}),
       });
-      return HttpResponse.json(pageRows(rows, url.searchParams, (r) => `${r.currency}::${r.stageId}`));
+      return HttpResponse.json(
+        pageRows(rows, url.searchParams, (r) => `${r.currency}::${r.stageId}`),
+      );
     } catch (err) {
       const mapped = rangeError(err);
       if (mapped) return mapped;
@@ -147,7 +145,9 @@ export const reportsHandlers = [
         ...(from && to ? { from, to } : {}),
         ...(sequenceId ? { sequenceId } : {}),
       });
-      return HttpResponse.json(pageRows(rows, url.searchParams, (r) => `${r.sequenceName}::${r.sequenceId}`));
+      return HttpResponse.json(
+        pageRows(rows, url.searchParams, (r) => `${r.sequenceName}::${r.sequenceId}`),
+      );
     } catch (err) {
       const mapped = rangeError(err);
       if (mapped) return mapped;
