@@ -148,3 +148,25 @@ describe('smart-views routes — preview wire', () => {
     expect((res.json() as { error: { code: string } }).error.code).toBe('VALIDATION_FAILED');
   });
 });
+
+describe('smart-views routes — production wiring (client derived from db.$client)', () => {
+  test('preview works when no explicit RawQueryable is injected', async () => {
+    // Proves the zero-wiring composition path: the orchestrator passes only `db`
+    // and the factory derives the raw client from `db.$client` (PGlite / pg Pool).
+    const derived = Fastify({ logger: false });
+    registerSmartViewRoutes(derived, { db, orgTimezone: 'UTC', defaultUserId: USER });
+    await derived.ready();
+    try {
+      const res = await derived.inject({
+        method: 'POST',
+        url: '/api/v1/smart-views/preview',
+        headers: { 'content-type': 'application/json' },
+        payload: JSON.stringify({ dsl: 'status = "Won"' }),
+      });
+      expect(res.statusCode).toBe(200);
+      expect((res.json() as { countEstimate: number }).countEstimate).toBe(3);
+    } finally {
+      await derived.close();
+    }
+  });
+});
