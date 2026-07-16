@@ -7,7 +7,7 @@ import { ApiError } from '../../../api/index.ts';
 import { listLeads } from '../../../api/leads.ts';
 import { listSmartViews, getSmartView, previewSmartView } from '../../../api/smartViews.ts';
 import { listLeadStatuses, listUsers } from '../../../api/reference.ts';
-import { EmptyState, Spinner, Skeleton, Button, Input } from '../../../ui/index.ts';
+import { EmptyState, ErrorState, Spinner, Skeleton, Button, Input } from '../../../ui/index.ts';
 import { SearchIcon, XIcon } from '../icons.tsx';
 import { usePrefersReducedMotion } from '../lib/useReducedMotion.ts';
 import { compareByColumn, resolveColumns } from '../columns/columns.tsx';
@@ -227,16 +227,10 @@ export function LeadsSurface({ viewId }: LeadsSurfaceProps): JSX.Element {
 
         <div className="leads-content">
           {dataError ? (
-            <EmptyState
+            <ErrorState
               title="Couldn’t load leads"
               description={errorMessage(dataError)}
-              actions={
-                <Button
-                  onClick={() => void (viewId ? previewQuery.refetch() : allLeadsQuery.refetch())}
-                >
-                  Retry
-                </Button>
-              }
+              onRetry={() => void (viewId ? previewQuery.refetch() : allLeadsQuery.refetch())}
             />
           ) : busy && rawRows.length === 0 ? (
             <div className="leads-content__loading">

@@ -5,7 +5,7 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { ApiError } from '../../../api/index.ts';
 import { getLead, getLeadTimeline } from '../../../api/leads.ts';
 import { listLeadStatuses, listUsers } from '../../../api/reference.ts';
-import { Button, EmptyState, Spinner } from '../../../ui/index.ts';
+import { EmptyState, ErrorState, Spinner } from '../../../ui/index.ts';
 import {
   listLeadContacts,
   listLeadOpportunities,
@@ -91,21 +91,23 @@ export function LeadDetail({ leadId }: LeadDetailProps): JSX.Element {
     const notFound = leadQuery.error instanceof ApiError && leadQuery.error.code === 'NOT_FOUND';
     return (
       <div className="lead-detail">
-        <EmptyState
-          title={notFound ? 'Lead not found' : 'Couldn’t load this lead'}
-          description={
-            notFound ? 'It may have been merged or deleted.' : describeError(leadQuery.error)
-          }
-          actions={
-            notFound ? (
+        {notFound ? (
+          <EmptyState
+            title="Lead not found"
+            description="It may have been merged or deleted."
+            actions={
               <Link className="sb-btn" to="/leads">
                 Back to leads
               </Link>
-            ) : (
-              <Button onClick={() => void leadQuery.refetch()}>Retry</Button>
-            )
-          }
-        />
+            }
+          />
+        ) : (
+          <ErrorState
+            title="Couldn’t load this lead"
+            description={describeError(leadQuery.error)}
+            onRetry={() => void leadQuery.refetch()}
+          />
+        )}
       </div>
     );
   }

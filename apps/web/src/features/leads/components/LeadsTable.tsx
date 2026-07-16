@@ -5,7 +5,7 @@ import type { Lead } from '@switchboard/shared';
 import { cx } from '../../../lib/cx.ts';
 import { useKeyBindings, useListNav } from '../../../keyboard/index.ts';
 import type { KeyBindingDef } from '../../../keyboard/index.ts';
-import { Spinner } from '../../../ui/index.ts';
+import { Button, Spinner } from '../../../ui/index.ts';
 import { ChevronDownIcon, ChevronUpIcon } from '../icons.tsx';
 import type { ColumnCtx, ColumnDef } from '../columns/columns.tsx';
 import { primaryLeadState } from '../lib/leadState.ts';
@@ -279,9 +279,9 @@ export function LeadsTable({
         </div>
       ) : hasMore && onLoadMore ? (
         <div className="lead-table__more">
-          <button type="button" className="sb-btn sb-btn--sm" onClick={onLoadMore}>
+          <Button size="sm" onClick={onLoadMore}>
             Load more
-          </button>
+          </Button>
         </div>
       ) : null}
     </div>

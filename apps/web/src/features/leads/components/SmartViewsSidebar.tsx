@@ -3,7 +3,7 @@ import type { JSX } from 'react';
 import type { SmartView } from '@switchboard/shared';
 import { cx } from '../../../lib/cx.ts';
 import { useListNav } from '../../../keyboard/index.ts';
-import { Skeleton, Button } from '../../../ui/index.ts';
+import { Skeleton, ErrorState } from '../../../ui/index.ts';
 import { FilterIcon, InboxIcon, UsersIcon } from '../icons.tsx';
 
 /*
@@ -129,12 +129,11 @@ export function SmartViewsSidebar({
       )}
 
       {isError ? (
-        <div className="sv-rail__error" role="alert">
-          <span>{errorMessage ?? 'Couldn’t load views.'}</span>
-          <Button size="sm" variant="ghost" onClick={onRetry}>
-            Retry
-          </Button>
-        </div>
+        <ErrorState
+          className="sv-rail__errorstate"
+          title={errorMessage ?? 'Couldn’t load views.'}
+          onRetry={onRetry}
+        />
       ) : null}
     </nav>
   );

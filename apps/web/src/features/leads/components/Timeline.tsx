@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { JSX } from 'react';
 import type { Activity } from '@switchboard/shared';
-import { Button, EmptyState, Spinner } from '../../../ui/index.ts';
+import { Button, EmptyState, ErrorState, Spinner } from '../../../ui/index.ts';
 import { ClockIcon } from '../icons.tsx';
 import { formatDayLabel, localDayKey } from '../lib/format.ts';
 import { TimelineEvent } from './TimelineEvent.tsx';
@@ -70,10 +70,10 @@ export function Timeline({
 
   if (isError) {
     return (
-      <EmptyState
+      <ErrorState
         title="Couldn’t load the timeline"
         description={errorMessage ?? 'The request failed.'}
-        actions={<Button onClick={onRetry}>Retry</Button>}
+        onRetry={onRetry}
       />
     );
   }

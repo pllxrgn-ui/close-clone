@@ -1,6 +1,6 @@
 import type { JSX } from 'react';
 import type { Opportunity } from '@switchboard/shared';
-import { Button, Skeleton, StatusPill } from '../../../ui/index.ts';
+import { ErrorState, Skeleton, StatusPill } from '../../../ui/index.ts';
 import type { StatusTone } from '../../../ui/index.ts';
 import { formatDate, formatMoneyCents } from '../lib/format.ts';
 
@@ -45,12 +45,11 @@ export function LeadOpportunitiesCard({
           <Skeleton height={54} />
         </div>
       ) : isError ? (
-        <div className="rail-card__error" role="alert">
-          <span>Couldn’t load opportunities.</span>
-          <Button size="sm" variant="ghost" onClick={onRetry}>
-            Retry
-          </Button>
-        </div>
+        <ErrorState
+          className="rail-card__errorstate"
+          title="Couldn’t load opportunities"
+          onRetry={onRetry}
+        />
       ) : opportunities.length === 0 ? (
         <p className="rail-card__empty">No opportunities on this lead.</p>
       ) : (

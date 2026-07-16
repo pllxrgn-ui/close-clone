@@ -114,15 +114,10 @@
   gap: var(--space-2);
   padding: var(--space-2);
 }
-.sv-rail__error {
+/* Compact the shared ErrorState for this narrow (232px) rail. */
+.sv-rail .sv-rail__errorstate {
   margin-top: var(--space-3);
-  padding: var(--space-3);
-  color: var(--state-overdue-fg);
-  font-size: var(--fs-sm);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  align-items: flex-start;
+  padding: var(--space-5) var(--space-4);
 }
 
 /* ── Main column: toolbar + content ────────────────────────────────────────── */
@@ -763,14 +758,9 @@
   color: var(--ink-3);
   font-size: var(--fs-sm);
 }
-.rail-card__error {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  align-items: flex-start;
-  padding: var(--space-4);
-  color: var(--state-overdue-fg);
-  font-size: var(--fs-sm);
+/* Compact the shared ErrorState for the narrow (320px) right-rail cards. */
+.rail-card .rail-card__errorstate {
+  padding: var(--space-5) var(--space-4);
 }
 .contact-row {
   display: flex;

@@ -149,6 +149,6 @@ describe('LeadDetail — failure paths', () => {
     // Lead + timeline still render; only the contacts card shows an error.
     expect(await screen.findByText('North Labs')).toBeInTheDocument();
     const contacts = screen.getByRole('region', { name: 'Contacts' });
-    expect(within(contacts).getByText('Couldn’t load contacts.')).toBeInTheDocument();
+    expect(within(contacts).getByRole('alert')).toHaveTextContent('Couldn’t load contacts');
   });
 });
