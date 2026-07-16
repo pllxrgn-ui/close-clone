@@ -14,10 +14,14 @@ import {
   type Db,
 } from '../../db/index.ts';
 import { MockEmailProvider } from '../../providers/mock/mock-email-provider.ts';
+import { MockTelephonyProvider } from '../../providers/telephony/mock-telephony-provider.ts';
 import { TokenCipher } from '../sync/token-cipher.ts';
 import { InProcessQueueDriver } from '../../queue/index.ts';
 import type { DispatchDeps } from './dispatch.ts';
 import type { UnsubscribeHeaderConfig } from './unsubscribe.ts';
+
+/** Default outbound SMS sender number wired into the harness (org Twilio number). */
+export const HARNESS_SMS_FROM = '+15550000000';
 
 /**
  * Seed + wiring helpers for the sequence-engine suites (task 2e). NOT a test file.
@@ -40,6 +44,8 @@ export interface EngineHarness {
   queue: InProcessQueueDriver;
   providers: Map<string, MockEmailProvider>;
   providerFor: (identity: { address: string; provider: 'gmail' | 'mock' }) => MockEmailProvider;
+  /** Shared telephony provider for `sms` steps (counts sendSms calls). */
+  telephony: MockTelephonyProvider;
   /** Mutable clock the tests advance. */
   clock: { now: Date };
   deps: DispatchDeps;
@@ -63,6 +69,7 @@ export function makeHarness(db: Db): EngineHarness {
     }
     return p;
   };
+  const telephony = new MockTelephonyProvider({ clock: { now: () => clock.now } });
   const deps: DispatchDeps = {
     db,
     providerFor,
@@ -71,8 +78,9 @@ export function makeHarness(db: Db): EngineHarness {
     workerId: 'worker-test',
     now,
     unsubscribe: UNSUB_CONFIG,
+    sms: { provider: telephony, fromNumber: HARNESS_SMS_FROM },
   };
-  return { db, cipher, queue, providers, providerFor, clock, deps };
+  return { db, cipher, queue, providers, providerFor, telephony, clock, deps };
 }
 
 let seq = 0;
@@ -104,7 +112,7 @@ export async function seedContact(
   db: Db,
   leadId: string,
   email: string,
-  opts: { dnc?: boolean; name?: string } = {},
+  opts: { dnc?: boolean; name?: string; phone?: string } = {},
 ): Promise<string> {
   const rows = await db
     .insert(contacts)
@@ -112,9 +120,29 @@ export async function seedContact(
       leadId,
       name: opts.name ?? 'Contact',
       emails: email.length > 0 ? [{ email, type: 'work' }] : [],
+      ...(opts.phone !== undefined ? { phones: [{ phone: opts.phone, type: 'mobile' }] } : {}),
       ...(opts.dnc === true ? { dnc: true } : {}),
     })
     .returning({ id: contacts.id });
+  return rows[0]!.id;
+}
+
+/** Seed an SMS-channel template (no subject; body carries merge tags). */
+export async function seedSmsTemplate(
+  db: Db,
+  ownerId?: string,
+  opts: { body?: string } = {},
+): Promise<string> {
+  const rows = await db
+    .insert(templates)
+    .values({
+      name: 'Seq sms template',
+      channel: 'sms',
+      body: opts.body ?? 'Hi {{contact.name}}, following up.',
+      ...(ownerId !== undefined ? { ownerId } : {}),
+      shared: false,
+    })
+    .returning({ id: templates.id });
   return rows[0]!.id;
 }
 
@@ -198,13 +226,21 @@ export async function seedSequence(
 
 export async function setOrgSettings(
   db: Db,
-  opts: { dailySendCap?: number; companyTimezone?: string; sendingWindow?: unknown } = {},
+  opts: {
+    dailySendCap?: number;
+    companyTimezone?: string;
+    sendingWindow?: unknown;
+    quietHours?: unknown;
+  } = {},
 ): Promise<void> {
   await db.insert(orgSettings).values({
     dailySendCap: opts.dailySendCap ?? 200,
     companyTimezone: opts.companyTimezone ?? 'UTC',
     ...(opts.sendingWindow !== undefined
       ? { sendingWindow: opts.sendingWindow as Record<string, unknown> }
+      : {}),
+    ...(opts.quietHours !== undefined
+      ? { quietHours: opts.quietHours as Record<string, unknown> }
       : {}),
   });
 }

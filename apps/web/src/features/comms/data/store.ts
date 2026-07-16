@@ -31,6 +31,7 @@ import type {
 } from '@switchboard/shared';
 import { db } from '../../../mocks/fixtures.ts';
 import { mulberry32, uuidFrom } from '../../../mocks/seed.ts';
+import { adminStore } from '../../admin/mocks/adminStore.ts';
 
 /** An outbound email as stored in the demo outbox/thread (C1 email_message shape, trimmed). */
 export interface OutboxMessage {
@@ -151,7 +152,7 @@ const SEQUENCE_SEEDS: readonly SeqSeed[] = [
     steps: [
       { type: 'email', delayHours: 0, requiresReview: false, templateName: 'Intro — first touch' },
       { type: 'call_task', delayHours: 48, requiresReview: false },
-      { type: 'email', delayHours: 96, requiresReview: true, templateName: 'Follow-up nudge' },
+      { type: 'email', delayHours: 96, requiresReview: true, templateName: 'Follow-up — no reply' },
     ],
   },
   {
@@ -162,10 +163,15 @@ const SEQUENCE_SEEDS: readonly SeqSeed[] = [
     paused: 2,
     steps: [
       { type: 'email', delayHours: 0, requiresReview: false, templateName: 'Intro — first touch' },
-      { type: 'email', delayHours: 48, requiresReview: false, templateName: 'Follow-up nudge' },
+      {
+        type: 'email',
+        delayHours: 48,
+        requiresReview: false,
+        templateName: 'Follow-up — no reply',
+      },
       { type: 'call_task', delayHours: 96, requiresReview: false },
       { type: 'sms', delayHours: 120, requiresReview: false },
-      { type: 'email', delayHours: 168, requiresReview: true, templateName: 'Proposal recap' },
+      { type: 'email', delayHours: 168, requiresReview: true, templateName: 'Meeting recap' },
     ],
   },
   {
@@ -175,10 +181,10 @@ const SEQUENCE_SEEDS: readonly SeqSeed[] = [
     active: 4,
     paused: 1,
     steps: [
-      { type: 'email', delayHours: 0, requiresReview: false, templateName: 'Follow-up nudge' },
+      { type: 'email', delayHours: 0, requiresReview: false, templateName: 'Follow-up — no reply' },
       { type: 'sms', delayHours: 48, requiresReview: false },
       { type: 'call_task', delayHours: 96, requiresReview: false },
-      { type: 'email', delayHours: 168, requiresReview: true, templateName: 'Renewal check-in' },
+      { type: 'email', delayHours: 168, requiresReview: true, templateName: 'Renewal outreach' },
     ],
   },
   {
@@ -189,9 +195,14 @@ const SEQUENCE_SEEDS: readonly SeqSeed[] = [
     paused: 2,
     steps: [
       { type: 'email', delayHours: 0, requiresReview: false, templateName: 'Intro — first touch' },
-      { type: 'email', delayHours: 48, requiresReview: false, templateName: 'Follow-up nudge' },
+      {
+        type: 'email',
+        delayHours: 48,
+        requiresReview: false,
+        templateName: 'Follow-up — no reply',
+      },
       { type: 'call_task', delayHours: 120, requiresReview: false },
-      { type: 'email', delayHours: 168, requiresReview: true, templateName: 'Proposal recap' },
+      { type: 'email', delayHours: 168, requiresReview: true, templateName: 'Meeting recap' },
     ],
   },
   {
@@ -202,8 +213,13 @@ const SEQUENCE_SEEDS: readonly SeqSeed[] = [
     paused: 0,
     steps: [
       { type: 'email', delayHours: 0, requiresReview: false, templateName: 'Intro — first touch' },
-      { type: 'email', delayHours: 96, requiresReview: false, templateName: 'Follow-up nudge' },
-      { type: 'email', delayHours: 168, requiresReview: true, templateName: 'Proposal recap' },
+      {
+        type: 'email',
+        delayHours: 96,
+        requiresReview: false,
+        templateName: 'Follow-up — no reply',
+      },
+      { type: 'email', delayHours: 168, requiresReview: true, templateName: 'Meeting recap' },
     ],
   },
 ];
@@ -228,7 +244,11 @@ function buildInitialState(): CommsState {
   const id = makeIds(SEED);
   const templates = seedTemplates(id);
   const snippets = seedSnippets(id);
-  const templateByName = new Map(templates.map((t) => [t.name, t.id]));
+  // Sequence steps reference the ADMIN-owned template library — the single owner of
+  // GET /templates (the comms composer reads that store). Resolving step template
+  // refs against `adminStore.templates` by name means the ladder resolves names
+  // against the same store production serves (ids like `tpl-intro` are stable).
+  const templateByName = new Map(adminStore.templates.map((t) => [t.name, t.id]));
 
   const sequences: Sequence[] = [];
   const steps: SequenceStep[] = [];

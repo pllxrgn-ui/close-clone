@@ -57,13 +57,13 @@ export function SequenceDetail({ sequenceId }: { sequenceId: string }): JSX.Elem
       setEnrollmentState(input.id, { state: input.state, pausedReason: 'manual' }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['comms', 'roster', sequenceId] });
-      void queryClient.invalidateQueries({ queryKey: ['comms', 'enrollments', 'all'] });
+      void queryClient.invalidateQueries({ queryKey: ['comms', 'enrollments'] });
     },
   });
 
   const refreshAfterEnroll = (): void => {
     void queryClient.invalidateQueries({ queryKey: ['comms', 'roster', sequenceId] });
-    void queryClient.invalidateQueries({ queryKey: ['comms', 'enrollments', 'all'] });
+    void queryClient.invalidateQueries({ queryKey: ['comms', 'enrollments'] });
   };
 
   if (sequencesQuery.isLoading) {

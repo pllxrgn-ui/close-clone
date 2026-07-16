@@ -34,6 +34,9 @@ export const leadDetailHandlers = [
     return HttpResponse.json(items);
   }),
 
-  // GET /opportunity-stages — reference list for stage labels.
-  http.get(api('/opportunity-stages'), () => HttpResponse.json(db.opportunityStages)),
+  // GET /opportunity-stages — the pipeline feature owns this reference list (it
+  // serves the same `db.opportunityStages`, sorted). This handler is registered
+  // AFTER pipeline in production order, so it was always shadowed; return undefined
+  // to cooperatively pass through rather than shadow-duplicate the route.
+  http.get(api('/opportunity-stages'), () => undefined),
 ];

@@ -73,9 +73,10 @@ function toStringArray(value: unknown): string[] {
 }
 
 export const commsHandlers = [
-  // ── Templates + snippets (composer library) ────────────────────────────────
-  http.get(api('/templates'), () => HttpResponse.json(commsStore.templates)),
-  http.get(api('/snippets'), () => HttpResponse.json(commsStore.snippets)),
+  // Templates + snippets are OWNED by the admin feature (`GET /templates`,
+  // `GET /snippets`) — the composer library reads the admin store. Those handlers
+  // register before comms in production order, so a duplicate here was always
+  // shadowed; it is removed to keep one owner per route (no MSW collision).
 
   // ── Suppressed recipients for a lead (rep-facing rail signal) ──────────────
   // Minimal, lead-scoped read: which of this lead's contact emails are globally
@@ -165,12 +166,20 @@ export const commsHandlers = [
     return HttpResponse.json(items);
   }),
 
-  http.get(api('/sequence-enrollments'), ({ request }) => {
-    const sequenceId = new URL(request.url).searchParams.get('sequenceId');
-    const items = commsStore.enrollments.filter((e) =>
-      sequenceId ? e.sequenceId === sequenceId : true,
-    );
-    return HttpResponse.json(items);
+  // Real path (CONTRACTS §C7): `GET /sequences/:id/enrollments` → `{ items }` of
+  // bare enrollment rows (ids + lifecycle state, no display names).
+  http.get(api('/sequences/:id/enrollments'), ({ params }) => {
+    const sequenceId = String(params.id);
+    const items = commsStore.enrollments
+      .filter((e) => e.sequenceId === sequenceId)
+      .map((e) => ({
+        id: e.id,
+        leadId: e.leadId,
+        contactId: e.contactId,
+        state: e.state,
+        pausedReason: e.pausedReason,
+      }));
+    return HttpResponse.json({ items });
   }),
 
   // Enriched roster (read view-model): enrollment + resolved lead/contact display
@@ -202,57 +211,90 @@ export const commsHandlers = [
     return HttpResponse.json(rows);
   }),
 
-  // ── Enroll (POST /sequences/:id/enroll) ────────────────────────────────────
+  // ── Bulk enroll (POST /sequences/:id/enroll) ───────────────────────────────
+  // Mirrors the REAL engine route (CONTRACTS §C7): body is `{ targets: [...] }`
+  // and the response is `{ enrolled, skipped }` — a soft-deleted / already-enrolled
+  // target is reported under `skipped` (NOT an HTTP error). The admin handler owns
+  // the `{ leadIds: [...] }` bulk body and falls through for a `targets` body, so
+  // this handler owns the sequence-drawer path in production order.
   http.post(api('/sequences/:id/enroll'), async ({ params, request }) => {
+    const body = await readJson(request);
+    if (!body || !Array.isArray(body.targets)) return undefined; // not our body shape
+
+    // The real route validates the body (zod) BEFORE the sequence lookup: a non-empty
+    // targets array of {leadId, contactId} — a malformed target is a 400, not a skip.
+    if (body.targets.length === 0) {
+      return errorJson(400, 'VALIDATION_FAILED', 'targets must be a non-empty array');
+    }
+    const parsedTargets: { leadId: string; contactId: string }[] = [];
+    for (const raw of body.targets) {
+      if (!isRecord(raw) || typeof raw.leadId !== 'string' || typeof raw.contactId !== 'string') {
+        return errorJson(400, 'VALIDATION_FAILED', 'each target needs a leadId and contactId');
+      }
+      parsedTargets.push({ leadId: raw.leadId, contactId: raw.contactId });
+    }
+
     const sequenceId = String(params.id);
     const sequence = commsStore.sequences.find((s) => s.id === sequenceId);
     if (!sequence) return errorJson(404, 'NOT_FOUND', 'Sequence not found');
     if (sequence.status !== 'active') {
       return errorJson(422, 'VALIDATION_FAILED', 'Cannot enroll into an archived sequence');
     }
-    const body = await readJson(request);
-    const leadId = body && typeof body.leadId === 'string' ? body.leadId : null;
-    const contactId = body && typeof body.contactId === 'string' ? body.contactId : null;
-    if (!leadId || !contactId) {
-      return errorJson(400, 'VALIDATION_FAILED', 'leadId and contactId are required');
-    }
-    // DNC contacts/leads may not be enrolled (I-DNC at enrollment time).
-    const lead = db.leads.find((l) => l.id === leadId);
-    const contact = db.contacts.find((c) => c.id === contactId);
-    if (lead?.dnc || contact?.dnc) {
-      return errorJson(422, 'SUPPRESSED', 'Contact is on the do-not-contact list');
-    }
-    // C1 uniqueness: one live enrollment per (sequence, contact).
-    const dupe = commsStore.enrollments.find(
-      (e) =>
-        e.sequenceId === sequenceId &&
-        e.contactId === contactId &&
-        (e.state === 'active' || e.state === 'paused'),
-    );
-    if (dupe) return errorJson(409, 'CONFLICT', 'Contact is already enrolled in this sequence');
 
-    const now = new Date().toISOString();
-    const enrollment: SequenceEnrollment = {
-      id: crypto.randomUUID(),
-      sequenceId,
-      leadId,
-      contactId,
-      emailAccountId: null,
-      enrolledBy: db.users[0]?.id ?? null,
-      state: 'active',
-      pausedReason: null,
-      createdAt: now,
-      updatedAt: now,
-    };
-    commsStore.enrollments.push(enrollment);
-    appendActivity({
-      leadId,
-      contactId,
-      userId: enrollment.enrolledBy,
-      type: 'sequence_enrolled',
-      payload: { sequence: sequence.name },
-    });
-    return HttpResponse.json(enrollment, { status: 201 });
+    const enrolled: { leadId: string; contactId: string; enrollmentId: string }[] = [];
+    const skipped: { leadId: string; contactId: string; reason: string }[] = [];
+    for (const { leadId, contactId } of parsedTargets) {
+      const lead = db.leads.find((l) => l.id === leadId && l.deletedAt === null);
+      if (!lead) {
+        skipped.push({ leadId, contactId, reason: 'lead_not_found' });
+        continue;
+      }
+      const contact = db.contacts.find((c) => c.id === contactId && c.deletedAt === null);
+      if (!contact) {
+        skipped.push({ leadId, contactId, reason: 'contact_not_found' });
+        continue;
+      }
+      if (contact.leadId !== leadId) {
+        skipped.push({ leadId, contactId, reason: 'contact_lead_mismatch' });
+        continue;
+      }
+      // C1 uniqueness: one live enrollment per (sequence, contact). DNC is NOT
+      // rejected here — the engine enrolls it and BLOCKS at send time (I-DNC).
+      const dupe = commsStore.enrollments.find(
+        (e) =>
+          e.sequenceId === sequenceId &&
+          e.contactId === contactId &&
+          (e.state === 'active' || e.state === 'paused'),
+      );
+      if (dupe) {
+        skipped.push({ leadId, contactId, reason: 'already_enrolled' });
+        continue;
+      }
+
+      const now = new Date().toISOString();
+      const enrollment: SequenceEnrollment = {
+        id: crypto.randomUUID(),
+        sequenceId,
+        leadId,
+        contactId,
+        emailAccountId: null,
+        enrolledBy: db.users[0]?.id ?? null,
+        state: 'active',
+        pausedReason: null,
+        createdAt: now,
+        updatedAt: now,
+      };
+      commsStore.enrollments.push(enrollment);
+      appendActivity({
+        leadId,
+        contactId,
+        userId: enrollment.enrolledBy,
+        type: 'sequence_enrolled',
+        payload: { sequence: sequence.name },
+      });
+      enrolled.push({ leadId, contactId, enrollmentId: enrollment.id });
+    }
+    return HttpResponse.json({ enrolled, skipped });
   }),
 
   // ── Pause / resume an enrollment (PATCH) ───────────────────────────────────
