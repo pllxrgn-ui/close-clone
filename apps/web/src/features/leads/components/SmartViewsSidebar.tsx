@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { Fragment, useMemo } from 'react';
 import type { JSX } from 'react';
 import type { SmartView } from '@switchboard/shared';
 import { cx } from '../../../lib/cx.ts';
@@ -86,22 +86,21 @@ export function SmartViewsSidebar({
           ))}
         </div>
       ) : (
-        <ul className="sv-rail__list" role="listbox" aria-label="Smart Views" {...nav.containerProps}>
+        <div className="sv-rail__list" role="listbox" aria-label="Smart Views" {...nav.containerProps}>
           {entries.map((entry, index) => {
             const prev = entries[index - 1];
             const showHeader = !prev || prev.group !== entry.group;
             const itemProps = nav.getItemProps(index);
             const current = entry.id === activeViewId;
             return (
-              <li key={entry.id ?? '__all__'} className="sv-rail__item-wrap">
+              <Fragment key={entry.id ?? '__all__'}>
                 {showHeader ? (
-                  <span className="sv-rail__group" role="presentation">
+                  <div className="sv-rail__group" aria-hidden="true">
                     {GROUP_LABEL[entry.group]}
-                  </span>
+                  </div>
                 ) : null}
-                <button
-                  type="button"
-                  ref={itemProps.ref as (el: HTMLButtonElement | null) => void}
+                <div
+                  ref={itemProps.ref}
                   role="option"
                   tabIndex={itemProps.tabIndex}
                   aria-selected={current}
@@ -117,11 +116,11 @@ export function SmartViewsSidebar({
                   {entry.shared ? (
                     <UsersIcon size={12} className="sv-rail__item-shared" title="Shared view" />
                   ) : null}
-                </button>
-              </li>
+                </div>
+              </Fragment>
             );
           })}
-        </ul>
+        </div>
       )}
 
       {isError ? (

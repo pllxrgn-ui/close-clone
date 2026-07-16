@@ -135,26 +135,28 @@ export function LeadsTable({
     }
   }, [hasMore, loadingMore, onLoadMore, lastIndex, leads.length]);
 
-  const template = `var(--lead-rail-w) var(--lead-select-w) ${columns
-    .map((c) => c.width)
-    .join(' ')} var(--lead-state-w)`;
+  // The 4px state rail is a decorative overlay (not a grid cell), so every row's
+  // children are proper cells and aria-colcount is exact.
+  const template = `var(--lead-select-w) ${columns.map((c) => c.width).join(' ')} var(--lead-state-w)`;
   const gridStyle = { '--lead-cols': template } as CSSProperties;
 
   return (
     <div
       className="lead-table"
-      role="grid"
-      aria-label="Leads"
-      aria-multiselectable="true"
-      aria-colcount={columns.length + 2}
-      {...(totalCount !== undefined ? { 'aria-rowcount': totalCount + 1 } : {})}
       data-reduced-motion={reducedMotion ? 'true' : undefined}
       style={gridStyle}
     >
-      {/* Header row (sort controls + select-all) */}
-      <div className="lead-table__head" role="rowgroup">
+      <div
+        className="lead-table__grid"
+        role="grid"
+        aria-label="Leads"
+        aria-multiselectable="true"
+        aria-colcount={columns.length + 2}
+        {...(totalCount !== undefined ? { 'aria-rowcount': totalCount + 1 } : {})}
+      >
+        {/* Header row (sort controls + select-all) */}
+        <div className="lead-table__head" role="rowgroup">
         <div className="lead-table__row lead-table__row--head" role="row" aria-rowindex={1}>
-          <span className="lead-cell lead-cell--rail" role="presentation" aria-hidden="true" />
           <span className="lead-cell lead-cell--select" role="columnheader">
             <input
               ref={selectAllRef}
@@ -202,19 +204,19 @@ export function LeadsTable({
         </div>
       </div>
 
-      {/* Virtualized body */}
-      <div
-        ref={scrollRef}
-        className="lead-table__body"
-        data-virtual-scroll="true"
-        role="presentation"
-        {...nav.containerProps}
-      >
+        {/* Virtualized body */}
         <div
-          className="lead-table__viewport"
+          ref={scrollRef}
+          className="lead-table__body"
+          data-virtual-scroll="true"
           role="rowgroup"
-          style={{ height: `${virtualizer.getTotalSize()}px` }}
+          {...nav.containerProps}
         >
+          <div
+            className="lead-table__viewport"
+            role="presentation"
+            style={{ height: `${virtualizer.getTotalSize()}px` }}
+          >
           {virtualRows.map((vi) => {
             const lead = leads[vi.index];
             if (!lead) return null;
@@ -240,9 +242,7 @@ export function LeadsTable({
                 onClick={itemProps.onClick}
                 onFocus={itemProps.onFocus}
               >
-                <span className="lead-cell lead-cell--rail" role="gridcell">
-                  <Rail state={primary} />
-                </span>
+                <Rail state={primary} className="lead-row__rail" />
                 <span className="lead-cell lead-cell--select" role="gridcell">
                   <input
                     type="checkbox"
@@ -272,6 +272,7 @@ export function LeadsTable({
               </div>
             );
           })}
+          </div>
         </div>
       </div>
 
