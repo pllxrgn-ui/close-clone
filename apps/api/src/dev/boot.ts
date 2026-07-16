@@ -1,10 +1,16 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import { asc } from 'drizzle-orm';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { loadConfig, type AppConfig } from '../config.ts';
 import { createTestDb } from '../db/test-helpers.ts';
 import { users, type Db } from '../db/index.ts';
-import { loadGoldenFixtures, type LoadedCounts } from '../services/fixtures/loader.ts';
+import {
+  fixturesPresent,
+  loadGoldenFixtures,
+  type LoadedCounts,
+} from '../services/fixtures/loader.ts';
 import { registerRoutes } from '../routes/index.ts';
 import { createProviderRegistry, createEmailSenderRegistry } from '../providers/registry.ts';
 import { TokenCipher } from '../services/sync/token-cipher.ts';
@@ -29,6 +35,22 @@ import { registerDevSmartViewRoutes, seedDevSmartViews, type RawQueryable } from
 
 /** Org timezone for relative-date resolution in smart-view previews (C3). */
 const DEV_ORG_TIMEZONE = 'America/New_York';
+
+/** Default golden fixture dir (matches the loader's own default resolution). */
+const GOLDEN_DIR = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '../../../..',
+  'fixtures/out/golden',
+);
+
+/** Actionable message when the (gitignored) golden fixture has not been built. */
+function fixturesMissingMessage(dir: string): string {
+  return (
+    `golden fixture not found at ${dir}. Generate it first (it is gitignored):\n` +
+    `  node --experimental-strip-types fixtures/src/cli.ts --golden\n` +
+    `  (or, on Node >= 23: pnpm --filter @switchboard/fixtures run generate:golden)`
+  );
+}
 
 export interface BuildDevServerOptions {
   config?: AppConfig;
@@ -71,6 +93,10 @@ export async function buildDevServer(opts: BuildDevServerOptions = {}): Promise<
   // Golden fixture (deterministic; same content hash every boot).
   let counts: LoadedCounts | null = null;
   if (opts.loadFixtures !== false) {
+    if (!fixturesPresent(GOLDEN_DIR, 'json')) {
+      await tdb.close();
+      throw new Error(fixturesMissingMessage(GOLDEN_DIR));
+    }
     counts = await loadGoldenFixtures(db);
   }
   const tLoaded = Date.now();
