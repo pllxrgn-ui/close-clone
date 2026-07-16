@@ -65,7 +65,8 @@ describe('migration / extension', () => {
     const migs = await ctx.client.query<{ n: number }>(
       `SELECT count(*)::int AS n FROM drizzle.__drizzle_migrations`,
     );
-    expect(migs.rows[0]?.n).toBe(4);
+    // Bumped 4 → 5 by Task 5b's migration 0011 (audit_log append-only trigger).
+    expect(migs.rows[0]?.n).toBe(5);
     const ext = await ctx.client.query<{ extname: string }>(
       `SELECT extname FROM pg_extension WHERE extname = 'pg_trgm'`,
     );
