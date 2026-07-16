@@ -138,7 +138,8 @@
   --z-rail: 10;
   --z-topbar: 20;
   --z-overlay: 100;
-  --z-toast: 200;
+  --z-popover: 150; /* menus/popovers — above overlays so they work inside modals */
+  --z-toast: 200; /* toasts + tooltips top everything */
 
   /* ══ DARK palette (default) ═══════════════════════════════════════════════ */
   color-scheme: dark;

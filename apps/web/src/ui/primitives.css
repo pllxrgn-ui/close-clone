@@ -500,6 +500,223 @@ a.sb-row {
   font-size: var(--fs-sm);
 }
 
+/* ── Field (label + control + hint + error, aria-wired by Field.tsx) ──────── */
+.sb-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sb-field__label {
+  color: var(--ink-1);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+}
+.sb-field__required {
+  margin-left: var(--space-1);
+  color: var(--state-dnc-fg);
+}
+.sb-field__hint {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-micro);
+}
+.sb-field__error {
+  margin: 0;
+  color: var(--state-dnc-fg);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-medium);
+}
+
+/* ── Textarea (Input's multi-line sibling) ───────────────────────────────── */
+.sb-textarea {
+  display: block;
+  width: 100%;
+  min-height: calc(var(--control-h) * 2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-1);
+  background: var(--surface-inset);
+  color: var(--ink-0);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-base);
+  resize: vertical;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+.sb-textarea::placeholder {
+  color: var(--ink-3);
+}
+.sb-textarea[aria-invalid='true'] {
+  border-color: var(--state-dnc-solid);
+}
+.sb-textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--surface-1);
+}
+
+/* ── Checkbox (real input, visually hidden; box driven by :checked etc.) ──── */
+.sb-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--ink-0);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  user-select: none;
+}
+.sb-check[data-disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.sb-check__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.sb-check__box {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-1);
+  background: var(--surface-inset);
+  color: var(--bg);
+  flex: none;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+.sb-check__mark,
+.sb-check__dash {
+  display: none;
+  line-height: 0;
+}
+.sb-check__input:checked + .sb-check__box,
+.sb-check__input:indeterminate + .sb-check__box {
+  /* Achromatic like the primary button — chrome carries no hue. */
+  background: var(--ink);
+  border-color: var(--ink);
+}
+.sb-check__input:checked:not(:indeterminate) + .sb-check__box .sb-check__mark {
+  display: block;
+}
+.sb-check__input:indeterminate + .sb-check__box .sb-check__dash {
+  display: block;
+}
+.sb-check__input[aria-invalid='true'] + .sb-check__box {
+  border-color: var(--state-dnc-solid);
+}
+/* Forward the global focus ring from the hidden input to the visible box. */
+.sb-check__input:focus-visible + .sb-check__box {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* ── Switch (role=switch; immediate-effect toggle; square-jack styling) ───── */
+.sb-switch {
+  position: relative;
+  width: 30px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-1);
+  background: var(--surface-inset);
+  cursor: pointer;
+  flex: none;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+.sb-switch__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-1);
+  background: var(--ink-3);
+  transition: transform var(--dur-press) var(--ease-out);
+}
+.sb-switch[aria-checked='true'] {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+.sb-switch[aria-checked='true'] .sb-switch__thumb {
+  transform: translateX(14px);
+  background: var(--bg);
+}
+.sb-switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.sb-switch-field {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--ink-0);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  user-select: none;
+}
+.sb-switch-field[data-disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.sb-switch-field[data-disabled] .sb-switch {
+  opacity: 1; /* the wrapper already dims — don't double-fade the track */
+}
+
+/* ── Tabs (keyboard-frequency view switch → NO animation, ever) ───────────── */
+.sb-tablist {
+  display: flex;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--border-0);
+}
+.sb-tab {
+  height: var(--control-h-lg);
+  padding: 0 var(--space-4);
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px; /* underline sits ON the tablist rule */
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  /* Arrow-key driven — selection change is instant (0ms). */
+}
+.sb-tab[aria-selected='true'] {
+  color: var(--ink-0);
+  border-bottom-color: var(--focus); /* the "active selection" cyan */
+}
+.sb-tab:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.sb-tabpanel {
+  padding-top: var(--space-5);
+}
+.sb-tabpanel[hidden] {
+  display: none;
+}
+
+/* ── ErrorState (EmptyState's failure sibling — the one red accent) ────────── */
+.sb-empty--error .sb-empty__icon {
+  color: var(--state-dnc-fg);
+}
+
 /* ── Hover states — gated to hover-capable, fine pointers (no sticky touch) ─ */
 @media (hover: hover) and (pointer: fine) {
   .sb-btn:hover:not(:disabled):not([aria-disabled='true']) {
@@ -527,5 +744,24 @@ a.sb-row {
   }
   .sb-row:hover {
     background: var(--surface-1);
+  }
+  .sb-textarea:hover:not(:disabled) {
+    border-color: var(--ink-3);
+  }
+  .sb-check:not([data-disabled]):hover .sb-check__box {
+    border-color: var(--ink-3);
+  }
+  .sb-switch:hover:not(:disabled):not([aria-checked='true']) {
+    border-color: var(--ink-3);
+  }
+  .sb-tab:hover:not(:disabled):not([aria-selected='true']) {
+    color: var(--ink-0);
+  }
+}
+
+/* Reduced motion: keep color/opacity feedback, drop movement (law §4). */
+@media (prefers-reduced-motion: reduce) {
+  .sb-switch__thumb {
+    transition: none;
   }
 }

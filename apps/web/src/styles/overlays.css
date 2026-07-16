@@ -228,6 +228,145 @@
   margin: var(--space-6) 0 var(--space-5);
 }
 
+/* ── Tooltip (pointer/focus-summoned label — 120ms enter, instant repeats) ── */
+.sb-tooltip {
+  z-index: var(--z-toast);
+  max-width: 260px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-1);
+  box-shadow: var(--shadow-1);
+  color: var(--ink-0);
+  font-size: var(--fs-micro);
+  line-height: var(--lh-base);
+  pointer-events: none;
+  animation: sb-tooltip-in var(--dur-fast) var(--ease-out);
+}
+.sb-tooltip[data-side='top'] {
+  transform-origin: center bottom;
+}
+.sb-tooltip[data-side='bottom'] {
+  transform-origin: center top;
+}
+/* Scrubbing a toolbar: subsequent tooltips skip the entrance entirely. */
+.sb-tooltip[data-instant] {
+  animation: none;
+}
+@keyframes sb-tooltip-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+/* ── Menu (pointer-summoned dropdown — origin-aware 180ms scale+fade) ─────── */
+.sb-menu {
+  z-index: var(--z-popover);
+  min-width: 180px;
+  max-width: 300px;
+  padding: var(--space-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-2);
+  box-shadow: var(--shadow-2);
+  animation: sb-menu-in var(--dur) var(--ease-out);
+}
+.sb-menu:focus {
+  outline: none;
+}
+.sb-menu[data-side='bottom'][data-align='start'] {
+  transform-origin: left top;
+}
+.sb-menu[data-side='bottom'][data-align='end'] {
+  transform-origin: right top;
+}
+.sb-menu[data-side='top'][data-align='start'] {
+  transform-origin: left bottom;
+}
+.sb-menu[data-side='top'][data-align='end'] {
+  transform-origin: right bottom;
+}
+@keyframes sb-menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+.sb-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
+  border: none;
+  border-left: 2px solid transparent;
+  border-radius: var(--radius-1);
+  background: transparent;
+  color: var(--ink-0);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+  /* Arrow-key driven highlight → instant (0ms), like the palette. */
+}
+.sb-menu__item:focus {
+  outline: none;
+  background: var(--accent-weak-bg);
+  border-left-color: var(--focus);
+}
+.sb-menu__item[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.sb-menu__item--danger {
+  color: var(--state-dnc-fg);
+}
+.sb-menu__item-icon {
+  display: inline-flex;
+  color: var(--ink-2);
+  flex: none;
+}
+.sb-menu__item--danger .sb-menu__item-icon {
+  color: inherit;
+}
+.sb-menu__separator {
+  height: 1px;
+  margin: var(--space-2) 0;
+  background: var(--border-0);
+}
+
+/* ── Drawer (edge-docked Modal — slide+fade enter; reduced-motion keeps fade) */
+.sb-overlay--drawer {
+  justify-content: flex-end;
+  align-items: stretch;
+  padding: 0;
+}
+.sb-overlay--drawer-left {
+  justify-content: flex-start;
+}
+.sb-drawer {
+  width: min(440px, 94vw);
+  border-top: none;
+  border-bottom: none;
+  border-right: none;
+  transition:
+    transform 220ms var(--ease-out),
+    opacity 220ms var(--ease-out);
+  @starting-style {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+.sb-drawer--left {
+  border-right: 1px solid var(--border-1);
+  border-left: none;
+  @starting-style {
+    transform: translateX(-16px);
+  }
+}
+
 /* ── Toasts (async feedback — the one place entrance motion is allowed) ──── */
 .sb-toasts {
   position: fixed;
@@ -269,5 +408,19 @@
 @media (prefers-reduced-motion: reduce) {
   .sb-toast {
     animation: none;
+  }
+  .sb-tooltip,
+  .sb-menu {
+    animation: none;
+  }
+  /* Drawer: keep the opacity fade (comprehension), drop the slide (movement). */
+  .sb-drawer {
+    transition: opacity 220ms var(--ease-out);
+  }
+  .sb-drawer,
+  .sb-drawer--left {
+    @starting-style {
+      transform: none;
+    }
   }
 }

@@ -1,25 +1,25 @@
 import { forwardRef } from 'react';
-import type { InputHTMLAttributes } from 'react';
+import type { TextareaHTMLAttributes } from 'react';
 import { cx } from '../lib/cx.ts';
 import { useFieldControl } from './fieldContext.ts';
 
-export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   invalid?: boolean;
 }
 
-export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { invalid, className, type = 'text', id, 'aria-describedby': describedBy, ...rest },
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
+  { invalid, className, rows = 3, id, 'aria-describedby': describedBy, ...rest },
   ref,
 ) {
   const field = useFieldControl({ id, invalid, describedBy });
   return (
-    <input
+    <textarea
       ref={ref}
-      type={type}
+      rows={rows}
       id={field.id}
       aria-invalid={field.invalid || undefined}
       aria-describedby={field.describedBy}
-      className={cx('sb-input', className)}
+      className={cx('sb-textarea', className)}
       {...rest}
     />
   );

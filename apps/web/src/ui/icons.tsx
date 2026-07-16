@@ -1,16 +1,20 @@
 import type { JSX } from 'react';
 import {
   BarChart3,
+  Check,
   ChevronDown,
   Command,
   CornerDownLeft,
   Inbox,
   ListFilter,
+  Minus,
   Monitor,
   Moon,
+  MoreHorizontal,
   Search,
   Settings,
   Sun,
+  TriangleAlert,
   Users,
   X,
   Zap,
@@ -55,3 +59,7 @@ export const BoltIcon = toIcon(Zap);
 export const CloseIcon = toIcon(X);
 export const CommandIcon = toIcon(Command);
 export const CornerDownLeftIcon = toIcon(CornerDownLeft);
+export const CheckIcon = toIcon(Check);
+export const MinusIcon = toIcon(Minus);
+export const AlertTriangleIcon = toIcon(TriangleAlert);
+export const EllipsisIcon = toIcon(MoreHorizontal);
