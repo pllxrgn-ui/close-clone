@@ -1,6 +1,18 @@
 # STATUS — Switchboard build
 
-**Phase:** MVP COMPLETE + DEPLOYED (07-16). Gate 1 ✅ · Gate 2 ✅ · merge train ✅ · **full product surface ✅** (inbox, pipeline, sequences UI, reports UI, bulk+settings — all merged, wired, and verified working in a real browser in mock mode). Demo ships two ways: the GitHub Pages link (`itguns.github.io/close-clone/welcome`, needs the one-time Settings→Pages switch on the ITGuns account) and the local PGlite real-engine (DEMO.md). ~2,600 tests green (969 web · 917 api · 85 shared). Demo ribbon live. CONTRACTS 1.3.0.
+## ✅ BUILD COMPLETE (2026-07-16)
+
+Every phase of the guide is built, merged to `main`, and green. **~4,000 tests** (1,481 api · ~1,100 web · 85 shared · 13 Playwright E2E executed), two phase gates, a whole-codebase security review (no critical), and a final coherence pass (no blocking incoherence — every compliance invariant verified enforced + tested). CONTRACTS at v1.3.1; DECISIONS D-001..D-034.
+
+**What's built:** data core + Smart-View DSL→SQL engine · Gmail-model email sync (idempotent state machine) · sequence engine with adversarially-proven never-events · full product UI (inbox, leads+bulk, pipeline, sequences, reports, settings, landing) deployed to GitHub Pages (mock data) · telephony/SMS/AI (Twilio/Deepgram/Haiku adapters, mock-verified, confirm-before-commit) · SaaS readiness: OIDC SSO+RBAC, API tokens/webhooks/rate-limits, observability, deploy kit, append-only audit, data export, admin CLI. Repo is a single `main` worktree.
+
+**Two things gated on a human (not the build):** (1) enable GitHub Pages (Settings→Pages→Source: GitHub Actions) to make the demo URL live; (2) real service accounts + Docker host for real-mode + production deploy (HUMAN_TODO). The production composition root (global OIDC guards, BullMQ webhook worker, real healthz, real adapters) is documented in deploy/WIRING.md and deferred until that infra exists — honest status: merged + unit/integration-tested + wired-per-doc, "done" when it runs against real infra.
+
+**Known v1 deferrals (documented, non-blocking — D-034):** SMS-in-sequences skips (SMS engine exists, sequence wiring deferred) · product-CRUD/inbox/bulk C7 surface realized in MSW + dev shims, production routes deferred (mock-first MVP) · comms client enroll-shape reconcile at real-API cutover.
+
+---
+
+**History:** MVP COMPLETE + DEPLOYED (07-16). Gate 1 ✅ · Gate 2 ✅ · merge train ✅ · **full product surface ✅** (inbox, pipeline, sequences UI, reports UI, bulk+settings — all merged, wired, and verified working in a real browser in mock mode). Demo ships two ways: the GitHub Pages link (`itguns.github.io/close-clone/welcome`, needs the one-time Settings→Pages switch on the ITGuns account) and the local PGlite real-engine (DEMO.md). ~2,600 tests green (969 web · 917 api · 85 shared). Demo ribbon live. CONTRACTS 1.3.0.
 
 **Wave A readiness: MERGED to main** (07-16) — SSO+RBAC, API tokens/webhooks/rate-limits, observability, deploy kit. api suite now **1,260 green**. Security headers wired into server.ts; the infra-gated production composition (real healthz, global OIDC guards, BullMQ webhook worker) is documented in deploy/WIRING.md and deferred to the deploy step per verify-before-completion (D-031).
 
