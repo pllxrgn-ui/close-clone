@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type { RefObject } from 'react';
 import { prefersReducedMotion } from './useIgnition.ts';
 
 /*
@@ -11,7 +12,7 @@ import { prefersReducedMotion } from './useIgnition.ts';
  * so the content is always present and never depends on scrolling.
  */
 export interface RevealResult<T extends HTMLElement> {
-  ref: React.RefObject<T | null>;
+  ref: RefObject<T | null>;
   revealed: boolean;
 }
 
