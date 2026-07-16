@@ -23,6 +23,7 @@ export type IdTokenRejectReason =
   | 'claims_invalid'
   | 'issuer_mismatch'
   | 'audience_mismatch'
+  | 'azp_mismatch'
   | 'expired'
   | 'issued_in_future'
   | 'not_yet_valid'
@@ -42,6 +43,7 @@ const claimsSchema = z
     iss: z.string().min(1),
     sub: z.string().min(1),
     aud: z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]),
+    azp: z.string().optional(),
     exp: z.number(),
     iat: z.number(),
     nbf: z.number().optional(),
@@ -122,6 +124,13 @@ export async function verifyIdToken(params: VerifyIdTokenParams): Promise<IdToke
   }
   if (!audienceMatches(claims.aud, params.audience)) {
     throw new IdTokenInvalidError('audience_mismatch');
+  }
+  // OIDC core §3.1.3.7 (2/3): when `aud` is multi-valued the Authorized Party
+  // (`azp`) MUST be present and equal to our client id. A missing `azp` on a
+  // multi-audience token is a rejection (undefined !== the string audience).
+  // A single-string `aud` equal to the client id keeps `azp` optional.
+  if (Array.isArray(claims.aud) && claims.azp !== params.audience) {
+    throw new IdTokenInvalidError('azp_mismatch');
   }
   if (nowSec > claims.exp + skew) {
     throw new IdTokenInvalidError('expired');

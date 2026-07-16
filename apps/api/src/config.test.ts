@@ -14,3 +14,32 @@ test('loadConfig parses provided env values', () => {
   expect(config.port).toBe(8080);
   expect(config.nodeEnv).toBe('test');
 });
+
+const STRONG_SECRET = 'a'.repeat(48); // >= 32 chars, not the dev default
+
+test('loadConfig fails closed in production when SESSION_SECRET is absent (dev default)', () => {
+  expect(() => loadConfig({ NODE_ENV: 'production' })).toThrow(/strong unique value in production/);
+});
+
+test('loadConfig fails closed in production when SESSION_SECRET is the dev default', () => {
+  expect(() =>
+    loadConfig({ NODE_ENV: 'production', SESSION_SECRET: 'dev-insecure-session-secret' }),
+  ).toThrow(/dev default is insecure/);
+});
+
+test('loadConfig fails closed in production when SESSION_SECRET is shorter than 32 chars', () => {
+  expect(() =>
+    loadConfig({ NODE_ENV: 'production', SESSION_SECRET: 'short-but-unique-secret' }),
+  ).toThrow(/>=32 chars/);
+});
+
+test('loadConfig succeeds in production with a strong unique SESSION_SECRET', () => {
+  const config = loadConfig({ NODE_ENV: 'production', SESSION_SECRET: STRONG_SECRET });
+  expect(config.nodeEnv).toBe('production');
+  expect(config.sessionSecret).toBe(STRONG_SECRET);
+});
+
+test('non-production keeps the dev default working (tests + dev stay green)', () => {
+  expect(loadConfig({ NODE_ENV: 'test' }).sessionSecret).toBe('dev-insecure-session-secret');
+  expect(loadConfig({}).sessionSecret).toBe('dev-insecure-session-secret');
+});

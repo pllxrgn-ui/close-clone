@@ -50,9 +50,67 @@ describe('happy path', () => {
     expect(claims.groups).toEqual(['sales-crm-users']);
   });
 
-  test('accepts an array aud that contains the client id', async () => {
+  test('accepts an array aud when azp matches the client id', async () => {
+    const issuer = new LocalOidcIssuer({ now });
+    const token = issuer.signIdToken({
+      sub: 's',
+      aud: [CLIENT, 'other'],
+      nonce: NONCE,
+      extra: { azp: CLIENT },
+    });
+    const claims = await verifyIdToken({
+      token,
+      issuer: issuer.issuer,
+      audience: CLIENT,
+      nonce: NONCE,
+      jwks: jwksFor(issuer),
+      now,
+    });
+    expect(claims.sub).toBe('s');
+  });
+});
+
+describe('multi-audience azp (OIDC core)', () => {
+  test('array aud with a mismatched azp → azp_mismatch', async () => {
+    const issuer = new LocalOidcIssuer({ now });
+    const token = issuer.signIdToken({
+      sub: 's',
+      aud: [CLIENT, 'other'],
+      nonce: NONCE,
+      extra: { azp: 'other' },
+    });
+    await expectReject(
+      verifyIdToken({
+        token,
+        issuer: issuer.issuer,
+        audience: CLIENT,
+        nonce: NONCE,
+        jwks: jwksFor(issuer),
+        now,
+      }),
+      'azp_mismatch',
+    );
+  });
+
+  test('array aud with a missing azp → azp_mismatch', async () => {
     const issuer = new LocalOidcIssuer({ now });
     const token = issuer.signIdToken({ sub: 's', aud: [CLIENT, 'other'], nonce: NONCE });
+    await expectReject(
+      verifyIdToken({
+        token,
+        issuer: issuer.issuer,
+        audience: CLIENT,
+        nonce: NONCE,
+        jwks: jwksFor(issuer),
+        now,
+      }),
+      'azp_mismatch',
+    );
+  });
+
+  test('single-string aud is still accepted without azp', async () => {
+    const issuer = new LocalOidcIssuer({ now });
+    const token = issuer.signIdToken({ sub: 's', aud: CLIENT, nonce: NONCE });
     const claims = await verifyIdToken({
       token,
       issuer: issuer.issuer,

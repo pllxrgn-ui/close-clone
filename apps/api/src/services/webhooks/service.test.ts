@@ -152,3 +152,46 @@ describe('remove', () => {
     await expect(svc.remove(subscription.id)).rejects.toBeInstanceOf(WebhookHasDeliveriesError);
   });
 });
+
+describe('SSRF url guard', () => {
+  test('rejects http (non-https), loopback, private, link-local, and IPv6-internal hosts', async () => {
+    const bad = [
+      'http://hooks.example.com/insecure', // plain http is refused; https required
+      'https://localhost/hook',
+      'https://sub.localhost/hook',
+      'https://127.0.0.1/hook', // IPv4 loopback
+      'https://10.0.0.5/hook', // 10.0.0.0/8 private
+      'https://172.16.0.9/hook', // 172.16.0.0/12 private
+      'https://192.168.1.10/hook', // 192.168.0.0/16 private
+      'https://169.254.169.254/latest/meta-data/', // cloud metadata (link-local)
+      'https://0.0.0.0/hook',
+      'https://[::1]/hook', // IPv6 loopback
+      'https://[fd00::1]/hook', // fc00::/7 unique-local
+      'https://[fe80::1]/hook', // fe80::/10 link-local
+      'https://[::ffff:169.254.169.254]/hook', // IPv4-mapped metadata bypass
+    ];
+    for (const url of bad) {
+      await expect(svc.create({ url, events: ['lead.created'] })).rejects.toBeInstanceOf(
+        WebhookValidationError,
+      );
+    }
+  });
+
+  test('accepts a normal public https url', async () => {
+    const { subscription } = await svc.create({
+      url: 'https://hooks.example.com/switchboard',
+      events: ['lead.created'],
+    });
+    expect(subscription.url).toBe('https://hooks.example.com/switchboard');
+  });
+
+  test('update is guarded too — a loopback target is rejected', async () => {
+    const { subscription } = await svc.create({
+      url: 'https://hooks.example.com/ok',
+      events: ['lead.created'],
+    });
+    await expect(
+      svc.update(subscription.id, { url: 'https://127.0.0.1/hook' }),
+    ).rejects.toBeInstanceOf(WebhookValidationError);
+  });
+});

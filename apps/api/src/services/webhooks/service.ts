@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { BlockList, isIP } from 'node:net';
 import { and, desc, eq, lt, or, sql, type SQL } from 'drizzle-orm';
 
 import { webhookSubscriptions, type Db } from '../../db/index.ts';
@@ -115,6 +116,53 @@ function toView(row: ViewRow): WebhookSubscriptionView {
   };
 }
 
+/**
+ * SSRF guard for outbound webhook targets (2026-07-16 review, finding 1). A
+ * literal-IP host is range-checked against loopback / private / link-local /
+ * reserved space (incl. the 169.254.169.254 cloud-metadata address); the WHATWG
+ * URL parser has already canonicalised octal/hex/decimal IPv4 forms, and
+ * {@link BlockList} matches IPv4-mapped IPv6 (`::ffff:a.b.c.d`) against the IPv4
+ * rules, closing those bypasses. A DNS-name host is screened for the known
+ * loopback names only.
+ *
+ * TODO(deploy): resolve-and-pin to fully defeat DNS rebinding — a name that
+ * passes here can still resolve to an internal address at delivery time. The
+ * delivery worker must resolve the host, re-check the resolved IP against this
+ * same block list, and connect to that pinned IP. That belongs in the delivery
+ * path (it needs the network), not in this synchronous create/update validator.
+ */
+const BLOCKED_HOST_IPS = new BlockList();
+// IPv4: this-network (incl. 0.0.0.0), loopback, private, link-local (incl. metadata).
+BLOCKED_HOST_IPS.addSubnet('0.0.0.0', 8, 'ipv4');
+BLOCKED_HOST_IPS.addSubnet('10.0.0.0', 8, 'ipv4');
+BLOCKED_HOST_IPS.addSubnet('127.0.0.0', 8, 'ipv4');
+BLOCKED_HOST_IPS.addSubnet('169.254.0.0', 16, 'ipv4');
+BLOCKED_HOST_IPS.addSubnet('172.16.0.0', 12, 'ipv4');
+BLOCKED_HOST_IPS.addSubnet('192.168.0.0', 16, 'ipv4');
+// IPv6: unspecified, loopback, unique-local (fc00::/7), link-local (fe80::/10).
+BLOCKED_HOST_IPS.addAddress('::', 'ipv6');
+BLOCKED_HOST_IPS.addAddress('::1', 'ipv6');
+BLOCKED_HOST_IPS.addSubnet('fc00::', 7, 'ipv6');
+BLOCKED_HOST_IPS.addSubnet('fe80::', 10, 'ipv6');
+
+function assertPublicHost(hostname: string): void {
+  // `URL.hostname` wraps IPv6 literals in brackets; strip them for isIP/BlockList.
+  const bare =
+    hostname.startsWith('[') && hostname.endsWith(']') ? hostname.slice(1, -1) : hostname;
+  const family = isIP(bare);
+  if (family === 4 || family === 6) {
+    if (BLOCKED_HOST_IPS.check(bare, family === 4 ? 'ipv4' : 'ipv6')) {
+      throw new WebhookValidationError(`webhook url host is not a public address: ${hostname}`);
+    }
+    return;
+  }
+  // DNS name: reject the reserved loopback names outright (RFC 6761 `.localhost`).
+  const name = bare.toLowerCase();
+  if (name === 'localhost' || name.endsWith('.localhost')) {
+    throw new WebhookValidationError(`webhook url host is not a public address: ${hostname}`);
+  }
+}
+
 function validateUrl(url: string): string {
   let parsed: URL;
   try {
@@ -122,9 +170,10 @@ function validateUrl(url: string): string {
   } catch {
     throw new WebhookValidationError(`invalid webhook url: ${url}`);
   }
-  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-    throw new WebhookValidationError('webhook url must be http(s)');
+  if (parsed.protocol !== 'https:') {
+    throw new WebhookValidationError('webhook url must use https');
   }
+  assertPublicHost(parsed.hostname);
   return parsed.toString();
 }
 
