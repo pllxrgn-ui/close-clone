@@ -23,10 +23,11 @@ The build does **not** wait on any of these (mock mode covers all of them). Each
 
 - [ ] **Legal/HR sign-off on call-recording policy.** Recording ships built but OFF; an admin may enable it only after sign-off is recorded. When enabled, a consent announcement plays on every recorded call — non-skippable.
 
-## Showcase (2026-07-16 — do these when Fable says "ready to push")
+## Showcase — the ONE thing to do now
 
-- [ ] **Create the private GitHub repo** (github.com → New → private, NO readme/gitignore) and paste the URL to Fable → it adds the remote and pushes `main` (+ tags). CI arms automatically on first push.
-- [ ] **Connect Vercel**: vercel.com → Add New Project → import the repo. `vercel.json` in the repo root already sets build (`pnpm --filter @switchboard/web build`), output (`apps/web/dist`), and SPA rewrites. The deployment is the mock-mode UI + landing (synthetic fixture data only — safe on a public preview URL; enable Vercel password protection if you want it gated anyway).
+- [x] ~~GitHub repo~~ — done: `github.com/ITGuns/close-clone`, `main` pushed, CI + Pages workflows armed.
+- [ ] **Enable GitHub Pages → makes the demo URL live.** Repo → Settings → Pages → *Build and deployment* → Source: **GitHub Actions**. One click; the `pages.yml` workflow then publishes the mock-mode demo at **https://itguns.github.io/close-clone/welcome** (synthetic fixture data — safe to share; append `/welcome` for the landing). Redeploys on every push to `main`.
+- (Alternative, not needed: Vercel import per `DEPLOY-PREVIEW.md` Option B — `vercel.json` is committed if you ever prefer it.)
 
 ## Verification checkpoints (scripts will be appended here as phases complete)
 
