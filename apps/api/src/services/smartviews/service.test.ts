@@ -4,7 +4,13 @@ import { compile, parse, type Ast, type DslCustomFieldDef } from '@switchboard/s
 
 import { customFieldDefs, leadStatuses, leads, users, type Db } from '../../db/index.ts';
 import { createTestDb, type TestDb } from '../../db/test-helpers.ts';
-import { ParseError, SmartViewInputError, SmartViewService } from './index.ts';
+import {
+  buildCompileContext,
+  ParseError,
+  resolveTargetIds,
+  SmartViewInputError,
+  SmartViewService,
+} from './index.ts';
 import type { RawQueryable } from './support.ts';
 
 /**
@@ -239,6 +245,29 @@ describe('SmartViewService — preview matches the compiler (single query author
     expect(forA.countEstimate).toBe(30); // 25 Won-A + 5 Lost-A
     const forB = await service.preview({ dsl: 'owner in (me)', limit: 100 }, USER_B, NOW);
     expect(forB.countEstimate).toBe(6);
+  });
+});
+
+describe('resolveTargetIds — bulk target-set walk (keyset, capped)', () => {
+  test('walks every page and returns the full deduped set (tiny pageSize)', async () => {
+    const ast = parse('status = "Won"', { fieldCatalog: CATALOG });
+    const ctx = buildCompileContext(USER_A, ORG_TZ, CATALOG, NOW);
+    // pageSize 7 over 31 matches → 5 page round-trips + created_at cursor lookups.
+    const { ids, truncated } = await resolveTargetIds(db, client, ast, ctx, { pageSize: 7 });
+    expect(truncated).toBe(false);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(new Set(ids)).toEqual(new Set(wonIdsOrdered));
+  });
+
+  test('stops at the cap and reports truncated', async () => {
+    const ast = parse('status = "Won"', { fieldCatalog: CATALOG });
+    const ctx = buildCompileContext(USER_A, ORG_TZ, CATALOG, NOW);
+    const { ids, truncated } = await resolveTargetIds(db, client, ast, ctx, {
+      pageSize: 7,
+      cap: 10,
+    });
+    expect(ids).toHaveLength(10);
+    expect(truncated).toBe(true);
   });
 });
 
