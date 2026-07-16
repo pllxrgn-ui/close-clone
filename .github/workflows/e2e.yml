@@ -1,0 +1,69 @@
+name: E2E
+
+# Playwright end-to-end suite (build guide task 5d). Separate from ci.yml: this
+# drives the built web app in MOCK mode (MSW + synthetic fixtures, zero external
+# accounts) in a real chromium browser. No Postgres/Redis services are needed —
+# the app answers its whole REST surface from the mock service worker.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: playwright · mock mode · chromium
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.31.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      # Workspace install — needed to build the web app (a workspace member).
+      - name: Install workspace deps
+        run: pnpm install --frozen-lockfile
+
+      # The E2E package is deliberately outside the pnpm workspace (like deploy/),
+      # so its heavy browser-test deps stay out of the app dependency graph.
+      - name: Install E2E deps (standalone)
+        run: pnpm --dir e2e install --ignore-workspace --frozen-lockfile
+
+      - name: Install Playwright chromium + OS deps
+        run: pnpm --dir e2e exec playwright install --with-deps chromium
+
+      # Build the mock-mode bundle up front; playwright.config serves it via
+      # `vite preview` (in CI it previews only — no rebuild).
+      - name: Build the web app (mock mode)
+        run: pnpm --filter @switchboard/web build
+
+      - name: Run E2E
+        run: pnpm --dir e2e test
+
+      - name: Upload Playwright HTML report
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
+          retention-days: 14
+
+      - name: Upload traces + videos
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: e2e/test-results/
+          retention-days: 14

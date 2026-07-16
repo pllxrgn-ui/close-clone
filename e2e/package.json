@@ -1,0 +1,20 @@
+{
+  "name": "@switchboard/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Switchboard Playwright end-to-end suite. Drives the real web app (apps/web) in MOCK mode (MSW + synthetic fixtures, zero external accounts). Deliberately NOT a pnpm-workspace member — its heavy browser-test deps stay out of the application dependency graph (mirrors deploy/). Install/run standalone with --ignore-workspace.",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report",
+    "typecheck": "tsc --noEmit",
+    "install:browsers": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@types/node": "^22.10.5",
+    "playwright": "^1.61.1"
+  }
+}

@@ -1,0 +1,11 @@
+# Playwright standalone install (kept out of the application dependency graph).
+node_modules/
+
+# Generated test artifacts (never committed).
+playwright-report/
+test-results/
+blob-report/
+.cache/
+
+# Saved auth storageState produced by auth.setup.ts.
+.auth/
