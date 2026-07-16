@@ -94,6 +94,16 @@ function toIsoRequired(value: string): string {
   return new Date(value).toISOString();
 }
 
+/**
+ * Guard a path-param id before it reaches a `uuid` column comparison — a
+ * non-uuid would make Postgres throw (500). A malformed id can name no lead, so
+ * by-id reads/writes treat it as "not found" (404 at the route).
+ */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isUuid(s: string): boolean {
+  return UUID_RE.test(s);
+}
+
 /** Coerce a raw Drizzle lead row into the C7 Lead DTO (ISO timestamps). */
 function mapLead(r: RawLeadRow): Lead {
   return {
@@ -198,6 +208,7 @@ export async function listLeads(db: Db, params: ListLeadsParams): Promise<Page<L
 
 /** GET /leads/:id — the full Lead DTO, or `null` when missing/soft-deleted. */
 export async function getLead(db: Db, id: string): Promise<Lead | null> {
+  if (!isUuid(id)) return null;
   const rows = (await db
     .select(LEAD_COLUMNS)
     .from(leads)
@@ -236,6 +247,7 @@ export async function getLeadTimeline(
   leadId: string,
   params: TimelineParams,
 ): Promise<Page<Activity> | null> {
+  if (!isUuid(leadId)) return null;
   const exists = await db
     .select({ id: leads.id })
     .from(leads)
@@ -411,6 +423,7 @@ export async function updateLead(
   input: UpdateLeadInput,
   actor: WriteActor = {},
 ): Promise<Lead | null> {
+  if (!isUuid(id)) return null;
   return db.transaction(async (tx) => {
     const currentRows = (await tx
       .select(LEAD_COLUMNS)
@@ -505,6 +518,7 @@ export async function updateLead(
  * taxonomy has no lead-deletion type.
  */
 export async function softDeleteLead(db: Db, id: string): Promise<boolean> {
+  if (!isUuid(id)) return false;
   const updated = await db
     .update(leads)
     .set({ deletedAt: sql`now()`, updatedAt: sql`now()` })

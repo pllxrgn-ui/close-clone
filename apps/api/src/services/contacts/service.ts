@@ -71,6 +71,12 @@ function toIsoRequired(value: string): string {
   return new Date(value).toISOString();
 }
 
+/** Guard a path-param id before a `uuid` column comparison (non-uuid → 500). */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isUuid(s: string): boolean {
+  return UUID_RE.test(s);
+}
+
 function mapContact(r: RawContactRow): Contact {
   return {
     id: r.id,
@@ -104,6 +110,7 @@ export async function listContactsByLead(db: Db, leadId: string): Promise<Contac
 
 /** GET /contacts/:id — the full Contact DTO, or `null` when missing/deleted. */
 export async function getContact(db: Db, id: string): Promise<Contact | null> {
+  if (!isUuid(id)) return null;
   const rows = (await db
     .select(CONTACT_COLUMNS)
     .from(contacts)
@@ -190,6 +197,7 @@ export async function updateContact(
   input: UpdateContactInput,
   actor: WriteActor = {},
 ): Promise<Contact | null> {
+  if (!isUuid(id)) return null;
   return db.transaction(async (tx) => {
     const currentRows = (await tx
       .select(CONTACT_COLUMNS)
@@ -251,6 +259,7 @@ export async function updateContact(
  * the contact is absent or already soft-deleted (route → 404).
  */
 export async function softDeleteContact(db: Db, id: string): Promise<boolean> {
+  if (!isUuid(id)) return false;
   const updated = await db
     .update(contacts)
     .set({ deletedAt: sql`now()`, updatedAt: sql`now()` })

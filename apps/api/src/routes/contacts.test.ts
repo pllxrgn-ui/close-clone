@@ -111,6 +111,11 @@ describe('GET /api/v1/contacts/:id', () => {
     const res = await app.inject({ method: 'GET', url: `/api/v1/contacts/${C_DELETED}` });
     expect(res.statusCode).toBe(404);
   });
+
+  test('malformed (non-uuid) id → 404 (never a 500)', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/v1/contacts/not-a-uuid' });
+    expect(res.statusCode).toBe(404);
+  });
 });
 
 // ── POST /contacts ───────────────────────────────────────────────────────────
