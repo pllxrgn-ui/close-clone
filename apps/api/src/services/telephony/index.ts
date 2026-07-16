@@ -53,6 +53,36 @@ export {
   type PatchCallResult,
 } from './dial.ts';
 
+export {
+  setRecordingEnabled,
+  isRecordingEnabled,
+  callHasRecordingConsent,
+  RecordingSettingsError,
+  OrgSettingsNotFoundError,
+  type SetRecordingEnabledInput,
+  type SetRecordingEnabledResult,
+} from './recording.ts';
+
+export {
+  loadDialerQueue,
+  advanceDialer,
+  dropVoicemailOnCall,
+  ACTIVE_CALL_STATUSES,
+  DialerBusyError,
+  DropCallNotFoundError,
+  DropCallNotDialableError,
+  DropCallAlreadyFinalizedError,
+  type RawQueryable,
+  type DialerQueueDeps,
+  type DialerQueueInput,
+  type DialerEntry,
+  type DialerQueue,
+  type DialerAdvanceDeps,
+  type DropVoicemailDeps,
+  type DropVoicemailInput,
+  type DropVoicemailResult,
+} from './dialer.ts';
+
 export { resolveContactByPhone, phoneMatchKey, type ContactMatch } from './phone.ts';
 export {
   isPhoneSuppressed,
