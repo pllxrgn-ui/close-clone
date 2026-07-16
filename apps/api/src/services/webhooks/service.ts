@@ -125,9 +125,9 @@ function toView(row: ViewRow): WebhookSubscriptionView {
  * rules, closing those bypasses. A DNS-name host is screened for the known
  * loopback names only.
  *
- * TODO(deploy): resolve-and-pin to fully defeat DNS rebinding — a name that
- * passes here can still resolve to an internal address at delivery time. The
- * delivery worker must resolve the host, re-check the resolved IP against this
+ * Deferred hardening (see deploy/WIRING.md): resolve-and-pin to fully defeat DNS
+ * rebinding — a name that passes here can still resolve to an internal address at
+ * delivery time. The delivery worker must resolve the host, re-check the resolved IP against this
  * same block list, and connect to that pinned IP. That belongs in the delivery
  * path (it needs the network), not in this synchronous create/update validator.
  */

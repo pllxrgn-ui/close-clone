@@ -16,9 +16,9 @@ import {
 
 /*
  * Lead-page header: identity + status + owner + a prominent DNC indicator, then a
- * next-action bar. The action bar is a placeholder — every button is a disabled
- * Phase-4 stub (the call/email/sms/task/sequence rails, all C6-gated, land later);
- * nothing here can send, dial, or bypass a compliance rail.
+ * next-action bar. Email is live (opens the compliance-gated composer); Call / SMS
+ * / Task / Enroll are disabled stubs that land later. Nothing here can send, dial,
+ * or bypass a compliance rail — the composer enforces DNC/suppression at send.
  */
 
 interface LeadHeaderProps {
@@ -89,11 +89,7 @@ export function LeadHeader({ lead, statusLabel, ownerName }: LeadHeaderProps): J
         </div>
       </div>
 
-      <div
-        className="lead-header__actions"
-        role="group"
-        aria-label="Lead actions (available in Phase 4)"
-      >
+      <div className="lead-header__actions" role="group" aria-label="Lead actions">
         <LeadComposerLauncher leadId={lead.id} />
         {NEXT_ACTIONS.map((action) => {
           const Icon = action.icon;

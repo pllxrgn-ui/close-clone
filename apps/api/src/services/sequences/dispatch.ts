@@ -265,7 +265,10 @@ export async function processIntent(deps: DispatchDeps, intentId: string): Promi
     }
 
     if (claim.channel === 'sms') {
-      // SMS sequence steps await the telephony stream (3x); never silently sent.
+      // SMS-in-sequences is a documented v1 gap (DECISIONS D-034): the SMS send
+      // engine (services/sms) exists and is rail-enforcing, but wiring sequence
+      // dispatch to it (recipient-local quiet-hours per enrollment, opt-out state)
+      // is deferred. Until then an SMS step is safely SKIPPED, never silently sent.
       await markTerminal(tx, intentId, 'SKIPPED', 'sms_channel_unavailable');
       return {
         kind: 'terminal',
