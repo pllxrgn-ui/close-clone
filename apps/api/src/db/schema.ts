@@ -678,6 +678,53 @@ export const syncEvents = pgTable('sync_events', {
   ...timestamps(),
 });
 
+// --- Imports (CSV import engine, Task 4f / CONTRACTS §C1 v1.1.0, D-018) ------
+
+/**
+ * Import status lifecycle (CONTRACTS §C1 `imports.status`):
+ * `uploaded → mapped → dry_run → committing → committed`, with `failed` reachable
+ * from any active state. Defined here rather than in `@switchboard/shared` only
+ * because Task 4f's allowlist excludes the shared package; it is otherwise a
+ * single-source-of-truth enum like the domain.ts ones and should be hoisted to
+ * shared at merge (reported as friction).
+ */
+export const importStatusValues = [
+  'uploaded',
+  'mapped',
+  'dry_run',
+  'committing',
+  'committed',
+  'failed',
+] as const;
+
+/**
+ * CSV import jobs (CONTRACTS §C1, added v1.1.0 / migration 0010). One row per
+ * uploaded file; `mapping`/`dedupe_config` are set at dry-run time, `dry_run_result`
+ * holds the persisted per-row plan + aggregate counts, and `result` carries the
+ * commit checkpoint (resumable, crash-safe) and final counts. `file_ref` points at
+ * the stored raw CSV (local disk under MOCK_MODE; object storage in deploy).
+ */
+export const imports = pgTable(
+  'imports',
+  {
+    id: id(),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    filename: text('filename').notNull(),
+    fileRef: text('file_ref').notNull(),
+    rowCount: integer('row_count'),
+    status: text('status', { enum: importStatusValues }).notNull().default('uploaded'),
+    mapping: jsonb('mapping').$type<Record<string, unknown>>(),
+    dedupeConfig: jsonb('dedupe_config').$type<Record<string, unknown>>(),
+    dryRunResult: jsonb('dry_run_result').$type<Record<string, unknown>>(),
+    result: jsonb('result').$type<Record<string, unknown>>(),
+    error: text('error'),
+    ...timestamps(),
+  },
+  (t) => [index('imports_created_by_idx').on(t.createdBy)],
+);
+
 // --- Row type inference (persistence shapes) -------------------------------
 
 export type UserRow = typeof users.$inferSelect;
@@ -694,3 +741,6 @@ export type TaskRow = typeof tasks.$inferSelect;
 export type NewTaskRow = typeof tasks.$inferInsert;
 export type LeadStatusRow = typeof leadStatuses.$inferSelect;
 export type OpportunityStageRow = typeof opportunityStages.$inferSelect;
+export type SuppressionRow = typeof suppressions.$inferSelect;
+export type ImportRow = typeof imports.$inferSelect;
+export type NewImportRow = typeof imports.$inferInsert;
