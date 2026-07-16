@@ -1,8 +1,17 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type { TelephonyProvider } from '@switchboard/shared/providers';
+import {
+  astSchema,
+  parse,
+  ParseError,
+  type Ast,
+  type Cursor,
+  type DslCustomFieldDef,
+} from '@switchboard/shared';
 
-import type { Db } from '../db/index.ts';
+import { smartViews, type Db } from '../db/index.ts';
+import { eq } from 'drizzle-orm';
 import type { QueueDriver } from '../queue/index.ts';
 import {
   CallNotFoundError,
@@ -11,15 +20,25 @@ import {
   DialLeadNotFoundError,
   DialProviderError,
   DialValidationError,
+  DialerBusyError,
+  DropCallAlreadyFinalizedError,
+  DropCallNotDialableError,
+  DropCallNotFoundError,
   InvalidTwilioWebhookError,
+  OrgSettingsNotFoundError,
+  advanceDialer,
   dialCall,
+  dropVoicemailOnCall,
   enqueueTwilioProcess,
+  loadDialerQueue,
   parseTwilioWebhook,
   patchCall,
   persistTwilioWebhook,
   renderVoiceTwiml,
   resolveInboundRouting,
+  setRecordingEnabled,
   type InboundRoutingDeps,
+  type RawQueryable,
   type TwilioChannel,
   type TwilioIngressVerifier,
 } from '../services/telephony/index.ts';
@@ -65,6 +84,22 @@ export interface TelephonyRouteDeps {
   voicemailActionUrl?: string;
   /** Optional wake-up queue; when present, ingress enqueues async processing. */
   queue?: QueueDriver;
+  // --- List dialer (3c) + recording switch (3d). All optional: the dialer/queue
+  // routes register only when their dep is present, so the 3b wiring is unchanged. ---
+  /**
+   * Raw SQL client (PGlite/pg) for the compiled Smart View query behind the list
+   * dialer queue. When present, the `POST /calls/dialer/queue` route registers.
+   */
+  dialerClient?: RawQueryable;
+  /** Org timezone for the dialer queue's relative-date resolution (C3). */
+  orgTimezone?: string;
+  /** Custom-field catalog the queue compiler whitelists `custom.<key>` against. */
+  fieldCatalog?: readonly DslCustomFieldDef[];
+  /**
+   * Adapter for the voicemail drop (`dropVoicemail`). When present, the
+   * `POST /calls/:id/voicemail-drop` route registers.
+   */
+  voicemailProvider?: Pick<TelephonyProvider, 'dropVoicemail'>;
 }
 
 const dialBodySchema = z.object({
@@ -81,6 +116,68 @@ const patchBodySchema = z.object({
   notes: z.string().max(20_000).optional(),
   actorId: z.string().uuid().optional(),
 });
+
+// --- List dialer + recording switch (3c/3d) --------------------------------
+
+const dialerQueueBodySchema = z
+  .object({
+    userId: z.string().uuid(),
+    smartViewId: z.string().uuid().optional(),
+    dsl: z.string().min(1).max(10_000).optional(),
+    ast: z.unknown().optional(),
+    cursor: z.string().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
+  })
+  .refine((b) => b.smartViewId !== undefined || b.dsl !== undefined || b.ast !== undefined, {
+    message: 'provide one of smartViewId, dsl, or ast',
+  });
+
+const dialerAdvanceBodySchema = z.object({
+  userId: z.string().uuid(),
+  leadId: z.string().uuid(),
+  contactId: z.string().uuid().optional(),
+  to: z.string().min(3).max(40).optional(),
+  from: z.string().min(3).max(40).optional(),
+  recordOptOut: z.boolean().optional(),
+});
+
+const voicemailDropBodySchema = z.object({
+  recordingRef: z.string().min(1).max(2048),
+  actorId: z.string().uuid().optional(),
+});
+
+const recordingSwitchBodySchema = z.object({
+  enabled: z.boolean(),
+  legalSignoffRef: z.string().min(1).max(2048).optional(),
+  reason: z.string().max(2000).optional(),
+  actorId: z.string().uuid().optional(),
+});
+
+/** Opaque base64(JSON) keyset cursor for the dialer queue `{sortValue, id}`. */
+function encodeDialerCursor(cursor: Cursor): string {
+  return Buffer.from(JSON.stringify(cursor), 'utf8').toString('base64url');
+}
+
+function decodeDialerCursor(raw: string): Cursor | null {
+  try {
+    const parsed = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')) as unknown;
+    if (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      'id' in parsed &&
+      typeof (parsed as { id: unknown }).id === 'string' &&
+      'sortValue' in parsed
+    ) {
+      const sv = (parsed as { sortValue: unknown }).sortValue;
+      if (sv === null || ['string', 'number', 'boolean'].includes(typeof sv)) {
+        return { sortValue: sv as Cursor['sortValue'], id: (parsed as { id: string }).id };
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 function normalizeHeaders(raw: FastifyRequest['headers']): Record<string, string> {
   const out: Record<string, string> = {};
@@ -222,6 +319,204 @@ export function registerTelephonyRoutes(app: FastifyInstance, deps: TelephonyRou
       throw err;
     }
   });
+
+  // --- List dialer (3c) ----------------------------------------------------
+
+  // POST /api/v1/calls/dialer/queue — one keyset page of the sequential dialer
+  // queue over a Smart View (compiled by the single query authority). Registers
+  // only when a raw client is wired.
+  if (deps.dialerClient !== undefined) {
+    const dialerClient = deps.dialerClient;
+    app.post('/api/v1/calls/dialer/queue', async (request, reply) => {
+      const parsed = dialerQueueBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        return sendError(
+          reply,
+          'VALIDATION_FAILED',
+          'invalid dialer queue request',
+          parsed.error.flatten(),
+        );
+      }
+      const resolved = await resolveQueueAst(deps, parsed.data);
+      if ('error' in resolved) return sendError(reply, resolved.code, resolved.error);
+
+      let cursor: Cursor | undefined;
+      if (parsed.data.cursor !== undefined) {
+        const c = decodeDialerCursor(parsed.data.cursor);
+        if (c === null) return sendError(reply, 'VALIDATION_FAILED', 'invalid cursor');
+        cursor = c;
+      }
+
+      const queue = await loadDialerQueue(
+        {
+          db: deps.db,
+          client: dialerClient,
+          ...(deps.orgTimezone !== undefined ? { orgTimezone: deps.orgTimezone } : {}),
+          ...(deps.fieldCatalog !== undefined ? { fieldCatalog: deps.fieldCatalog } : {}),
+          now: deps.now,
+        },
+        {
+          ast: resolved.ast,
+          currentUserId: parsed.data.userId,
+          ...(cursor !== undefined ? { cursor } : {}),
+          ...(parsed.data.limit !== undefined ? { limit: parsed.data.limit } : {}),
+        },
+      );
+      return reply.send({
+        items: queue.entries,
+        ...(queue.nextCursor !== undefined
+          ? { nextCursor: encodeDialerCursor(queue.nextCursor) }
+          : {}),
+      });
+    });
+  }
+
+  // POST /api/v1/calls/dialer/advance — place the next call SEQUENTIALLY (one live
+  // call per rep; all I-DNC / I-REC rails via the dial engine).
+  app.post('/api/v1/calls/dialer/advance', async (request, reply) => {
+    const parsed = dialerAdvanceBodySchema.safeParse(request.body);
+    if (!parsed.success) {
+      return sendError(
+        reply,
+        'VALIDATION_FAILED',
+        'invalid dialer advance request',
+        parsed.error.flatten(),
+      );
+    }
+    const d = parsed.data;
+    try {
+      const result = await advanceDialer(
+        {
+          db: deps.db,
+          provider: deps.dialProvider,
+          now: deps.now,
+          ...(deps.callerId !== undefined ? { callerId: deps.callerId } : {}),
+        },
+        {
+          userId: d.userId,
+          leadId: d.leadId,
+          ...(d.contactId !== undefined ? { contactId: d.contactId } : {}),
+          ...(d.to !== undefined ? { to: d.to } : {}),
+          ...(d.from !== undefined ? { from: d.from } : {}),
+          ...(d.recordOptOut !== undefined ? { recordOptOut: d.recordOptOut } : {}),
+        },
+      );
+      return reply.send(result);
+    } catch (err) {
+      // Sequential guard: a live call blocks the advance (C8 CONFLICT).
+      if (err instanceof DialerBusyError) return sendError(reply, 'CONFLICT', err.message);
+      const mapped = mapDialError(reply, err);
+      if (mapped !== null) return mapped;
+      throw err;
+    }
+  });
+
+  // POST /api/v1/calls/:id/voicemail-drop — drop a pre-recorded asset into a live
+  // outbound call. Registers only when a drop-capable provider is wired.
+  if (deps.voicemailProvider !== undefined) {
+    const voicemailProvider = deps.voicemailProvider;
+    app.post('/api/v1/calls/:id/voicemail-drop', async (request, reply) => {
+      const idResult = z
+        .string()
+        .uuid()
+        .safeParse((request.params as { id?: unknown }).id);
+      if (!idResult.success) return sendError(reply, 'VALIDATION_FAILED', 'invalid call id');
+      const parsed = voicemailDropBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        return sendError(
+          reply,
+          'VALIDATION_FAILED',
+          'invalid voicemail drop request',
+          parsed.error.flatten(),
+        );
+      }
+      try {
+        const result = await dropVoicemailOnCall(
+          { db: deps.db, provider: voicemailProvider, now: deps.now },
+          {
+            callId: idResult.data,
+            recordingRef: parsed.data.recordingRef,
+            ...(parsed.data.actorId !== undefined ? { actorId: parsed.data.actorId } : {}),
+          },
+        );
+        return reply.send(result);
+      } catch (err) {
+        if (err instanceof DropCallNotFoundError) return sendError(reply, 'NOT_FOUND', err.message);
+        if (err instanceof DropCallNotDialableError)
+          return sendError(reply, 'VALIDATION_FAILED', err.message);
+        if (err instanceof DropCallAlreadyFinalizedError)
+          return sendError(reply, 'CONFLICT', err.message);
+        if (err instanceof DialProviderError)
+          return sendError(reply, 'PROVIDER_ERROR', err.message);
+        throw err;
+      }
+    });
+  }
+
+  // --- Recording compliance switch (3d) ------------------------------------
+  // POST /api/v1/admin/recording — flip org_settings.recording_enabled (§I-REC,
+  // admin + audit-logged). MUST be mounted behind the admin RBAC preHandler by the
+  // composition root; this handler records the audit but does not itself authorize.
+  app.post('/api/v1/admin/recording', async (request, reply) => {
+    const parsed = recordingSwitchBodySchema.safeParse(request.body);
+    if (!parsed.success) {
+      return sendError(
+        reply,
+        'VALIDATION_FAILED',
+        'invalid recording switch request',
+        parsed.error.flatten(),
+      );
+    }
+    try {
+      const result = await setRecordingEnabled(deps.db, {
+        enabled: parsed.data.enabled,
+        ...(parsed.data.actorId !== undefined ? { actorId: parsed.data.actorId } : {}),
+        ...(parsed.data.legalSignoffRef !== undefined
+          ? { legalSignoffRef: parsed.data.legalSignoffRef }
+          : {}),
+        ...(parsed.data.reason !== undefined ? { reason: parsed.data.reason } : {}),
+        ...(request.ip !== undefined ? { ip: request.ip } : {}),
+      });
+      return reply.send(result);
+    } catch (err) {
+      if (err instanceof OrgSettingsNotFoundError)
+        return sendError(reply, 'NOT_FOUND', err.message);
+      throw err;
+    }
+  });
+}
+
+type ResolvedQueueAst = { ast: Ast } | { error: string; code: 'VALIDATION_FAILED' | 'NOT_FOUND' };
+
+/** Resolve the dialer queue's Smart View AST from smartViewId | dsl | ast. */
+async function resolveQueueAst(
+  deps: TelephonyRouteDeps,
+  body: { smartViewId?: string | undefined; dsl?: string | undefined; ast?: unknown },
+): Promise<ResolvedQueueAst> {
+  if (body.smartViewId !== undefined) {
+    const rows = await deps.db
+      .select({ ast: smartViews.ast })
+      .from(smartViews)
+      .where(eq(smartViews.id, body.smartViewId))
+      .limit(1);
+    const row = rows[0];
+    if (row === undefined) return { error: 'smart view not found', code: 'NOT_FOUND' };
+    const parsed = astSchema.safeParse(row.ast);
+    if (!parsed.success)
+      return { error: 'stored smart view ast is invalid', code: 'VALIDATION_FAILED' };
+    return { ast: parsed.data };
+  }
+  if (body.dsl !== undefined) {
+    try {
+      return { ast: parse(body.dsl, { fieldCatalog: deps.fieldCatalog ?? [] }) };
+    } catch (err) {
+      if (err instanceof ParseError) return { error: err.message, code: 'VALIDATION_FAILED' };
+      throw err;
+    }
+  }
+  const parsed = astSchema.safeParse(body.ast);
+  if (!parsed.success) return { error: 'invalid ast', code: 'VALIDATION_FAILED' };
+  return { ast: parsed.data };
 }
 
 /** Map a dial-engine error to its C8 envelope; null if not a known dial error. */

@@ -81,13 +81,18 @@ describe('loadDialerQueue', () => {
     const byId = new Map(queue.entries.map((e) => [e.leadId, e]));
     expect(queue.entries).toHaveLength(3);
 
-    expect(byId.get(good)).toMatchObject({ phone: NUM_A, dnc: false, suppressed: false, dialable: true });
+    expect(byId.get(good)).toMatchObject({
+      phone: NUM_A,
+      dnc: false,
+      suppressed: false,
+      dialable: true,
+    });
     expect(byId.get(dnc)).toMatchObject({ dnc: true, dialable: false });
     expect(byId.get(suppressedLead)).toMatchObject({ suppressed: true, dialable: false });
   });
 
   test('a lead with no phoned contact surfaces as non-dialable (phone null)', async () => {
-    const noPhone = await seedLead(db, { name: 'NoPhone', ownerId: rep });
+    await seedLead(db, { name: 'NoPhone', ownerId: rep });
     const ast = parse('owner in (me)', { fieldCatalog: [] });
     const queue = await loadDialerQueue(queueDeps(), { ast, currentUserId: rep });
     expect(queue.entries).toHaveLength(1);
@@ -149,7 +154,7 @@ describe('advanceDialer — sequential (one live call at a time)', () => {
     const lead = await seedLead(db, { name: 'Acme', ownerId: rep });
     const contact = await seedContact(db, lead, [NUM_A], { name: 'Ann' });
 
-    const first = await advanceDialer(advanceDeps(), { userId: rep, leadId: lead, contactId: contact });
+    await advanceDialer(advanceDeps(), { userId: rep, leadId: lead, contactId: contact });
     expect(mock.dialCount).toBe(1);
     // The call is now queued (live) → a second advance is refused.
     const err = await advanceDialer(advanceDeps(), {
@@ -165,11 +170,19 @@ describe('advanceDialer — sequential (one live call at a time)', () => {
   test('advance succeeds again once the live call reaches a terminal status', async () => {
     const lead = await seedLead(db, { name: 'Acme', ownerId: rep });
     const contact = await seedContact(db, lead, [NUM_A], { name: 'Ann' });
-    const first = await advanceDialer(advanceDeps(), { userId: rep, leadId: lead, contactId: contact });
+    const first = await advanceDialer(advanceDeps(), {
+      userId: rep,
+      leadId: lead,
+      contactId: contact,
+    });
     // Simulate the call ending (status callback would do this in the real flow).
     await db.update(calls).set({ status: 'completed' }).where(eq(calls.id, first.callId));
 
-    const second = await advanceDialer(advanceDeps(), { userId: rep, leadId: lead, contactId: contact });
+    const second = await advanceDialer(advanceDeps(), {
+      userId: rep,
+      leadId: lead,
+      contactId: contact,
+    });
     expect(second.callId).not.toBe(first.callId);
     expect(mock.dialCount).toBe(2);
   });

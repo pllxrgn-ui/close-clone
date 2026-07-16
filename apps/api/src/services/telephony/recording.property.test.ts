@@ -15,7 +15,14 @@ import {
   type TwilioChannel,
 } from './index.ts';
 import { callHasRecordingConsent } from './recording.ts';
-import { activitiesFor, callsFor, seedContact, seedLead, seedOrgSettings, seedUser } from './test-helpers.ts';
+import {
+  activitiesFor,
+  callsFor,
+  seedContact,
+  seedLead,
+  seedOrgSettings,
+  seedUser,
+} from './test-helpers.ts';
 
 /**
  * §I-REC property suite (task 3d acceptance): across every combination of the org
@@ -58,9 +65,7 @@ async function drainLifecycle(): Promise<void> {
 }
 
 function recordingEvents(events: CallLifecycleEvent[]): CallLifecycleEvent[] {
-  return events.filter(
-    (e) => e.type === 'recording_started' || e.type === 'recording_completed',
-  );
+  return events.filter((e) => e.type === 'recording_started' || e.type === 'recording_completed');
 }
 
 async function setOrgRecording(enabled: boolean): Promise<void> {
@@ -71,7 +76,12 @@ beforeEach(async () => {
   ctx = await createTestDb();
   db = ctx.db;
   mock = createMockTelephonyProvider();
-  dialDeps = { db, provider: mock, now: () => new Date('2026-07-15T12:00:00.000Z'), callerId: REP_NUMBER };
+  dialDeps = {
+    db,
+    provider: mock,
+    now: () => new Date('2026-07-15T12:00:00.000Z'),
+    callerId: REP_NUMBER,
+  };
   processDeps = { db, provider: mock };
   rep = await seedUser(db, { name: 'Rep' });
   await seedOrgSettings(db, { recordingEnabled: false });
