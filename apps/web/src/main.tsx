@@ -15,7 +15,10 @@ import App from './App.tsx';
 async function enableMocking(): Promise<void> {
   if (import.meta.env.VITE_API_MODE === 'real') return;
   const { worker } = await import('./mocks/browser.ts');
-  await worker.start({ onUnhandledRequest: 'bypass' });
+  await worker.start({
+    onUnhandledRequest: 'bypass',
+    serviceWorker: { url: `${import.meta.env.BASE_URL}mockServiceWorker.js` },
+  });
 }
 
 const rootElement = document.getElementById('root');

@@ -12,7 +12,7 @@ import { ROUTER_FUTURE } from './app/routerFuture.ts';
 export function App(): JSX.Element {
   return (
     <AppProviders>
-      <BrowserRouter future={ROUTER_FUTURE}>
+      <BrowserRouter future={ROUTER_FUTURE} basename={import.meta.env.BASE_URL}>
         <AppRoutes />
       </BrowserRouter>
     </AppProviders>
