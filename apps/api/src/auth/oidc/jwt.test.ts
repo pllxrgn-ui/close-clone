@@ -49,9 +49,10 @@ describe('sign → verify round trip', () => {
   test('a tampered signature fails verification', () => {
     const token = issuer.signIdToken({ sub: 'u1', aud: 'client' });
     const parts = token.split('.');
-    // Flip the last base64url char of the signature.
+    // Flip the FIRST signature char — always a significant high-order byte (a
+    // trailing char can encode only padding bits and decode to identical bytes).
     const sig = parts[2] as string;
-    const flipped = (sig.slice(0, -1) + (sig.endsWith('A') ? 'B' : 'A')) as string;
+    const flipped = (sig[0] === 'A' ? 'B' : 'A') + sig.slice(1);
     const decoded = decodeJwt(`${parts[0]}.${parts[1]}.${flipped}`);
     const jwk = issuer.jwks().keys[0] as JsonWebKey;
     expect(verifyJwsSignature(decoded, importRsaJwk(jwk))).toBe(false);

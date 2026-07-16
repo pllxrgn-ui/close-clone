@@ -71,7 +71,8 @@ describe('signature + structure', () => {
     const token = issuer.signIdToken({ sub: 's', aud: CLIENT, nonce: NONCE });
     const parts = token.split('.');
     const sig = parts[2] as string;
-    const tampered = `${parts[0]}.${parts[1]}.${sig.slice(0, -2)}${sig.endsWith('AA') ? 'BB' : 'AA'}`;
+    // Flip the first (always-significant) signature char — see jwt.test.ts note.
+    const tampered = `${parts[0]}.${parts[1]}.${sig[0] === 'A' ? 'B' : 'A'}${sig.slice(1)}`;
     await expectReject(
       verifyIdToken({
         token: tampered,
