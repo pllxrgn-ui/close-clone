@@ -6,9 +6,11 @@
 
 **Wave B: COMPLETE.** 5h security review + 3 fixes ✅ (no critical; core certified solid; report docs/security/2026-07-16-review.md). 5d Playwright E2E ✅ — merged, **13 specs actually executed green (browsers installed), 3× stable**, CI-wired (`.github/workflows/e2e.yml`): full §8 rep loop + all surfaces + keyboard + DNC-send-disabled + theme/reduced-motion. Repo prettier-clean (CI format:check green).
 
-**Phase 3 (mock-first): in progress** on `phase3-integrations` worktree — Twilio adapter + signature-verified ingress → sequential dialer/voicemail/recording (§4.5 default-OFF + consent) → SMS (STOP + quiet hours) → AI call summaries/drafting/NL→SmartView (confirm-before-commit, I-AI). Real Twilio/Deepgram/Haiku = HUMAN_TODO (accounts); adapters unit-tested vs synthetic fixtures.
+**Phase 3 (mock-first): COMPLETE + MERGED** (D-033) — Twilio adapter + signature-verified ingress + calls/dial; sequential dialer + voicemail; recording §4.5 (default-OFF, admin+audited, consent-before-record, I-REC); two-way SMS (STOP + quiet-hours, I-QUIET); AI call summaries + drafting + NL→SmartView (confirm-before-commit, I-AI). ai/asr mocks bound in the registry; telephony/sms/ai wired as optional routes. Full api suite **1,481 green**. Real Twilio/Deepgram/Haiku = HUMAN_TODO; deferred wiring in deploy/WIRING.md §5.
 
-**Remaining to "all done":** merge E2E + Phase 3 (with QA) · final whole-codebase coherence pass.
+**Repo collapsed:** all 20 feature worktrees merged + removed — single `main` worktree at `D:\CODE\NEW\close-clone`.
+
+**FINAL step: coherence pass running** (whole-codebase review — contract drift, invariant leaks, dead code, DECISIONS↔code). On its clearance (+ any fixes), the build is DONE.
 **Orchestrator:** Fable 5 · **Implementers:** Opus 4.8 subagents · **Mode:** MOCK_MODE-first (no external accounts present)
 
 ## The three constraints most likely to break this build, and the de-risk plan
