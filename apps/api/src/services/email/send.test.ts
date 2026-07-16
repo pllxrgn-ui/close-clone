@@ -231,7 +231,6 @@ describe('compliance rails — I-DNC (execution-time, engine layer)', () => {
     const lead = await seedLead(ctx.db, 'Acme');
     await ctx.db.execute(
       // set dnc via a raw update to avoid depending on a lead service
-      // eslint-disable-next-line
       (await import('drizzle-orm')).sql`UPDATE leads SET dnc = true WHERE id = ${lead}`,
     );
     await seedContact(ctx.db, lead, ['dana@acme.test'], { name: 'Dana' });
