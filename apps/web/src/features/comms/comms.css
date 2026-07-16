@@ -640,7 +640,8 @@
 }
 .roster__row {
   display: grid;
-  grid-template-columns: 3px minmax(0, 1fr) auto auto;
+  /* rail · who · email · state · action */
+  grid-template-columns: 3px minmax(0, 1fr) auto auto auto;
   align-items: center;
   gap: var(--space-3);
   min-height: 44px;
