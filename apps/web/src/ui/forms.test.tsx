@@ -163,6 +163,20 @@ describe('Switch', () => {
     await userEvent.click(screen.getByText('Comfortable density'));
     expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
   });
+
+  // review finding: inside a Field, the Field label must actually name the switch
+  test('adopts the Field control id: label names it and label-click toggles', async () => {
+    const onCheckedChange = vi.fn();
+    render(
+      <Field label="Recording">
+        <Switch checked={false} onCheckedChange={onCheckedChange} />
+      </Field>,
+    );
+    const control = screen.getByRole('switch', { name: 'Recording' });
+    expect(control).toBeInTheDocument();
+    await userEvent.click(screen.getByText('Recording'));
+    expect(onCheckedChange).toHaveBeenCalledWith(true);
+  });
 });
 
 describe('ErrorState', () => {

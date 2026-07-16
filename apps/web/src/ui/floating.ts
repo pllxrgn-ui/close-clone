@@ -48,8 +48,13 @@ function compute(
   const maxLeft = window.innerWidth - VIEWPORT_MARGIN - p.width;
   left = Math.min(Math.max(left, VIEWPORT_MARGIN), Math.max(maxLeft, VIEWPORT_MARGIN));
 
+  // Vertical clamp: a panel taller than the remaining space must not run off
+  // the viewport (the flip above already picked the roomier side).
+  const maxTop = window.innerHeight - VIEWPORT_MARGIN - p.height;
+  const clampedTop = Math.min(Math.max(top, VIEWPORT_MARGIN), Math.max(maxTop, VIEWPORT_MARGIN));
+
   return {
-    style: { position: 'fixed', top: Math.round(top), left: Math.round(left) },
+    style: { position: 'fixed', top: Math.round(clampedTop), left: Math.round(left) },
     side: actualSide,
   };
 }

@@ -99,7 +99,12 @@ export function Menu({
       return;
     }
     if (event.key === 'Tab') {
-      // A menu is not a tab stop container — close and let focus move on.
+      // A menu is not a tab stop container. The panel is portalled to the end
+      // of <body>, so the browser's default Tab would jump to the top of the
+      // document — refocus the trigger FIRST (the default action runs after
+      // dispatch, from the then-active element), then close; native Tab
+      // proceeds to the element after/before the trigger, Shift-aware.
+      triggerRef.current?.focus();
       close(false);
       return;
     }

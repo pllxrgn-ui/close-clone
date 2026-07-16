@@ -126,7 +126,8 @@
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ease: var(--ease-out); /* default enter curve (alias for legacy refs) */
-  --dur-fast: 120ms; /* tooltips / hovers */
+  --dur-fast: 120ms; /* hovers / color feedback */
+  --dur-tooltip: 140ms; /* tooltip entrance (law floor: 125ms) */
   --dur: 180ms; /* dropdowns / popovers */
   --dur-press: 130ms; /* press affordance (scale 0.97) */
   --lamp-pulse-dur: 2.2s; /* the only ambient motion */

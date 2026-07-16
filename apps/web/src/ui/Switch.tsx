@@ -1,5 +1,7 @@
+import { useContext, useEffect } from 'react';
 import type { JSX, ReactNode } from 'react';
 import { cx } from '../lib/cx.ts';
+import { FieldContext } from './fieldContext.ts';
 
 export interface SwitchProps {
   checked: boolean;
@@ -28,11 +30,24 @@ export function Switch({
   'aria-label': ariaLabel,
   'aria-labelledby': ariaLabelledBy,
 }: SwitchProps): JSX.Element {
+  // Inside a Field, adopt the generated control id so the Field label's
+  // htmlFor resolves (button is a labelable element). Explicit id wins.
+  const fieldContext = useContext(FieldContext);
+  const resolvedId = id ?? fieldContext?.controlId;
+
+  useEffect(() => {
+    if (import.meta.env.DEV && fieldContext && label !== undefined && label !== null) {
+      console.warn(
+        'Switch: omit the `label` prop inside <Field> — the Field label already names the switch, and two labels concatenate the accessible name.',
+      );
+    }
+  }, [fieldContext, label]);
+
   const button = (
     <button
       type="button"
       role="switch"
-      id={id}
+      id={resolvedId}
       aria-checked={checked}
       aria-label={ariaLabel}
       aria-labelledby={ariaLabelledBy}

@@ -72,7 +72,10 @@ Rules that keep it scalable:
 `Field` generates the ids: label→control association, `aria-describedby` for
 hint **and** error, `aria-invalid` when `error` is set, `role="alert"` so the
 error is announced when it appears. Works with `Input`, `Textarea`, `Select`,
-`Checkbox`; explicit `id`/`aria-describedby`/`invalid` on the control win.
+`Checkbox`, `Switch`; explicit `id`/`aria-describedby`/`invalid` on the control
+win. **One label wins:** inside a `Field`, omit the `Checkbox`/`Switch` inline
+`label` prop — the Field label already names the control, and two labels
+concatenate the accessible name (a dev-mode warning fires).
 
 ### Async pane — cover all four states, in this order
 

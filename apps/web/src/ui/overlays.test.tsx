@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { Button } from './Button.tsx';
 import { Drawer } from './Drawer.tsx';
 import { Menu, MenuItem, MenuSeparator } from './Menu.tsx';
+import { Modal } from './Modal.tsx';
 import { Tab, TabList, TabPanel, Tabs } from './Tabs.tsx';
 import { Tooltip } from './Tooltip.tsx';
 
@@ -76,6 +77,26 @@ describe('Tooltip', () => {
     );
     pointerEnter(screen.getByRole('button'), 'touch');
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  // review finding: Escape must dismiss ONLY the tooltip, not an enclosing dialog
+  test('inside a Modal, first Escape closes the tooltip and keeps the dialog', async () => {
+    const onClose = vi.fn();
+    render(
+      <Modal open onClose={onClose} label="Settings">
+        <Tooltip content="hint">
+          <Button>Info</Button>
+        </Tooltip>
+      </Modal>,
+    );
+    await userEvent.tab(); // dialog holds initial focus; Tab reaches the button
+    expect(screen.getByRole('button', { name: 'Info' })).toHaveFocus();
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+    await userEvent.keyboard('{Escape}');
+    expect(onClose).toHaveBeenCalledOnce();
   });
 });
 
@@ -170,6 +191,17 @@ describe('Menu', () => {
     await userEvent.click(document.body);
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
+
+  // review finding: portal panel means native Tab would land at the document
+  // top — the menu must re-anchor focus to the trigger before closing
+  test('Tab closes the menu and re-anchors focus at the trigger', async () => {
+    renderMenu();
+    await userEvent.click(screen.getByRole('button', { name: 'Actions' }));
+    expect(screen.getByRole('menuitem', { name: 'Edit' })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole('menu'), { key: 'Tab' });
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Actions' })).toHaveFocus();
+  });
 });
 
 describe('Tabs', () => {
@@ -224,6 +256,40 @@ describe('Tabs', () => {
     render(<Harness />);
     expect(screen.getByRole('tab', { name: 'Calls' })).toHaveAttribute('tabindex', '0');
     expect(screen.getByRole('tab', { name: 'Emails' })).toHaveAttribute('tabindex', '-1');
+  });
+
+  // review finding: a value matching no tab must not lock keyboard users out
+  test('when value matches no tab, the first enabled tab stays tabbable', () => {
+    render(
+      <Tabs value="nope" onValueChange={() => {}}>
+        <TabList label="sections">
+          <Tab value="a" disabled>
+            A
+          </Tab>
+          <Tab value="b">B</Tab>
+        </TabList>
+        <TabPanel value="b">content</TabPanel>
+      </Tabs>,
+    );
+    expect(screen.getByRole('tab', { name: 'B' })).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('tab', { name: 'A' })).toHaveAttribute('tabindex', '-1');
+  });
+
+  // review finding: values with spaces must still produce valid IDREF wiring
+  test('values with spaces keep the tab↔panel aria association intact', () => {
+    render(
+      <Tabs value="my report" onValueChange={() => {}}>
+        <TabList label="sections">
+          <Tab value="my report">My report</Tab>
+        </TabList>
+        <TabPanel value="my report">report body</TabPanel>
+      </Tabs>,
+    );
+    const tab = screen.getByRole('tab', { name: 'My report' });
+    const panel = screen.getByRole('tabpanel');
+    expect(panel).toHaveAccessibleName('My report');
+    expect(tab.getAttribute('aria-controls')).toBe(panel.id);
+    expect(panel.id).not.toMatch(/\s/);
   });
 });
 

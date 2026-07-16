@@ -241,7 +241,7 @@
   font-size: var(--fs-micro);
   line-height: var(--lh-base);
   pointer-events: none;
-  animation: sb-tooltip-in var(--dur-fast) var(--ease-out);
+  animation: sb-tooltip-in var(--dur-tooltip) var(--ease-out);
 }
 .sb-tooltip[data-side='top'] {
   transform-origin: center bottom;
@@ -364,6 +364,14 @@
   border-left: none;
   @starting-style {
     transform: translateX(-16px);
+  }
+}
+/* Keyboard-summoned drawers: 0ms, ever (law §4). */
+.sb-drawer--instant {
+  transition: none;
+  @starting-style {
+    opacity: 1;
+    transform: none;
   }
 }
 

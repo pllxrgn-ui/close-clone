@@ -75,15 +75,29 @@ export function Tooltip({ content, side = 'top', className, children }: TooltipP
     setOpen(false);
   }
 
-  useEffect(() => clearTimer, []);
+  // Track open in a ref so unmount-while-open still records lastHiddenAt
+  // (keeps the toolbar-scrubbing instant window warm across re-renders).
+  const openRef = useRef(open);
+  openRef.current = open;
+  useEffect(
+    () => () => {
+      clearTimer();
+      if (openRef.current) lastHiddenAt = performance.now();
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') hide();
+      if (event.key !== 'Escape') return;
+      // Capture-phase + stopPropagation: Escape dismisses the tooltip WITHOUT
+      // also closing an enclosing Modal/Drawer (APG tooltip contract).
+      event.stopPropagation();
+      hide();
     };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
+    document.addEventListener('keydown', onKeyDown, true);
+    return () => document.removeEventListener('keydown', onKeyDown, true);
   }, [open]);
 
   const child = Children.only(children);

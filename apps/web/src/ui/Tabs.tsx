@@ -1,6 +1,11 @@
-import { createContext, useContext, useId, useMemo } from 'react';
+import { createContext, useContext, useEffect, useId, useMemo, useRef } from 'react';
 import type { JSX, KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
 import { cx } from '../lib/cx.ts';
+
+/** `value` strings become id fragments — sanitize so aria IDREF lists (space-separated) stay valid. */
+function idSafe(value: string): string {
+  return value.replace(/[^\w-]/g, '_');
+}
 
 /*
  * Controlled tabs with roving tabindex and automatic activation (arrow keys
@@ -48,6 +53,27 @@ export interface TabListProps {
 }
 
 export function TabList({ label, className, children }: TabListProps): JSX.Element {
+  const listRef = useRef<HTMLDivElement | null>(null);
+
+  // Roving-tabindex fallback: if the controlled value matches no tab (empty,
+  // stale, not yet mounted), every tab would be tabindex=-1 and keyboard users
+  // could never enter the tablist. Make the tabindex state authoritative after
+  // every render: selected tab when one exists, else the first enabled tab.
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    const tabs = Array.from(list.querySelectorAll<HTMLElement>('[role="tab"]'));
+    if (tabs.length === 0) return;
+    const selected = tabs.find(
+      (tab) => tab.getAttribute('aria-selected') === 'true' && !tab.hasAttribute('disabled'),
+    );
+    const tabbable = selected ?? tabs.find((tab) => !tab.hasAttribute('disabled'));
+    for (const tab of tabs) {
+      const wanted = tab === tabbable ? '0' : '-1';
+      if (tab.getAttribute('tabindex') !== wanted) tab.setAttribute('tabindex', wanted);
+    }
+  });
+
   function onKeyDown(event: ReactKeyboardEvent<HTMLDivElement>): void {
     const keys = ['ArrowRight', 'ArrowLeft', 'Home', 'End'];
     if (!keys.includes(event.key)) return;
@@ -69,6 +95,7 @@ export function TabList({ label, className, children }: TabListProps): JSX.Eleme
 
   return (
     <div
+      ref={listRef}
       role="tablist"
       aria-label={label}
       className={cx('sb-tablist', className)}
@@ -93,9 +120,9 @@ export function Tab({ value, disabled = false, className, children }: TabProps):
     <button
       type="button"
       role="tab"
-      id={`${baseId}-tab-${value}`}
+      id={`${baseId}-tab-${idSafe(value)}`}
       aria-selected={isSelected}
-      aria-controls={`${baseId}-panel-${value}`}
+      aria-controls={`${baseId}-panel-${idSafe(value)}`}
       tabIndex={isSelected ? 0 : -1}
       disabled={disabled}
       className={cx('sb-tab', className)}
@@ -118,8 +145,8 @@ export function TabPanel({ value, className, children }: TabPanelProps): JSX.Ele
   return (
     <div
       role="tabpanel"
-      id={`${baseId}-panel-${value}`}
-      aria-labelledby={`${baseId}-tab-${value}`}
+      id={`${baseId}-panel-${idSafe(value)}`}
+      aria-labelledby={`${baseId}-tab-${idSafe(value)}`}
       hidden={!isSelected}
       tabIndex={0}
       className={cx('sb-tabpanel', className)}

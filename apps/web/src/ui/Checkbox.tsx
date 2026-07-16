@@ -1,7 +1,7 @@
-import { forwardRef, useEffect, useRef } from 'react';
+import { forwardRef, useContext, useEffect, useRef } from 'react';
 import type { InputHTMLAttributes, ReactNode } from 'react';
 import { cx } from '../lib/cx.ts';
-import { useFieldControl } from './fieldContext.ts';
+import { FieldContext, useFieldControl } from './fieldContext.ts';
 import { CheckIcon, MinusIcon } from './icons.tsx';
 
 export interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
@@ -22,6 +22,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Che
   ref,
 ) {
   const innerRef = useRef<HTMLInputElement | null>(null);
+  const fieldContext = useContext(FieldContext);
   const field = useFieldControl({
     id,
     invalid,
@@ -31,6 +32,16 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Che
   useEffect(() => {
     if (innerRef.current) innerRef.current.indeterminate = indeterminate;
   }, [indeterminate]);
+
+  // Inside a Field, the Field's label already names this input; a second
+  // inline label concatenates the accessible name ("Newsletter Subscribe").
+  useEffect(() => {
+    if (import.meta.env.DEV && fieldContext && label !== undefined && label !== null) {
+      console.warn(
+        'Checkbox: omit the `label` prop inside <Field> — the Field label already names the input, and two labels concatenate the accessible name.',
+      );
+    }
+  }, [fieldContext, label]);
 
   return (
     <label className={cx('sb-check', className)} data-disabled={disabled || undefined}>
