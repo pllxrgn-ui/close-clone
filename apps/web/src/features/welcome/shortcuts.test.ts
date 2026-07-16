@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { NAV_ITEMS } from '../../app/nav.ts';
+import { NAV_ITEMS } from '../../app/nav.tsx';
 import { comboToCapSteps } from '../../keyboard/combo.ts';
 import { WELCOME_SHORTCUT_GROUPS } from './shortcuts.ts';
 

@@ -290,7 +290,11 @@ export function LeadsSurface({ viewId }: LeadsSurfaceProps): JSX.Element {
           )}
         </div>
 
-        <BulkBar count={selected.size} onClear={() => setSelected(new Set())} />
+        <BulkBar
+          count={selected.size}
+          onClear={() => setSelected(new Set())}
+          selectedLeads={rows.filter((l) => selected.has(l.id))}
+        />
       </section>
     </div>
   );

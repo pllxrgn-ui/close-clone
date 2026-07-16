@@ -2,7 +2,7 @@ import type { JSX } from 'react';
 import { NavLink } from 'react-router-dom';
 import { cx } from '../lib/cx.ts';
 import { KbdCombo } from '../keyboard/index.ts';
-import { NAV_ITEMS } from './nav.ts';
+import { NAV_ITEMS } from './nav.tsx';
 
 /** Primary navigation. Links are natively keyboardable; active state via
  *  aria-current (NavLink). Shortcut chords are rendered from the same combo

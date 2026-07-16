@@ -7,6 +7,9 @@ import { fuzzyMatch, scoreEntry } from './fuzzy.ts';
 import { useDebouncedValue } from './useDebouncedValue.ts';
 import { COMMAND_GROUPS, useLeadCommands, useStaticCommands } from './commands.ts';
 import type { Command, CommandGroupName } from './commands.ts';
+import { useCommsCommands } from '../features/comms/index.ts';
+import { useAdminCommands } from '../features/admin/index.ts';
+import { usePipelineCommands } from '../features/pipeline/index.ts';
 
 interface OptionVM {
   command: Command;
@@ -77,7 +80,15 @@ export function CommandPalette({
   const optionId = (index: number): string => `${baseId}-opt-${index}`;
 
   const debouncedQuery = useDebouncedValue(query, 120);
-  const staticCommands = useStaticCommands(onClose);
+  const commsCommands = useCommsCommands(onClose);
+  const adminCommands = useAdminCommands(onClose);
+  const pipelineCommands = usePipelineCommands(onClose);
+  const staticCommands = [
+    ...useStaticCommands(onClose),
+    ...commsCommands,
+    ...adminCommands,
+    ...pipelineCommands,
+  ];
   const leadCommands = useLeadCommands(debouncedQuery, onClose);
 
   const sections = useMemo<SectionVM[]>(() => {

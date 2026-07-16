@@ -1,4 +1,4 @@
-import { NAV_ITEMS } from '../../app/nav.ts';
+import { NAV_ITEMS } from '../../app/nav.tsx';
 
 /*
  * The landing page renders the app's REAL keyboard map as a design object — no

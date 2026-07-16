@@ -1,31 +1,22 @@
 import type { JSX } from 'react';
-import { Button, IconButton } from '../../../ui/index.ts';
-import { BranchIcon, MailIcon, TargetIcon, UploadIcon, XIcon } from '../icons.tsx';
+import { IconButton } from '../../../ui/index.ts';
+import { XIcon } from '../icons.tsx';
+import { LeadBulkActions } from '../../admin/index.ts';
+import type { Lead } from '@switchboard/shared';
 
 /*
- * Bulk-action bar shown when one or more leads are selected. Every action is a
- * disabled placeholder explicitly labelled for Phase 4 (the bulk engine + C6
- * compliance rails land there) — nothing here mutates records or bypasses a rail.
- * Only "Clear selection" is live.
+ * Bulk-action bar shown when one or more leads are selected. The live actions
+ * (assign, status, enroll, DNC, export) come from the admin feature's
+ * LeadBulkActions; each mutates through the C7 layer. "Clear selection" is local.
  */
 
 interface BulkBarProps {
   count: number;
+  selectedLeads: readonly Lead[];
   onClear: () => void;
 }
 
-const PHASE4_ACTIONS: ReadonlyArray<{
-  id: string;
-  label: string;
-  icon: (props: { size?: number }) => JSX.Element;
-}> = [
-  { id: 'sequence', label: 'Add to sequence', icon: BranchIcon },
-  { id: 'email', label: 'Send email', icon: MailIcon },
-  { id: 'status', label: 'Set status', icon: TargetIcon },
-  { id: 'export', label: 'Export', icon: UploadIcon },
-];
-
-export function BulkBar({ count, onClear }: BulkBarProps): JSX.Element | null {
+export function BulkBar({ count, onClear, selectedLeads }: BulkBarProps): JSX.Element | null {
   if (count <= 0) return null;
   return (
     <div className="bulk-bar" role="region" aria-label={`${count} leads selected`}>
@@ -33,22 +24,7 @@ export function BulkBar({ count, onClear }: BulkBarProps): JSX.Element | null {
         <strong>{count.toLocaleString('en-US')}</strong> selected
       </span>
       <div className="bulk-bar__actions">
-        {PHASE4_ACTIONS.map((action) => {
-          const Icon = action.icon;
-          return (
-            <Button
-              key={action.id}
-              size="sm"
-              variant="ghost"
-              disabled
-              title={`${action.label} — available in Phase 4`}
-              aria-label={`${action.label} (available in Phase 4)`}
-            >
-              <Icon size={14} />
-              {action.label}
-            </Button>
-          );
-        })}
+        <LeadBulkActions selectedLeads={selectedLeads} onDone={onClear} />
       </div>
       <IconButton label="Clear selection" onClick={onClear} className="bulk-bar__clear">
         <XIcon size={16} />

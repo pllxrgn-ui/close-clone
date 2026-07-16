@@ -2,6 +2,7 @@ import type { JSX } from 'react';
 import { Link } from 'react-router-dom';
 import type { Lead } from '@switchboard/shared';
 import { Button, StatusPill } from '../../../ui/index.ts';
+import { LeadComposerLauncher } from '../../comms/index.ts';
 import type { StatusTone } from '../../../ui/index.ts';
 import { initials } from '../../../lib/format.ts';
 import {
@@ -9,7 +10,6 @@ import {
   BranchIcon,
   CircleDashedIcon,
   ExternalLinkIcon,
-  MailIcon,
   MessageIcon,
   PhoneIcon,
 } from '../icons.tsx';
@@ -39,7 +39,6 @@ const NEXT_ACTIONS: ReadonlyArray<{
   icon: (p: { size?: number }) => JSX.Element;
 }> = [
   { id: 'call', label: 'Call', icon: PhoneIcon },
-  { id: 'email', label: 'Email', icon: MailIcon },
   { id: 'sms', label: 'SMS', icon: MessageIcon },
   { id: 'task', label: 'Task', icon: CircleDashedIcon },
   { id: 'sequence', label: 'Enroll', icon: BranchIcon },
@@ -95,6 +94,7 @@ export function LeadHeader({ lead, statusLabel, ownerName }: LeadHeaderProps): J
         role="group"
         aria-label="Lead actions (available in Phase 4)"
       >
+        <LeadComposerLauncher leadId={lead.id} />
         {NEXT_ACTIONS.map((action) => {
           const Icon = action.icon;
           return (

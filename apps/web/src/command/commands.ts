@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { search } from '../api/search.ts';
-import { NAV_ITEMS } from '../app/nav.ts';
+import { NAV_ITEMS } from '../app/nav.tsx';
 import { useTheme } from '../theme/ThemeProvider.tsx';
 import { useToast } from '../feedback/ToastProvider.tsx';
 

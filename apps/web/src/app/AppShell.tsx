@@ -5,6 +5,7 @@ import { Spinner } from '../ui/index.ts';
 import { KeyboardProvider, CheatSheet } from '../keyboard/index.ts';
 import { CommandPalette } from '../command/index.ts';
 import { ToastProvider } from '../feedback/index.ts';
+import { CommsProvider } from '../features/comms/index.ts';
 import { LeftRail } from './LeftRail.tsx';
 import { TopBar } from './TopBar.tsx';
 import { useShellKeymap } from './useShellKeymap.ts';
@@ -26,7 +27,9 @@ export function AppShell(): JSX.Element {
   return (
     <KeyboardProvider>
       <ToastProvider>
-        <ShellChrome />
+        <CommsProvider>
+          <ShellChrome />
+        </CommsProvider>
       </ToastProvider>
     </KeyboardProvider>
   );

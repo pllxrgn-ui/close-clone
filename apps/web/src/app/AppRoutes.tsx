@@ -32,14 +32,23 @@ const ViewDetailPage = lazy(() =>
 const ViewBuilderPage = lazy(() =>
   import('../features/view-builder/index.ts').then((m) => ({ default: m.ViewBuilderPage })),
 );
+const PipelinePage = lazy(() =>
+  import('../features/pipeline/index.ts').then((m) => ({ default: m.PipelineRoutePage })),
+);
+const SequencesPage = lazy(() =>
+  import('../features/comms/index.ts').then((m) => ({ default: m.SequencesRoutePage })),
+);
+const SequenceDetailPage = lazy(() =>
+  import('../features/comms/index.ts').then((m) => ({ default: m.SequenceDetailRoutePage })),
+);
+const ReportsPageReal = lazy(() =>
+  import('../features/reports/index.ts').then((m) => ({ default: m.ReportsRoutePage })),
+);
+const SettingsPageReal = lazy(() =>
+  import('../features/admin/index.ts').then((m) => ({ default: m.AdminSettingsPage })),
+);
 const WelcomePage = lazy(() =>
   import('../features/welcome/index.ts').then((m) => ({ default: m.WelcomePage })),
-);
-const ReportsPage = lazy(() =>
-  import('../pages/ReportsPage.tsx').then((m) => ({ default: m.ReportsPage })),
-);
-const SettingsPage = lazy(() =>
-  import('../pages/SettingsPage.tsx').then((m) => ({ default: m.SettingsPage })),
 );
 const NotFoundPage = lazy(() =>
   import('../pages/NotFoundPage.tsx').then((m) => ({ default: m.NotFoundPage })),
@@ -66,11 +75,14 @@ export function AppRoutes(): JSX.Element {
             <Route path="leads" element={<LeadsPage />} />
             <Route path="leads/:id" element={<LeadDetailPage />} />
             <Route path="views" element={<ViewsPage />} />
+            <Route path="pipeline" element={<PipelinePage />} />
+            <Route path="sequences" element={<SequencesPage />} />
+            <Route path="sequences/:id" element={<SequenceDetailPage />} />
             <Route path="views/new" element={<ViewBuilderPage />} />
             <Route path="views/:id" element={<ViewDetailPage />} />
             <Route path="views/:id/edit" element={<ViewBuilderPage />} />
-            <Route path="reports" element={<ReportsPage />} />
-            <Route path="settings" element={<SettingsPage />} />
+            <Route path="reports" element={<ReportsPageReal />} />
+            <Route path="settings" element={<SettingsPageReal />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Route>

@@ -3,7 +3,7 @@ import type { RefObject } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useKeyBindings } from '../keyboard/index.ts';
 import type { KeyBindingDef } from '../keyboard/index.ts';
-import { NAV_ITEMS } from './nav.ts';
+import { NAV_ITEMS } from './nav.tsx';
 
 interface ShellKeymapOptions {
   searchRef: RefObject<HTMLInputElement | null>;
