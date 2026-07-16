@@ -160,7 +160,10 @@ export class HaikuAIProvider implements AIProvider {
     return callSummarySchema.parse(parseJson(text));
   }
 
-  async draftEmail(instruction: string, threadCtx: unknown): Promise<{ subject?: string; body: string }> {
+  async draftEmail(
+    instruction: string,
+    threadCtx: unknown,
+  ): Promise<{ subject?: string; body: string }> {
     if (instruction.length === 0) throw new Error('haiku draftEmail: empty instruction');
     const ctx = emailThreadContextSchema.parse(threadCtx ?? {});
     const excerpt =
@@ -177,7 +180,9 @@ export class HaikuAIProvider implements AIProvider {
     const text = await this.complete(system, userText, emailDraftJsonSchema);
     const draft = emailDraftSchema.parse(parseJson(text));
     // Narrow to the C2 exact-optional return shape (omit absent subject).
-    return draft.subject !== undefined ? { subject: draft.subject, body: draft.body } : { body: draft.body };
+    return draft.subject !== undefined
+      ? { subject: draft.subject, body: draft.body }
+      : { body: draft.body };
   }
 
   async nlToSmartView(query: string, fieldCatalog: unknown): Promise<SmartViewSuggestion> {
@@ -229,7 +234,10 @@ export class HaikuAIProvider implements AIProvider {
       body: JSON.stringify(requestBody),
     });
     if (res.status < 200 || res.status >= 300) {
-      throw new AnthropicApiError(res.status, `anthropic messages failed with status ${res.status}`);
+      throw new AnthropicApiError(
+        res.status,
+        `anthropic messages failed with status ${res.status}`,
+      );
     }
     const parsed = messageResponseSchema.parse(JSON.parse(res.body));
     if (parsed.stop_reason === 'refusal') {

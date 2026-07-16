@@ -91,7 +91,12 @@ export function registerAiRoutes(app: FastifyInstance, deps: AiRouteDeps): void 
   app.post('/api/v1/ai/call-summaries', async (request, reply) => {
     const parsed = generateBodySchema.safeParse(request.body);
     if (!parsed.success) {
-      return sendError(reply, 'VALIDATION_FAILED', 'invalid call summary request', parsed.error.flatten());
+      return sendError(
+        reply,
+        'VALIDATION_FAILED',
+        'invalid call summary request',
+        parsed.error.flatten(),
+      );
     }
     try {
       const draft = await generateCallSummaryDraft(
@@ -123,7 +128,12 @@ export function registerAiRoutes(app: FastifyInstance, deps: AiRouteDeps): void 
     if (!parsed.success) {
       // A missing/blank confirmedBy is rejected here — §I-AI: no final without a
       // recorded confirming user.
-      return sendError(reply, 'VALIDATION_FAILED', 'confirmedBy is required', parsed.error.flatten());
+      return sendError(
+        reply,
+        'VALIDATION_FAILED',
+        'confirmedBy is required',
+        parsed.error.flatten(),
+      );
     }
     try {
       const result = await confirmCallSummary(
@@ -132,7 +142,8 @@ export function registerAiRoutes(app: FastifyInstance, deps: AiRouteDeps): void 
       );
       return reply.send(result);
     } catch (err) {
-      if (err instanceof SummaryNoteNotFoundError) return sendError(reply, 'NOT_FOUND', err.message);
+      if (err instanceof SummaryNoteNotFoundError)
+        return sendError(reply, 'NOT_FOUND', err.message);
       if (err instanceof LeadNotFoundError) return sendError(reply, 'NOT_FOUND', err.message);
       if (err instanceof NotAiNoteError) return sendError(reply, 'VALIDATION_FAILED', err.message);
       if (err instanceof SummaryAlreadyFinalError) return sendError(reply, 'CONFLICT', err.message);
@@ -144,7 +155,12 @@ export function registerAiRoutes(app: FastifyInstance, deps: AiRouteDeps): void 
   app.post('/api/v1/ai/email-drafts', async (request, reply) => {
     const parsed = draftBodySchema.safeParse(request.body);
     if (!parsed.success) {
-      return sendError(reply, 'VALIDATION_FAILED', 'invalid email draft request', parsed.error.flatten());
+      return sendError(
+        reply,
+        'VALIDATION_FAILED',
+        'invalid email draft request',
+        parsed.error.flatten(),
+      );
     }
     try {
       const draft = await draftEmailForComposer(
@@ -167,10 +183,14 @@ export function registerAiRoutes(app: FastifyInstance, deps: AiRouteDeps): void 
   app.post('/api/v1/ai/smart-view', async (request, reply) => {
     const parsed = smartViewBodySchema.safeParse(request.body);
     if (!parsed.success) {
-      return sendError(reply, 'VALIDATION_FAILED', 'invalid smart view request', parsed.error.flatten());
+      return sendError(
+        reply,
+        'VALIDATION_FAILED',
+        'invalid smart view request',
+        parsed.error.flatten(),
+      );
     }
-    const catalog: SmartViewFieldCatalog =
-      parsed.data.catalog ??
+    const catalog: SmartViewFieldCatalog = parsed.data.catalog ??
       deps.fieldCatalog ?? { builtins: [...BUILTIN_FIELD_NAMES], custom: [] };
     try {
       const result = await nlToSmartView({ ai: deps.ai }, { query: parsed.data.query, catalog });
@@ -186,7 +206,8 @@ export function registerAiRoutes(app: FastifyInstance, deps: AiRouteDeps): void 
       // builder to confirm and save via POST /smart-views.
       return reply.send({ dsl: astToDsl(result.ast), ast: result.ast });
     } catch (err) {
-      if (err instanceof NlToSmartViewError) return sendError(reply, 'VALIDATION_FAILED', err.message);
+      if (err instanceof NlToSmartViewError)
+        return sendError(reply, 'VALIDATION_FAILED', err.message);
       const refusal = mapRefusal(reply, err);
       if (refusal !== null) return refusal;
       throw err;

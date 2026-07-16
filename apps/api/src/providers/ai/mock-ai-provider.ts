@@ -86,7 +86,10 @@ export class MockAIProvider implements AIProvider {
     return deriveSummary(parsed, context.leadName);
   }
 
-  async draftEmail(instruction: string, threadCtx: unknown): Promise<{ subject?: string; body: string }> {
+  async draftEmail(
+    instruction: string,
+    threadCtx: unknown,
+  ): Promise<{ subject?: string; body: string }> {
     this.draftCalls += 1;
     if (instruction.length === 0) throw new Error('mock AI draftEmail: empty instruction');
     const ctx = emailThreadContextSchema.parse(threadCtx ?? {});
@@ -131,7 +134,9 @@ function firstSentence(text: string): string {
  * the value satisfies `AIProvider.draftEmail` under exactOptionalPropertyTypes.
  */
 function normalizeDraft(draft: EmailDraft): { subject?: string; body: string } {
-  return draft.subject !== undefined ? { subject: draft.subject, body: draft.body } : { body: draft.body };
+  return draft.subject !== undefined
+    ? { subject: draft.subject, body: draft.body }
+    : { body: draft.body };
 }
 
 function deriveDraft(instruction: string, subject: string | undefined): EmailDraft {
@@ -142,7 +147,9 @@ function deriveDraft(instruction: string, subject: string | undefined): EmailDra
         : `Re: ${subject}`
       : undefined;
   const body = `Hi,\n\n${instruction.trim()}\n\nBest regards,\n`;
-  return emailDraftSchema.parse(replySubject === undefined ? { body } : { subject: replySubject, body });
+  return emailDraftSchema.parse(
+    replySubject === undefined ? { body } : { subject: replySubject, body },
+  );
 }
 
 /**

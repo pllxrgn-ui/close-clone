@@ -1,8 +1,4 @@
-import {
-  transcriptSchema,
-  type ASRProvider,
-  type Transcript,
-} from '@switchboard/shared/providers';
+import { transcriptSchema, type ASRProvider, type Transcript } from '@switchboard/shared/providers';
 
 /**
  * In-memory `ASRProvider` (CONTRACTS §C2) for MOCK_MODE and the AI-feature suites

@@ -167,8 +167,7 @@ function toTranscript(parsed: z.infer<typeof deepgramResponseSchema>): Transcrip
     });
   }
 
-  const text =
-    flatText.length > 0 ? flatText : segments.map((s) => s.text).join(' ');
+  const text = flatText.length > 0 ? flatText : segments.map((s) => s.text).join(' ');
   return transcriptSchema.parse({
     text,
     segments,
