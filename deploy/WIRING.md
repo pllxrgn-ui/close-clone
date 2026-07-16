@@ -42,3 +42,15 @@ Both findings are latent only until auth is mounted here; wiring this section is
 ## Verification gate
 
 None of the above is "done" until it runs green against real Postgres + Redis + a real (or staged) OIDC issuer. Until then it is merged, unit/integration-tested on PGlite + in-process drivers, and wired per this file. That is the honest status.
+
+## 5. Telephony / SMS / AI (Phase 3 — `apps/api/src/{providers/telephony,providers/ai,providers/asr,services/telephony,services/sms,services/ai}`)
+
+`registerRoutes` now threads optional `telephony` / `sms` / `ai` deps (mounted only when supplied). Under MOCK_MODE the registry binds `telephony`/`asr`/`ai` mocks; wire the real adapters + route deps at the deploy root:
+
+- **Providers (real branch of `createProviderRegistry`):** `telephony: createTwilioTelephonyProvider({ accountSid, authToken, apiKeySid, apiKeySecret, twimlAppSid, voiceUrl, statusCallbackUrl, transport: new FetchTwilioTransport() })`, `asr: createDeepgramASRProvider({ apiKey, transport })`, `ai: createHaikuAIProvider({ apiKey, transport })`. All keyed by accounts in HUMAN_TODO (Twilio/Deepgram/Anthropic).
+- **Telephony routes:** `registerRoutes(app, { …, telephony: { verifier: new SignatureTwilioVerifier(authToken), dialProvider: registry.telephony, now, publicBaseUrl: <external origin, NOT the proxy host>, callerId: TWILIO_PHONE_NUMBER, queue?, dialerClient: <raw pg client> } })`. Twilio signs the full public URL — `publicBaseUrl` must be the real external origin. Under MOCK_MODE use `SignatureTwilioVerifier(MOCK_TWILIO_AUTH_TOKEN)` + the mock provider.
+- **SMS route:** `sms: { provider: registry.telephony, now, fromNumber: TWILIO_PHONE_NUMBER }`. Outbound quiet-hours (I-QUIET) + DNC are enforced in the send engine; inbound STOP is handled by the telephony ingress processor.
+- **AI routes:** `ai: { asr: registry.asr, ai: registry.ai, now, fieldCatalog? }`. I-AI holds: summaries land as DRAFT notes; a separate confirm endpoint (carrying `confirmedBy`) flips to final + emits the timeline event. NL→Smart View re-parses the model's DSL through the shared parser (invalid = visible error).
+- **Webhook worker:** the telephony ingress persists then enqueues `twilio:process`; the composition root's combined QueueDriver processor must call `handleTelephonyJob(...)` alongside the sequence handler, and run `processPendingTwilioWebhooks(...)` on a sweeper interval (mirrors the sequence sweeper).
+- **Ring group (contract gap):** no first-class ring-group table in C1; v1 routes inbound to active-users-minus-owner (`ActuveUsersRingGroup`, injectable). A real ring group needs a schema addition (migration 0012+) if desired.
+- **Recording (I-REC):** default OFF (`org_settings.recording_enabled`); enabling is an admin+audited switch; `recording_consent_played` is emitted before recording on every recorded call. Legal sign-off is HUMAN_TODO.

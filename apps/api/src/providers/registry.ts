@@ -1,7 +1,14 @@
-import type { EmailProvider, TelephonyProvider } from '@switchboard/shared/providers';
+import type {
+  EmailProvider,
+  TelephonyProvider,
+  ASRProvider,
+  AIProvider,
+} from '@switchboard/shared/providers';
 import { MockEmailProvider } from './mock/mock-email-provider.ts';
 import { GmailEmailProvider } from './email/gmail-email-provider.ts';
 import { createMockTelephonyProvider } from './telephony/index.ts';
+import { createMockASRProvider } from './asr/index.ts';
+import { createMockAIProvider } from './ai/index.ts';
 import type { Clock, IdSource } from './mock/clock.ts';
 
 /**
@@ -34,8 +41,11 @@ export interface GmailBindingConfig {
 
 export interface ProviderRegistry {
   email: EmailProvider;
-  /** Bound under mockMode; the real Twilio adapter arrives with task 3b. */
+  /** All bound under mockMode; the real Twilio/Deepgram/Haiku adapters are wired
+   *  at the deploy composition root (they need accounts — see deploy/WIRING.md). */
   telephony?: TelephonyProvider;
+  asr?: ASRProvider;
+  ai?: AIProvider;
 }
 
 export interface RegistryConfig {
@@ -61,6 +71,8 @@ export function createProviderRegistry(
         ...(mockOverrides.clock !== undefined ? { clock: mockOverrides.clock } : {}),
         ...(mockOverrides.ids !== undefined ? { ids: mockOverrides.ids } : {}),
       }),
+      asr: createMockASRProvider(),
+      ai: createMockAIProvider(),
     };
   }
   if (config.gmail === undefined) {

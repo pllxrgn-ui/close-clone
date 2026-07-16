@@ -11,6 +11,9 @@ import { registerEmailSendRoutes, type EmailSendRouteDeps } from './email-send.t
 import { registerSequenceRoutes, type SequenceRouteDeps } from './sequences.ts';
 import { registerUnsubscribeRoutes, type UnsubscribeRouteDeps } from './unsubscribe.ts';
 import { registerReportsRoutes } from './reports.ts';
+import { registerTelephonyRoutes, type TelephonyRouteDeps } from './telephony.ts';
+import { registerSmsRoutes, type SmsRouteDeps } from './sms.ts';
+import { registerAiRoutes, type AiRouteDeps } from './ai.ts';
 import { registerImportRoutes, type ImportRouteDeps } from './imports.ts';
 import { registerAdminAuditRoutes, type AdminAuditRouteDeps } from './admin-audit.ts';
 import { registerAdminExportRoutes, type AdminExportRouteDeps } from './admin-export.ts';
@@ -43,6 +46,13 @@ export interface RouteDeps {
   adminAudit?: Omit<AdminAuditRouteDeps, 'db'>;
   /** Admin data export (admin RBAC preHandler + optional exportsRoot). */
   adminExport?: Omit<AdminExportRouteDeps, 'db'>;
+  /** Telephony: Twilio ingress + calls/dial + dialer/recording (real Twilio deps
+   *  — verifier/publicBaseUrl — from the deploy root; mock deps under MOCK_MODE). */
+  telephony?: Omit<TelephonyRouteDeps, 'db'>;
+  /** Two-way SMS send (I-QUIET/I-DNC); provider from the registry. */
+  sms?: Omit<SmsRouteDeps, 'db'>;
+  /** AI: call summaries + email drafting + NL→Smart View (confirm-before-commit). */
+  ai?: Omit<AiRouteDeps, 'db'>;
 }
 
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
@@ -70,6 +80,15 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     registerUnsubscribeRoutes(app, { db: deps.db, secret: deps.unsubscribe.secret });
   }
   registerReportsRoutes(app, { db: deps.db });
+  if (deps.telephony !== undefined) {
+    registerTelephonyRoutes(app, { db: deps.db, ...deps.telephony });
+  }
+  if (deps.sms !== undefined) {
+    registerSmsRoutes(app, { db: deps.db, ...deps.sms });
+  }
+  if (deps.ai !== undefined) {
+    registerAiRoutes(app, { db: deps.db, ...deps.ai });
+  }
   if (deps.imports !== undefined) {
     registerImportRoutes(app, { db: deps.db, ...deps.imports });
   }
