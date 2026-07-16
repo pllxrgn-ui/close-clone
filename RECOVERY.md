@@ -51,7 +51,8 @@ Runs unattended on every task-notification plus an hourly heartbeat cron (sessio
 **Pipeline advancement (in priority order):**
 1. Phase 2 chain (2c→2f) — the build's spine; on chain completion run **GATE 2** (I-SYNC replay/shuffle/dupe proofs + all I-SEND-* under adversarial interleavings + rail-bypass attempts), and only after the gate: the merge train.
 2. **Merge train** (after Gate 2): telephony → web → import → reporting → admin-ops into main; apply each report's routeWiring/registryWiring; regenerate lockfile; full monorepo suite green after EACH merge; contract friction adjudicated with CONTRACTS version bumps logged in DECISIONS.md.
-3. Post-merge: wire the **PGlite dev server** (real API + 5k fixture + MOCK_MODE, no Docker) so the product runs locally; then vision-review the web app + landing against DESIGN.md via the in-app browser with screenshots.
+3. Post-merge: the **PGlite dev server** (landed on branch `dev-server`, D-025) merges with the train so the product runs locally; then vision-review the web app + landing against DESIGN.md via the in-app browser with screenshots.
+3b. Showcase publish (user-directed): author `vercel.json` (build `pnpm --filter @switchboard/web build`, output `apps/web/dist`, SPA rewrites) + `DEPLOY-PREVIEW.md`; verify the production web build compiles in mock-demo mode; user creates the private GitHub repo + Vercel import (HUMAN_TODO "Showcase" section); Fable adds the remote and pushes `main` once the URL arrives.
 4. Web chain: when the running workflow ends (old script ends after W4), resume immediately — W1–W4 replay cached, W5 (Operator Grid re-skin) + W6 (landing) run live.
 5. No new backfill streams overnight — everything left in the backlog depends on Phase 2 output or 5a auth (D-017).
 
