@@ -100,15 +100,13 @@ describe('POST /api/v1/bulk — wire', () => {
   test('assign returns a { jobId, action, summary } envelope', async () => {
     await seedLead();
     const other = randomUUID();
-    await db
-      .insert(users)
-      .values({
-        id: other,
-        email: `o${other.slice(0, 6)}@t.test`,
-        name: 'O',
-        role: 'rep',
-        idpSubject: `idp|${other}`,
-      });
+    await db.insert(users).values({
+      id: other,
+      email: `o${other.slice(0, 6)}@t.test`,
+      name: 'O',
+      role: 'rep',
+      idpSubject: `idp|${other}`,
+    });
     const viewId = await seedOwnerView();
 
     const res = await post({ smartViewId: viewId, action: 'assign', params: { ownerId: other } });
