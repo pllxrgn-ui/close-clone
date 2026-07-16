@@ -9,7 +9,7 @@ import { useId, useMemo, useState } from 'react';
 import type { JSX } from 'react';
 import type { Ast, DslCustomFieldDef, Position } from '@switchboard/shared';
 import { ParseError, parse } from '@switchboard/shared';
-import { Button } from '../../ui/index.ts';
+import { Button, Textarea } from '../../ui/index.ts';
 import { AlertIcon, CheckIcon } from './icons.tsx';
 
 interface ParseState {
@@ -63,11 +63,11 @@ export function RawDslPanel({
         </Button>
       </div>
 
-      <textarea
+      <Textarea
         id={`${errorId}-ta`}
         className="sb-vb-dsl__input"
         aria-label="Smart View DSL"
-        aria-invalid={state.error !== null || undefined}
+        invalid={state.error !== null}
         aria-describedby={state.error ? errorId : undefined}
         spellCheck={false}
         autoCapitalize="off"

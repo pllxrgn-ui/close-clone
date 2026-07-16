@@ -2,15 +2,17 @@
  * Reports surface shell — the tablist over the three report families and the
  * active tab's panel. Tab state lives in the URL (`?report=`), so the command
  * palette and the 1/2/3 route shortcuts can deep-link a family and the choice
- * survives navigation. Full keyboard support: roving tabindex + arrow/Home/End
- * on the tablist (WAI-ARIA tabs), plus 1/2/3 anywhere on the route. Tab switches
- * are instant (keyboard-initiated → no motion).
+ * survives navigation. Keyboard support comes from the shared Tabs primitive
+ * (roving tabindex + arrow/Home/End, WAI-ARIA tabs, 0ms switches) plus the 1/2/3
+ * route shortcuts wired here. Only the active panel mounts, so inactive report
+ * queries never fire.
  */
-import { useCallback, useMemo, useRef } from 'react';
-import type { JSX, KeyboardEvent } from 'react';
+import { useCallback, useMemo } from 'react';
+import type { JSX } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useKeyBindings } from '../../../keyboard/index.ts';
 import type { KeyBindingDef } from '../../../keyboard/index.ts';
+import { Tab, TabList, TabPanel, Tabs } from '../../../ui/index.ts';
 import { ActivityReport } from './ActivityReport.tsx';
 import { FunnelReport } from './FunnelReport.tsx';
 import { SequencesReport } from './SequencesReport.tsx';
@@ -27,19 +29,13 @@ export function isReportTabKey(value: string | null): value is ReportTabKey {
   return value !== null && TABS.some((t) => t.key === value);
 }
 
-function tabAt(index: number): ReportTabKey {
-  const wrapped = ((index % TABS.length) + TABS.length) % TABS.length;
-  return TABS[wrapped]?.key ?? 'activity';
-}
-
 export function ReportsSurface(): JSX.Element {
   const [params, setParams] = useSearchParams();
   const raw = params.get('report');
   const active: ReportTabKey = isReportTabKey(raw) ? raw : 'activity';
-  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const select = useCallback(
-    (key: ReportTabKey, focus = false): void => {
+    (key: string): void => {
       setParams(
         (prev) => {
           prev.set('report', key);
@@ -47,10 +43,6 @@ export function ReportsSurface(): JSX.Element {
         },
         { replace: true },
       );
-      if (focus) {
-        const idx = TABS.findIndex((t) => t.key === key);
-        tabRefs.current[idx]?.focus();
-      }
     },
     [setParams],
   );
@@ -70,32 +62,6 @@ export function ReportsSurface(): JSX.Element {
   );
   useKeyBindings(bindings);
 
-  const onTabsKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
-    const idx = TABS.findIndex((t) => t.key === active);
-    switch (event.key) {
-      case 'ArrowRight':
-      case 'ArrowDown':
-        event.preventDefault();
-        select(tabAt(idx + 1), true);
-        break;
-      case 'ArrowLeft':
-      case 'ArrowUp':
-        event.preventDefault();
-        select(tabAt(idx - 1), true);
-        break;
-      case 'Home':
-        event.preventDefault();
-        select(tabAt(0), true);
-        break;
-      case 'End':
-        event.preventDefault();
-        select(tabAt(TABS.length - 1), true);
-        break;
-      default:
-        break;
-    }
-  };
-
   return (
     <div className="rpt">
       <header className="rpt__head">
@@ -105,42 +71,24 @@ export function ReportsSurface(): JSX.Element {
         </div>
       </header>
 
-      <div
-        className="rpt-tabs"
-        role="tablist"
-        aria-label="Report families"
-        onKeyDown={onTabsKeyDown}
-      >
-        {TABS.map((tab, i) => (
-          <button
-            key={tab.key}
-            ref={(el) => {
-              tabRefs.current[i] = el;
-            }}
-            type="button"
-            role="tab"
-            id={`rpt-tab-${tab.key}`}
-            aria-selected={tab.key === active}
-            aria-controls={`rpt-panel-${tab.key}`}
-            tabIndex={tab.key === active ? 0 : -1}
-            className="rpt-tab"
-            onClick={() => select(tab.key)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      <div
-        role="tabpanel"
-        id={`rpt-panel-${active}`}
-        aria-labelledby={`rpt-tab-${active}`}
-        tabIndex={0}
-      >
-        {active === 'activity' && <ActivityReport />}
-        {active === 'funnel' && <FunnelReport />}
-        {active === 'sequences' && <SequencesReport />}
-      </div>
+      <Tabs value={active} onValueChange={select}>
+        <TabList label="Report families" className="rpt-tabs">
+          {TABS.map((tab) => (
+            <Tab key={tab.key} value={tab.key}>
+              {tab.label}
+            </Tab>
+          ))}
+        </TabList>
+        <TabPanel value="activity" className="rpt-tabpanel">
+          <ActivityReport />
+        </TabPanel>
+        <TabPanel value="funnel" className="rpt-tabpanel">
+          <FunnelReport />
+        </TabPanel>
+        <TabPanel value="sequences" className="rpt-tabpanel">
+          <SequencesReport />
+        </TabPanel>
+      </Tabs>
     </div>
   );
 }

@@ -40,42 +40,13 @@
   color: var(--ink-2);
 }
 
-/* ── Tabs ───────────────────────────────────────────────────────────────────── */
+/* ── Tabs (shared Tabs primitive — reports only align it to the header gutter) ── */
 .rpt-tabs {
-  display: flex;
-  gap: var(--space-1);
   padding: 0 var(--space-7);
-  border-bottom: 1px solid var(--border-0);
 }
-.rpt-tab {
-  appearance: none;
-  border: none;
-  background: transparent;
-  color: var(--ink-2);
-  font: inherit;
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
-  letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
-  padding: var(--space-3) var(--space-4);
-  margin-bottom: -1px;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-  transition: color var(--dur-fast) var(--ease-out);
-}
-.rpt-tab[aria-selected='true'] {
-  color: var(--ink-0);
-  border-bottom-color: var(--focus);
-}
-@media (hover: hover) and (pointer: fine) {
-  .rpt-tab:hover {
-    color: var(--ink-0);
-  }
-}
-.rpt-tab:focus-visible {
-  outline: var(--focus-ring-width) solid var(--focus);
-  outline-offset: -2px;
-  border-radius: var(--radius-1);
+.rpt-tabpanel {
+  /* Each report family owns its .rpt-panel padding; drop the primitive's top pad. */
+  padding-top: 0;
 }
 
 /* ── Panel + toolbar ────────────────────────────────────────────────────────── */
@@ -430,20 +401,11 @@
   gap: var(--space-3);
   padding: var(--space-4);
 }
-.rpt-error {
-  padding: var(--space-5);
-  border: 1px solid var(--state-dnc);
-  background: var(--state-dnc-bg);
-  color: var(--ink-0);
-  font-size: var(--fs-sm);
-}
-
 /* Reduced motion: keep color/opacity, drop movement. */
 @media (prefers-reduced-motion: reduce) {
   .rpt-bar__fill,
   .rpt-meter__fill,
   .rpt-funnel__seg,
-  .rpt-tab,
   .rpt-seg__btn,
   .rpt-live {
     transition: none;

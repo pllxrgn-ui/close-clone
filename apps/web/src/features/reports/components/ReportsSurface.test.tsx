@@ -33,6 +33,7 @@ describe('ReportsSurface', () => {
   test('arrow keys move selection along the tablist (roving)', async () => {
     renderReports(<ReportsSurface />, '/reports?report=funnel');
     const tablist = screen.getByRole('tablist');
+    tab('Funnel').focus(); // roving tabindex: arrows move relative to the focused tab
     fireEvent.keyDown(tablist, { key: 'ArrowRight' });
     await waitFor(() => expect(tab('Sequences')).toHaveAttribute('aria-selected', 'true'));
     fireEvent.keyDown(tablist, { key: 'ArrowRight' }); // wraps to Activity

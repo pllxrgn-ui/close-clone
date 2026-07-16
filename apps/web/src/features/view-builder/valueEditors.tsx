@@ -11,7 +11,7 @@ import type {
   RelativeUnit,
   ScalarValue,
 } from '@switchboard/shared';
-import { Input, Select } from '../../ui/index.ts';
+import { Checkbox, Input, Select } from '../../ui/index.ts';
 import { IconButton } from '../../ui/index.ts';
 import {
   ACTIVITY_OPTIONS,
@@ -411,16 +411,14 @@ export function ActivityEditor({
           onChange={(e) => onChange({ ...leaf, sequenceName: e.target.value })}
         />
       ) : null}
-      <label className="sb-vb-within-toggle">
-        <input
-          type="checkbox"
-          checked={within !== undefined}
-          onChange={(e) =>
-            onChange(setActivityWithin(leaf, e.target.checked ? { n: 30, unit: 'd' } : null))
-          }
-        />
-        <span>within</span>
-      </label>
+      <Checkbox
+        className="sb-vb-within-toggle"
+        label="within"
+        checked={within !== undefined}
+        onChange={(e) =>
+          onChange(setActivityWithin(leaf, e.target.checked ? { n: 30, unit: 'd' } : null))
+        }
+      />
       {within ? (
         <span className="sb-vb-rel">
           <Input

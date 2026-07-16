@@ -4,7 +4,7 @@
  * re-query (Retry), never a dead end.
  */
 import type { JSX } from 'react';
-import { Button, Skeleton } from '../../../ui/index.ts';
+import { ErrorState, Skeleton } from '../../../ui/index.ts';
 
 /** A row of stat-tile placeholders. */
 export function TilesSkeleton({ count = 5 }: { count?: number }): JSX.Element {
@@ -31,7 +31,7 @@ export function RowsSkeleton({ count = 5 }: { count?: number }): JSX.Element {
   );
 }
 
-/** Inline error with a Retry that re-runs the query. */
+/** Failed-to-load pane with a Retry that re-runs the query. */
 export function ReportError({
   message,
   onRetry,
@@ -39,12 +39,5 @@ export function ReportError({
   message: string;
   onRetry: () => void;
 }): JSX.Element {
-  return (
-    <div className="rpt-error" role="alert">
-      <p style={{ margin: '0 0 8px' }}>Couldn’t load this report — {message}</p>
-      <Button size="sm" onClick={onRetry}>
-        Retry
-      </Button>
-    </div>
-  );
+  return <ErrorState title="Couldn’t load this report" description={message} onRetry={onRetry} />;
 }
