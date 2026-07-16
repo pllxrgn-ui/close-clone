@@ -1,5 +1,7 @@
 # RECOVERY — resume protocol after a disconnect / crash / new session
 
+> **2026-07-16 (post-merge):** the merge train is COMPLETE — every stream branch is merged into `main` (see STATUS.md). The stream table below is historical; worktrees are pending removal after the showcase. Active work happens on `main` from here.
+
 **Audience: the orchestrator (Claude).** When the user says anything like "continue where we left off", execute this file top to bottom. The orchestrator MUST keep this file current: update the stream table on every workflow launch, completion, or merge, and commit it.
 
 ## Ground truth

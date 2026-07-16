@@ -1,6 +1,6 @@
 # STATUS — Switchboard build
 
-**Phase:** 2 — Email engine (in progress; Gate 1 passed 2026-07-15)
+**Phase:** MERGED — Gate 1 ✅ (07-15) · Gate 2 ✅ (07-16, 488 api tests incl. adversarial suites) · merge train complete (07-16): all 9 branches unified on `main`. Product demoable end-to-end: landing → dev-login → real leads/views/search/timeline against the PGlite dev server (5k leads). Showcase artifacts: DEMO.md, DEPLOY-PREVIEW.md, vercel.json. Remaining phases: 3b–3g, 4a/4c/4e/4i, 5a/5c/5d/5e/5f/5h + final coherence pass.
 **Orchestrator:** Fable 5 · **Implementers:** Opus 4.8 subagents · **Mode:** MOCK_MODE-first (no external accounts present)
 
 ## The three constraints most likely to break this build, and the de-risk plan
