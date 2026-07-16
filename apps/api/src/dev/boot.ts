@@ -11,16 +11,16 @@ import {
   loadGoldenFixtures,
   type LoadedCounts,
 } from '../services/fixtures/loader.ts';
+import type { preHandlerHookHandler } from 'fastify';
 import { registerRoutes } from '../routes/index.ts';
 import { createProviderRegistry, createEmailSenderRegistry } from '../providers/registry.ts';
+import { InProcessQueueDriver } from '../queue/index.ts';
 import { TokenCipher } from '../services/sync/token-cipher.ts';
 import { MockGmailPushVerifier } from '../services/sync/index.ts';
 import { registerDevCors } from './cors.ts';
 import { registerDevAuthRoutes } from './auth.ts';
 import { registerDevReferenceRoutes } from './reference.ts';
-import { registerDevLeadRoutes } from './leads.ts';
-import { registerDevLeadDetailRoutes } from './lead-detail.ts';
-import { registerDevSmartViewRoutes, seedDevSmartViews, type RawQueryable } from './smart-views.ts';
+import { seedDevSmartViews, type RawQueryable } from './smart-views.ts';
 
 /**
  * Dev-server composition root (DEV-ONLY). Boots embedded PGlite (real Postgres
@@ -125,13 +125,19 @@ export async function buildDevServer(opts: BuildDevServerOptions = {}): Promise<
     orgTimezone: DEV_ORG_TIMEZONE,
   }));
 
-  // Every existing route plugin, wired with MOCK_MODE adapters (the real
-  // composition path via `registerRoutes`): search, triage, templates, snippets,
-  // threads (DB-only) + email sync/send (mock provider, cipher, push verifier).
+  // The FULL real API via `registerRoutes` with MOCK_MODE adapters — this is the
+  // whole point: VITE_API_MODE=real runs the web against these real routes (the
+  // product CRUD, smart-views, bulk, admin, inbox, sequences), not MSW. The old
+  // dev read-shims for leads/lead-detail/smart-views are GONE (superseded — they
+  // would collide with the real routes); seedDevSmartViews still seeds the demo
+  // views into the real `smart_views` table that the real route reads.
   const registry = createProviderRegistry({ mockMode: true });
   const senderRegistry = createEmailSenderRegistry({ mockMode: true });
   const cipher = new TokenCipher(config.sessionSecret);
   const verifier = new MockGmailPushVerifier();
+  const queue = new InProcessQueueDriver();
+  // Dev admin guard: dev-login users are treated as admins (no OIDC in dev).
+  const devAdminGuard: preHandlerHookHandler = async () => {};
   registerRoutes(app, {
     db,
     email: {
@@ -143,20 +149,16 @@ export async function buildDevServer(opts: BuildDevServerOptions = {}): Promise<
       providerName: 'mock',
     },
     emailSend: { providerFor: senderRegistry.providerFor, cipher },
+    sequences: { queue, now: () => new Date() },
+    smartViews: { client, orgTimezone: DEV_ORG_TIMEZONE, defaultUserId },
+    bulk: { client, orgTimezone: DEV_ORG_TIMEZONE, queue, defaultUserId },
+    adminCrud: { adminGuard: devAdminGuard },
+    inbox: { queue },
   });
 
-  // Dev-only shims (open reads; dev-login supplies `me`).
+  // Dev-only shims that are NOT superseded: dev-login (OIDC stub) + reference reads.
   registerDevAuthRoutes(app, { db, sessionSecret: config.sessionSecret });
   registerDevReferenceRoutes(app, { db });
-  registerDevLeadRoutes(app, { db });
-  registerDevLeadDetailRoutes(app, { db });
-  registerDevSmartViewRoutes(app, {
-    db,
-    client,
-    sessionSecret: config.sessionSecret,
-    defaultUserId,
-    orgTimezone: DEV_ORG_TIMEZONE,
-  });
 
   await app.ready();
   const totalMs = Date.now() - t0;

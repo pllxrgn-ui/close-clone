@@ -17,6 +17,15 @@ import { registerAiRoutes, type AiRouteDeps } from './ai.ts';
 import { registerImportRoutes, type ImportRouteDeps } from './imports.ts';
 import { registerAdminAuditRoutes, type AdminAuditRouteDeps } from './admin-audit.ts';
 import { registerAdminExportRoutes, type AdminExportRouteDeps } from './admin-export.ts';
+import { registerLeadRoutes } from './leads.ts';
+import { registerContactRoutes } from './contacts.ts';
+import { registerOpportunitiesRoutes } from './opportunities.ts';
+import { registerTasksRoutes } from './tasks.ts';
+import { registerNotesRoutes } from './notes.ts';
+import { registerInboxRoutes, type InboxRouteDeps } from './inbox.ts';
+import { registerSmartViewRoutes, type SmartViewRouteDeps } from './smart-views.ts';
+import { registerBulkRoutes, type BulkRouteDeps } from './bulk.ts';
+import { registerAdminCrudRoutes, type AdminCrudRouteDeps } from './admin-crud.ts';
 
 /**
  * REST route registration (CONTRACTS §C7). This is the repo's single entry point
@@ -53,6 +62,14 @@ export interface RouteDeps {
   sms?: Omit<SmsRouteDeps, 'db'>;
   /** AI: call summaries + email drafting + NL→Smart View (confirm-before-commit). */
   ai?: Omit<AiRouteDeps, 'db'>;
+  /** Inbox composed reads + review dispositions (db-only; optional now/queue). */
+  inbox?: Omit<InboxRouteDeps, 'db'>;
+  /** Smart View CRUD + preview (needs orgTimezone + defaultUserId for `me`/relative dates). */
+  smartViews?: Omit<SmartViewRouteDeps, 'db'>;
+  /** Bulk-action engine over a Smart View target set (needs orgTimezone + queue + defaultUserId). */
+  bulk?: Omit<BulkRouteDeps, 'db'>;
+  /** Admin CRUD (users/custom-fields/org-settings/suppressions) — needs the admin RBAC guard. */
+  adminCrud?: Omit<AdminCrudRouteDeps, 'db'>;
 }
 
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
@@ -80,6 +97,22 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     registerUnsubscribeRoutes(app, { db: deps.db, secret: deps.unsubscribe.secret });
   }
   registerReportsRoutes(app, { db: deps.db });
+  // Product-CRUD resources (db-only) — the real API the web binds to in real mode.
+  registerLeadRoutes(app, { db: deps.db });
+  registerContactRoutes(app, { db: deps.db });
+  registerOpportunitiesRoutes(app, { db: deps.db });
+  registerTasksRoutes(app, { db: deps.db });
+  registerNotesRoutes(app, { db: deps.db });
+  registerInboxRoutes(app, { db: deps.db, ...(deps.inbox ?? {}) });
+  if (deps.smartViews !== undefined) {
+    registerSmartViewRoutes(app, { db: deps.db, ...deps.smartViews });
+  }
+  if (deps.bulk !== undefined) {
+    registerBulkRoutes(app, { db: deps.db, ...deps.bulk });
+  }
+  if (deps.adminCrud !== undefined) {
+    registerAdminCrudRoutes(app, { db: deps.db, ...deps.adminCrud });
+  }
   if (deps.telephony !== undefined) {
     registerTelephonyRoutes(app, { db: deps.db, ...deps.telephony });
   }
