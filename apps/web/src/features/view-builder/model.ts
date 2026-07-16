@@ -274,7 +274,12 @@ export function cloneWithNewIds(node: BuilderNode): BuilderNode {
     case 'not':
       return { id: newId(), type: 'not', child: cloneWithNewIds(node.child) };
     case 'group':
-      return { id: newId(), type: 'group', op: node.op, children: node.children.map(cloneWithNewIds) };
+      return {
+        id: newId(),
+        type: 'group',
+        op: node.op,
+        children: node.children.map(cloneWithNewIds),
+      };
   }
 }
 

@@ -28,7 +28,12 @@ import {
 } from './leafOps.ts';
 import { ArrowDownIcon, ArrowUpIcon, CopyIcon, TrashIcon } from './icons.tsx';
 import type { LeafExpr } from './model.ts';
-import { ActivityEditor, MembershipEditor, ScalarValueEditor, TextEditor } from './valueEditors.tsx';
+import {
+  ActivityEditor,
+  MembershipEditor,
+  ScalarValueEditor,
+  TextEditor,
+} from './valueEditors.tsx';
 
 export interface PredicateRowProps {
   leaf: LeafExpr;
@@ -65,7 +70,13 @@ function synthesizeFieldOption(ref: FieldRef): FieldOption {
     const type = (BUILTIN_FIELDS as Record<string, FieldType>)[ref.name] ?? 'text';
     return { value: ref.name, ref, type, label: ref.name, group: 'Lead' };
   }
-  return { value: `custom.${ref.key}`, ref, type: ref.type, label: `custom.${ref.key}`, group: 'Custom' };
+  return {
+    value: `custom.${ref.key}`,
+    ref,
+    type: ref.type,
+    label: `custom.${ref.key}`,
+    group: 'Custom',
+  };
 }
 
 export function PredicateRow(props: PredicateRowProps): JSX.Element {
@@ -81,7 +92,9 @@ export function PredicateRow(props: PredicateRowProps): JSX.Element {
   const attrGroups = buildAttributeGroups(fieldOptions, currentField);
 
   const onAttribute = (value: string): void => {
-    const field = fieldOptions.find((o) => o.value === value) ?? (currentField?.value === value ? currentField : undefined);
+    const field =
+      fieldOptions.find((o) => o.value === value) ??
+      (currentField?.value === value ? currentField : undefined);
     onChange(attributeLeaf(value, field, leaf));
   };
 
@@ -122,12 +135,7 @@ export function PredicateRow(props: PredicateRowProps): JSX.Element {
       </select>
 
       {currentField ? (
-        <FieldPredicateBody
-          field={currentField}
-          leaf={leaf}
-          users={users}
-          onChange={onChange}
-        />
+        <FieldPredicateBody field={currentField} leaf={leaf} users={users} onChange={onChange} />
       ) : leaf.kind === 'activity' ? (
         <span className="sb-vb-valuecell">
           <ActivityEditor leaf={leaf} onChange={onChange} />
@@ -215,7 +223,9 @@ function FieldPredicateBody({
             field={field}
             value={leaf.value}
             users={users}
-            onChange={(value) => onChange({ kind: 'field', field: field.ref, cmp: leaf.cmp, value })}
+            onChange={(value) =>
+              onChange({ kind: 'field', field: field.ref, cmp: leaf.cmp, value })
+            }
           />
         </span>
       ) : null}

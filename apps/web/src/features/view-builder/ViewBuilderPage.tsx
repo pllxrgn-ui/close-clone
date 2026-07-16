@@ -13,11 +13,7 @@ import type { Ast } from '@switchboard/shared';
 import { astToDsl, parse } from '@switchboard/shared';
 import { listLeadStatuses, listUsers } from '../../api/reference.ts';
 import { ApiError } from '../../api/errors.ts';
-import {
-  createSmartView,
-  getSmartView,
-  updateSmartView,
-} from '../../api/smartViews.ts';
+import { createSmartView, getSmartView, updateSmartView } from '../../api/smartViews.ts';
 import { Button, Spinner } from '../../ui/index.ts';
 import { useToast } from '../../feedback/index.ts';
 import { fetchCustomFields, toDslCatalog } from './api.ts';
@@ -53,7 +49,10 @@ export function ViewBuilderPage(): JSX.Element {
     retry: false,
   });
   const usersQuery = useQuery({ queryKey: ['users'], queryFn: () => listUsers() });
-  const statusesQuery = useQuery({ queryKey: ['lead-statuses'], queryFn: () => listLeadStatuses() });
+  const statusesQuery = useQuery({
+    queryKey: ['lead-statuses'],
+    queryFn: () => listLeadStatuses(),
+  });
   const viewQuery = useQuery({
     queryKey: ['smart-view', viewId],
     queryFn: () => getSmartView(viewId as string),
@@ -169,11 +168,7 @@ export function ViewBuilderPage(): JSX.Element {
         </div>
         <div className="sb-vb-header__actions">
           <label className="sb-vb-share">
-            <input
-              type="checkbox"
-              checked={shared}
-              onChange={(e) => setShared(e.target.checked)}
-            />
+            <input type="checkbox" checked={shared} onChange={(e) => setShared(e.target.checked)} />
             <span>Shared with team</span>
           </label>
           <Button
@@ -212,11 +207,7 @@ export function ViewBuilderPage(): JSX.Element {
               catalogError={customFieldsQuery.isError}
             />
           ) : (
-            <RawDslPanel
-              initialDsl={dsl ?? ''}
-              fieldCatalog={dslCatalog}
-              onApply={applyDsl}
-            />
+            <RawDslPanel initialDsl={dsl ?? ''} fieldCatalog={dslCatalog} onApply={applyDsl} />
           )}
         </div>
 

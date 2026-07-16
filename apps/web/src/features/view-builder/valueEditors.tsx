@@ -430,7 +430,9 @@ export function ActivityEditor({
             aria-label="Within amount"
             value={String(within.n)}
             onChange={(e) =>
-              onChange(setActivityWithin(leaf, { n: toNonNegInt(e.target.value), unit: within.unit }))
+              onChange(
+                setActivityWithin(leaf, { n: toNonNegInt(e.target.value), unit: within.unit }),
+              )
             }
           />
           <Select
@@ -438,7 +440,9 @@ export function ActivityEditor({
             aria-label="Within unit"
             value={within.unit}
             onChange={(e) =>
-              onChange(setActivityWithin(leaf, { n: within.n, unit: e.target.value as RelativeUnit }))
+              onChange(
+                setActivityWithin(leaf, { n: within.n, unit: e.target.value as RelativeUnit }),
+              )
             }
           >
             {UNIT_OPTIONS.map((u) => (

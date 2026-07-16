@@ -144,9 +144,7 @@ function GroupView({
       </div>
 
       {count === 0 ? (
-        <p className="sb-vb-group__empty">
-          No conditions yet. Add a condition to start filtering.
-        </p>
+        <p className="sb-vb-group__empty">No conditions yet. Add a condition to start filtering.</p>
       ) : (
         <ul className="sb-vb-group__children">
           {node.children.map((child, index) => (
@@ -216,7 +214,11 @@ function NodeView({
   // `not` wrapper: negation lives on the OUTER node; move/remove/duplicate still
   // target it (node.id), so a negated clause reorders as a unit.
   const child = node.child;
-  const negControls = { ...base, negated: true, onToggleNegate: () => ctx.actions.unnegate(node.id) };
+  const negControls = {
+    ...base,
+    negated: true,
+    onToggleNegate: () => ctx.actions.unnegate(node.id),
+  };
 
   if (child.type === 'leaf') {
     return (
@@ -250,7 +252,11 @@ function NodeView({
 }
 
 function cxGroup(isRoot: boolean, negated?: boolean): string {
-  return ['sb-vb-group', isRoot ? 'sb-vb-group--root' : 'sb-vb-group--nested', negated ? 'is-negated' : '']
+  return [
+    'sb-vb-group',
+    isRoot ? 'sb-vb-group--root' : 'sb-vb-group--nested',
+    negated ? 'is-negated' : '',
+  ]
     .filter(Boolean)
     .join(' ');
 }

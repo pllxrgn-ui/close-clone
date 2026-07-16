@@ -96,7 +96,16 @@ const CUSTOM_DESCS: FieldDesc[] = CATALOG.map((d) => ({
 const ALL_DESCS = [...BUILTIN_DESCS, ...CUSTOM_DESCS];
 const MEMBER_DESCS = ALL_DESCS.filter((d) => membershipAllowed(d.type));
 
-const VALUE_CMP_POOL: readonly ValueCmp[] = ['=', '!=', '<', '<=', '>', '>=', 'contains', 'starts_with'];
+const VALUE_CMP_POOL: readonly ValueCmp[] = [
+  '=',
+  '!=',
+  '<',
+  '<=',
+  '>',
+  '>=',
+  'contains',
+  'starts_with',
+];
 
 function scalarForType(rng: () => number, type: FieldType): ScalarValue {
   switch (type) {
@@ -110,10 +119,16 @@ function scalarForType(rng: () => number, type: FieldType): ScalarValue {
       return { kind: 'bool', value: rng() < 0.5 };
     case 'date':
       if (rng() < 0.5) {
-        return { kind: 'date', value: `20${int(rng, 10, 35)}-${pad(int(rng, 1, 12))}-${pad(int(rng, 1, 28))}` };
+        return {
+          kind: 'date',
+          value: `20${int(rng, 10, 35)}-${pad(int(rng, 1, 12))}-${pad(int(rng, 1, 28))}`,
+        };
       }
       return rng() < 0.5
-        ? { kind: 'reldate', rel: { form: 'relative', n: int(rng, 0, 999), unit: pick(rng, UNITS) } }
+        ? {
+            kind: 'reldate',
+            rel: { form: 'relative', n: int(rng, 0, 999), unit: pick(rng, UNITS) },
+          }
         : { kind: 'reldate', rel: { form: 'named', name: pick(rng, NAMED_RELDATES) } };
   }
 }
@@ -149,9 +164,7 @@ function randomLeaf(rng: () => number): LeafExpr {
     const activity = pick(rng, ACTIVITY_TYPES_DSL) as ActivityTypeDsl;
     const leaf: LeafExpr = { kind: 'activity', op: rng() < 0.5 ? 'has' : 'no', activity };
     const withName =
-      activity === 'in_sequence'
-        ? { ...leaf, sequenceName: pick(rng, STRINGS) }
-        : leaf;
+      activity === 'in_sequence' ? { ...leaf, sequenceName: pick(rng, STRINGS) } : leaf;
     return rng() < 0.5
       ? { ...withName, within: { n: int(rng, 0, 999), unit: pick(rng, UNITS) } }
       : withName;
@@ -196,7 +209,9 @@ describe('round-trip: builder → astToDsl → parse ≡ AST (property, seeded)'
       try {
         reparsed = parse(dsl, opts);
       } catch (err) {
-        throw new Error(`iteration ${i}: parse failed for dsl=${JSON.stringify(dsl)}: ${String(err)}`);
+        throw new Error(
+          `iteration ${i}: parse failed for dsl=${JSON.stringify(dsl)}: ${String(err)}`,
+        );
       }
       expect(reparsed, `iteration ${i} dsl=${JSON.stringify(dsl)}`).toEqual(ast);
     }

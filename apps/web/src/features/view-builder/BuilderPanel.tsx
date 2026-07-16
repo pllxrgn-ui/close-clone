@@ -58,7 +58,8 @@ export function BuilderPanel({
     },
     remove: (id: string) => onRootChange(asGroup(removeNode(root, id))),
     move: (id: string, delta: number) => onRootChange(asGroup(moveChild(root, id, delta))),
-    setOp: (groupId: string, op: Combinator) => onRootChange(asGroup(setGroupOp(root, groupId, op))),
+    setOp: (groupId: string, op: Combinator) =>
+      onRootChange(asGroup(setGroupOp(root, groupId, op))),
     negate: (id: string) => onRootChange(asGroup(wrapInNot(root, id))),
     unnegate: (notId: string) => onRootChange(asGroup(unwrapNot(root, notId))),
     duplicate: (id: string) => onRootChange(asGroup(duplicateNode(root, id))),

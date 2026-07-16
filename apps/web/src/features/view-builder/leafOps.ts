@@ -145,7 +145,8 @@ export function withComparator(field: FieldOption, cmp: BuilderCmp, prev: LeafEx
  *  comparator if still legal for the new type. */
 export function fieldLeaf(field: FieldOption, prev?: LeafExpr): LeafExpr {
   const prevCmp = prev ? comparatorOf(prev) : null;
-  const cmp = prevCmp && comparatorValidFor(field.type, prevCmp) ? prevCmp : defaultValueCmp(field.type);
+  const cmp =
+    prevCmp && comparatorValidFor(field.type, prevCmp) ? prevCmp : defaultValueCmp(field.type);
   const fallback: LeafExpr = {
     kind: 'field',
     field: field.ref,
@@ -156,7 +157,11 @@ export function fieldLeaf(field: FieldOption, prev?: LeafExpr): LeafExpr {
 }
 
 /** Build a leaf when the attribute-select changes to a non-field kind. */
-export function attributeLeaf(attribute: string, field: FieldOption | undefined, prev: LeafExpr): LeafExpr {
+export function attributeLeaf(
+  attribute: string,
+  field: FieldOption | undefined,
+  prev: LeafExpr,
+): LeafExpr {
   if (attribute === ATTR_ACTIVITY) {
     return prev.kind === 'activity' ? prev : defaultActivity();
   }
