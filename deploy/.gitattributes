@@ -1,0 +1,9 @@
+# Container- and host-executed text MUST stay LF regardless of core.autocrlf.
+# CRLF breaks the `#!/bin/sh` shebang and shell parsing inside the Linux images
+# (entrypoint.sh is the container ENTRYPOINT) and on Linux backup hosts.
+*.sh    text eol=lf
+*.mjs   text eol=lf
+*.conf  text eol=lf
+*.yml   text eol=lf
+# PowerShell handles LF fine; keep it LF for a consistent, diff-clean tree.
+*.ps1   text eol=lf

@@ -1,0 +1,5 @@
+# Local backup dumps produced by scripts/backup.sh (never commit data).
+backups/
+
+# Standalone install for the compose-invariants test (see package.json).
+node_modules/

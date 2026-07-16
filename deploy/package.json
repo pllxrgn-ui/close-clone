@@ -1,0 +1,15 @@
+{
+  "name": "@switchboard/deploy-kit",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Switchboard deploy kit: compose stack, Dockerfiles, backup/restore scripts, and the compose-invariants test. Deliberately NOT a pnpm-workspace member — its test deps (vitest, js-yaml) stay out of the application dependency graph. Install/run standalone with --ignore-workspace.",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "js-yaml": "^4.1.0",
+    "vitest": "^3.0.4"
+  }
+}

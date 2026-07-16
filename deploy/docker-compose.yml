@@ -1,0 +1,281 @@
+# Switchboard — single-host deployment stack (ARCHITECTURE §8).
+#
+#   docker compose --env-file .env -f deploy/docker-compose.yml up -d --build
+#
+# One command brings up the whole stack on an internal Docker host / small VM:
+#   web       — the React SPA, built static and served by nginx (SPA fallback,
+#               gzip, security headers) + reverse-proxy for /api, /ws, /wh, /healthz.
+#   api       — the Fastify server. ONE image; role chosen at runtime by APP_ROLE
+#               (server | worker). The server role runs migrations on boot behind
+#               an advisory-lock gate (single-writer v1 — see deploy/README.md).
+#   postgres  — the only source of truth. Named data volume + WAL archiving to a
+#               SECOND named volume (base for point-in-time recovery / the drill).
+#   redis     — BullMQ transport only (never state; every job re-derivable from PG).
+#   worker    — same image as api, APP_ROLE=worker. Profile-gated OFF until the
+#               standalone worker composition root lands (see README "Workers").
+#   glitchtip — optional self-hosted error tracking, profile-gated OFF.
+#
+# TLS is terminated upstream by the company proxy / internal LB; every service
+# here speaks plain HTTP on the internal network (ARCHITECTURE §8). Postgres and
+# Redis publish NO host ports — they are reachable only on the compose network.
+#
+# `docker compose up` honours deploy.resources.limits (memory + cpus) in Compose
+# v2; the limits below are sized for a small shared VM. No :latest tags anywhere.
+
+name: switchboard
+
+services:
+  # ---------------------------------------------------------------------------
+  # Postgres 16 — source of truth. Data on `pgdata`; WAL archived to `pgwal`.
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    # The image starts as root and drops to the `postgres` user via its
+    # entrypoint. We prepare the (root-owned, freshly-created) WAL-archive mount
+    # before handing off, so archiving can write to the second volume.
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        set -e
+        mkdir -p /var/lib/postgresql/wal-archive
+        chown postgres:postgres /var/lib/postgresql/wal-archive
+        exec docker-entrypoint.sh postgres \
+          -c wal_level=replica \
+          -c archive_mode=on \
+          -c "archive_command=test ! -f /var/lib/postgresql/wal-archive/%f && cp %p /var/lib/postgresql/wal-archive/%f" \
+          -c archive_timeout=300 \
+          -c max_wal_size=1GB
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+      # Deterministic WAL/collation behaviour across host upgrades.
+      LANG: C
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - pgwal:/var/lib/postgresql/wal-archive
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1024M
+
+  # ---------------------------------------------------------------------------
+  # Redis 7 — BullMQ transport. Append-only persistence so a restart keeps
+  # in-flight wake-ups; correctness never depends on it (Postgres is authoritative).
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - 'yes'
+      - --maxmemory
+      - 192mb
+      - --maxmemory-policy
+      - noeviction
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # ---------------------------------------------------------------------------
+  # API (Fastify) — server role. Migrates on boot, then serves /api + /healthz.
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    image: switchboard-api:0.1.0
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      APP_ROLE: server
+      # Run pending migrations on boot (advisory-lock gated). Set to 0 on
+      # replicas that must NOT migrate (see README "Workers & multi-replica").
+      MIGRATE_ON_BOOT: '1'
+      PORT: '3000'
+      # In-cluster service URLs override any localhost values from .env.
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # Node 22 ships global fetch; no curl/wget needed in the slim runtime.
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 768M
+
+  # ---------------------------------------------------------------------------
+  # Worker — SAME image as api, APP_ROLE=worker, no migrations. Profile-gated
+  # OFF: the standalone worker composition root (apps/api/src/worker.ts) is a
+  # tracked follow-up; v1 runs sweep/send in-process in `api`. Enable with
+  # `--profile worker` once that entry exists (README "Workers & multi-replica").
+  # ---------------------------------------------------------------------------
+  worker:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    image: switchboard-api:0.1.0
+    restart: unless-stopped
+    profiles: ['worker']
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      APP_ROLE: worker
+      MIGRATE_ON_BOOT: '0'
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    healthcheck:
+      # The worker writes a liveness heartbeat file; the entrypoint touches it.
+      test:
+        ['CMD-SHELL', 'test -f /tmp/worker-alive && find /tmp/worker-alive -mmin -2 | grep -q .']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
+  # ---------------------------------------------------------------------------
+  # Web — static SPA served by (unprivileged, non-root) nginx + reverse proxy.
+  # The single public front door: TLS terminates upstream and forwards here.
+  # ---------------------------------------------------------------------------
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    image: switchboard-web:0.1.0
+    restart: unless-stopped
+    ports:
+      # host:container — nginx-unprivileged listens on 8080. Company proxy → here.
+      - '${WEB_HTTP_PORT:-8080}:8080'
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O - http://127.0.0.1:8080/nginx-health || exit 1']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+
+  # ---------------------------------------------------------------------------
+  # GlitchTip — optional self-hosted error tracking (ARCHITECTURE §8). OFF by
+  # default. Needs its own database + GLITCHTIP_SECRET_KEY; see README. Both the
+  # web and worker roles run from the same pinned image.
+  # ---------------------------------------------------------------------------
+  glitchtip:
+    image: glitchtip/glitchtip:v4.0
+    restart: unless-stopped
+    profiles: ['glitchtip']
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${GLITCHTIP_DB:-glitchtip}
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY:?set GLITCHTIP_SECRET_KEY in .env to enable glitchtip}
+      REDIS_URL: redis://redis:6379/1
+      PORT: '8080'
+      GLITCHTIP_DOMAIN: ${GLITCHTIP_DOMAIN:-http://localhost:8000}
+      DEFAULT_FROM_EMAIL: ${GLITCHTIP_FROM_EMAIL:-glitchtip@localhost}
+      CELERY_WORKER_AUTOSCALE: '1,3'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O - http://127.0.0.1:8080/_health/ || exit 1']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 768M
+
+  glitchtip-worker:
+    image: glitchtip/glitchtip:v4.0
+    restart: unless-stopped
+    profiles: ['glitchtip']
+    command: ['./bin/run-celery-with-beat.sh']
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${GLITCHTIP_DB:-glitchtip}
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY:?set GLITCHTIP_SECRET_KEY in .env to enable glitchtip}
+      REDIS_URL: redis://redis:6379/1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      glitchtip:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'celery -A glitchtip inspect ping -d "celery@$$HOSTNAME" || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
+# Named volumes: DB data, a SEPARATE WAL-archive volume (PITR base), and Redis AOF.
+volumes:
+  pgdata:
+  pgwal:
+  redisdata:
