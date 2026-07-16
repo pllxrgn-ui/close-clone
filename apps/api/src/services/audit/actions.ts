@@ -18,9 +18,16 @@ import { auditActorTypeSchema } from '@switchboard/shared';
  * parameter properties — the host type-stripping constraint).
  */
 export const AUDIT_ACTIONS = [
-  // Authn/authz (build guide §5b: "auth events").
+  // Authn/authz (build guide §5b: "auth events"). Logout added for 5a (D-028).
   'auth.login',
   'auth.denied',
+  'auth.logout',
+  // Internal API tokens + outbound webhook lifecycle (5c, D-028).
+  'api_token.created',
+  'api_token.revoked',
+  'webhook_subscription.created',
+  'webhook_subscription.updated',
+  'webhook_subscription.deleted',
   // Admin surface (build guide §5b: "admin changes").
   'admin.user_changed',
   'admin.custom_field_created',
