@@ -10,7 +10,11 @@ Every phase of the guide is built, merged to `main`, and green. **~4,000 tests**
 
 **Two things gated on a human (not the build):** (1) enable GitHub Pages (Settings→Pages→Source: GitHub Actions) to make the demo URL live; (2) real service accounts + Docker host for real-mode + production deploy (HUMAN_TODO). The production composition root (global OIDC guards, BullMQ webhook worker, real healthz, real adapters) is documented in deploy/WIRING.md and deferred until that infra exists — honest status: merged + unit/integration-tested + wired-per-doc, "done" when it runs against real infra.
 
-**Known v1 deferrals (documented, non-blocking — D-034):** SMS-in-sequences skips (SMS engine exists, sequence wiring deferred) · product-CRUD/inbox/bulk C7 surface realized in MSW + dev shims, production routes deferred (mock-first MVP) · comms client enroll-shape reconcile at real-API cutover.
+**Real product API — BUILT + WIRED + PROVEN (2026-07-17, D-036):** the D-034 S2 gap is CLOSED. leads/contacts/opportunities/tasks/notes/smart-views/bulk/admin/inbox now have REAL production routes (not MSW-only); SMS-in-sequences wired into the send transaction. Full api suite **1,699 green**. Verified end-to-end in a real browser with **VITE_API_MODE=real (MSW OFF)**: leads board, Smart View compiling `next_task_due < today` live (≈1,442 real overdue), inbox composed queue (1,442 real tasks), admin/users, smart-views/preview — all served by real routes against real Postgres, zero console errors. The product CORE runs for real end-to-end; external integrations (email/calls/SMS/AI/SSO) still need accounts (HUMAN_TODO).
+
+**Follow-up (tracked, non-blocking):** the pipeline board renders ALL real opportunities (2,052) unvirtualized → sluggish in real mode; MOCK-mode demo (Pages + local mock) is unaffected (~83 seeded). Bound the board load / default-limit GET /opportunities.
+
+**Prior deferrals now resolved:** ~~SMS-in-sequences skips~~ (wired, D-036) · ~~product-CRUD/inbox/bulk MSW-only~~ (real routes, D-036) · comms client reconciled to real routes (R5).
 
 ---
 
