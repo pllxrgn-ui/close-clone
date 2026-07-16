@@ -276,7 +276,7 @@ export function LeadsTable({
       </div>
 
       {loadingMore ? (
-        <div className="lead-table__more" role="status">
+        <div className="lead-table__more">
           <Spinner label="Loading more leads" />
           <span className="lead-table__more-text">Loading more…</span>
         </div>

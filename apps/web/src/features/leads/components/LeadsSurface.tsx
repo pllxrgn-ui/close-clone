@@ -243,7 +243,7 @@ export function LeadsSurface({ viewId }: LeadsSurfaceProps): JSX.Element {
               }
             />
           ) : busy && rawRows.length === 0 ? (
-            <div className="leads-content__loading" role="status" aria-label="Loading leads">
+            <div className="leads-content__loading">
               <TableSkeleton />
             </div>
           ) : rows.length === 0 ? (
