@@ -1,17 +1,16 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { JSX, KeyboardEvent } from 'react';
-import { Modal } from '../../../ui/Modal.tsx';
-import { Button, Input, Kbd } from '../../../ui/index.ts';
+import { Button, Drawer, IconButton, Input, Kbd, Textarea } from '../../../ui/index.ts';
 import { IS_MAC } from '../../../keyboard/index.ts';
 import type { ReplyItem } from '../model/types.ts';
 import { MailIcon, MessageIcon, SendIcon, XIcon } from '../icons.tsx';
 
 /*
- * Minimal reply composer, rendered as a right-side drawer over the shared Modal
- * primitive (portal + focus trap + Escape + focus restore). It is keyboard-
- * summoned (R), so — like the palette and cheat sheet — it opens instantly (0ms),
- * per the motion law. To/subject are prefilled; ⌘/Ctrl+Enter sends. The parent
- * owns the send mutation and closes the drawer on success.
+ * Minimal reply composer, rendered in the shared Drawer primitive (Modal +
+ * portal + focus trap + Escape + focus restore). Summoned by R — keyboard-
+ * initiated, so it opens with `instant` (0ms slide, law §4); keyboard actions
+ * inside (⌘/Ctrl+Enter to send) stay instant too. To/subject are prefilled.
+ * The parent owns the send mutation and closes the drawer on success.
  */
 
 export interface ComposerSendPayload {
@@ -77,13 +76,12 @@ export function ComposerDrawer({
   const toId = `${ids}-to`;
 
   return (
-    <Modal
+    <Drawer
       open
+      instant
       onClose={onClose}
       label={`Reply to ${item.leadName}`}
       initialFocusRef={bodyRef}
-      className="sb-inbox-drawer"
-      backdropClassName="sb-inbox-drawer__scrim"
     >
       <form
         className="sb-inbox-composer"
@@ -102,14 +100,9 @@ export function ComposerDrawer({
               Reply <span className="sb-inbox-composer__lead">{item.leadName}</span>
             </span>
           </div>
-          <button
-            type="button"
-            className="sb-iconbtn sb-iconbtn--sm"
-            onClick={onClose}
-            aria-label="Close composer"
-          >
+          <IconButton label="Close composer" size="sm" onClick={onClose}>
             <XIcon size={16} />
-          </button>
+          </IconButton>
         </header>
 
         <div className="sb-inbox-composer__fields">
@@ -140,7 +133,7 @@ export function ComposerDrawer({
             <label className="sb-inbox-composer__label" htmlFor={bodyId}>
               Message
             </label>
-            <textarea
+            <Textarea
               id={bodyId}
               ref={bodyRef}
               className="sb-inbox-composer__body"
@@ -151,6 +144,8 @@ export function ComposerDrawer({
             />
           </div>
 
+          {/* Send failure = action error inside a live form: a compact inline
+              alert, not the ErrorState pane (that's for failed-to-load). */}
           {errorMessage ? (
             <p className="sb-inbox-composer__error" role="alert">
               {errorMessage}
@@ -174,6 +169,6 @@ export function ComposerDrawer({
           </div>
         </footer>
       </form>
-    </Modal>
+    </Drawer>
   );
 }

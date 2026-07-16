@@ -1,8 +1,15 @@
 import { useMemo, useRef, useState } from 'react';
 import type { JSX, RefObject } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Modal } from '../../../ui/Modal.tsx';
-import { Button, EmptyState, Input, Spinner, StatusPill } from '../../../ui/index.ts';
+import {
+  Button,
+  Drawer,
+  EmptyState,
+  IconButton,
+  Input,
+  Spinner,
+  StatusPill,
+} from '../../../ui/index.ts';
 import { ApiError } from '../../../api/index.ts';
 import { search } from '../../../api/search.ts';
 import { useToast } from '../../../feedback/index.ts';
@@ -12,10 +19,10 @@ import { primaryEmail } from '../lib/mergeTags.ts';
 import { ArrowLeftIcon, BanIcon, CloseIcon, SearchIcon, UserPlusIcon } from '../icons.tsx';
 
 /*
- * Enroll drawer for a sequence: search a lead → pick a contact → enroll. Reuses
- * the Modal primitive as a right-side drawer (portal + focus-trap). The DNC rail
- * shows before the action and blocks enroll; the server re-checks (I-DNC) and the
- * unique-active-enrollment rule (409) is surfaced as a toast.
+ * Enroll drawer for a sequence: search a lead → pick a contact → enroll. Built
+ * on the shared Drawer primitive (portal + focus-trap + slide-in entrance). The
+ * DNC rail shows before the action and blocks enroll; the server re-checks
+ * (I-DNC) and the unique-active-enrollment rule (409) is surfaced as a toast.
  */
 export function EnrollDrawer({
   open,
@@ -32,13 +39,11 @@ export function EnrollDrawer({
 }): JSX.Element {
   const focusRef = useRef<HTMLElement | null>(null);
   return (
-    <Modal
+    <Drawer
       open={open}
       onClose={onClose}
       label={`Enroll a contact in ${sequenceName}`}
       initialFocusRef={focusRef}
-      className="comms-drawer comms-drawer--narrow"
-      backdropClassName="comms-drawer-overlay"
     >
       <EnrollBody
         key={open ? 'open' : 'closed'}
@@ -48,7 +53,7 @@ export function EnrollDrawer({
         onEnrolled={onEnrolled}
         searchRef={focusRef}
       />
-    </Modal>
+    </Drawer>
   );
 }
 
@@ -117,14 +122,9 @@ function EnrollBody({
         <h2 className="comms-drawer__title">
           <UserPlusIcon size={16} /> Enroll a contact
         </h2>
-        <button
-          type="button"
-          className="sb-iconbtn sb-iconbtn--sm"
-          aria-label="Close"
-          onClick={onClose}
-        >
+        <IconButton label="Close" size="sm" onClick={onClose}>
           <CloseIcon size={16} />
-        </button>
+        </IconButton>
       </header>
 
       <div className="comms-drawer__scroll">

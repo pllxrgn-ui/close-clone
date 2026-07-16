@@ -246,22 +246,7 @@
   padding: var(--space-8) var(--space-5);
 }
 
-/* ── Composer drawer (right-aligned over the shared Modal) ─────────────────── */
-.sb-overlay.sb-inbox-drawer__scrim {
-  justify-content: flex-end;
-  align-items: stretch;
-  padding: 0;
-}
-.sb-modal.sb-inbox-drawer {
-  width: min(460px, 100vw);
-  height: 100%;
-  max-height: 100%;
-  border-radius: 0;
-  border-top: none;
-  border-right: none;
-  border-bottom: none;
-  border-left: 1px solid var(--line-strong);
-}
+/* ── Composer (inner layout inside the shared Drawer primitive) ────────────── */
 .sb-inbox-composer {
   display: flex;
   flex-direction: column;
@@ -323,32 +308,19 @@
   color: var(--ink-1);
   font-size: var(--fs-sm);
 }
-.sb-inbox-composer__body {
+.sb-textarea.sb-inbox-composer__body {
   flex: 1;
-  width: 100%;
   min-height: 160px;
   padding: var(--space-3);
   resize: none;
-  border: 1px solid var(--border-1);
-  border-radius: var(--radius-1);
-  background: var(--surface-inset);
-  color: var(--ink-0);
-  font-family: var(--font-body);
-  font-size: var(--fs-sm);
-  line-height: var(--lh-base);
-  transition: border-color var(--dur-fast) var(--ease-out);
 }
-.sb-inbox-composer__body:focus {
-  outline: none;
-  border-color: var(--focus);
-}
-.sb-inbox-composer__body::placeholder {
-  color: var(--ink-3);
-}
+/* Send failure — compact inline alert (action error, not a load-failure pane). */
 .sb-inbox-composer__error {
-  color: var(--state-dnc);
+  margin: 0;
+  color: var(--state-dnc-fg);
   font-size: var(--fs-sm);
 }
+
 .sb-inbox-composer__foot {
   display: flex;
   align-items: center;

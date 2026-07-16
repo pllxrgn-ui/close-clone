@@ -3,7 +3,16 @@ import type { JSX, KeyboardEvent, RefObject } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Contact } from '@switchboard/shared';
 import { Modal } from '../../../ui/Modal.tsx';
-import { Button, EmptyState, Input, Select, Spinner, StatusPill } from '../../../ui/index.ts';
+import {
+  Button,
+  EmptyState,
+  IconButton,
+  Input,
+  Select,
+  Spinner,
+  StatusPill,
+  Textarea,
+} from '../../../ui/index.ts';
 import { ApiError } from '../../../api/index.ts';
 import { getLead } from '../../../api/leads.ts';
 import { listUsers } from '../../../api/reference.ts';
@@ -130,14 +139,9 @@ function LeadPicker({
         <h2 className="comms-drawer__title">
           <MailIcon size={16} /> New email
         </h2>
-        <button
-          type="button"
-          className="sb-iconbtn sb-iconbtn--sm"
-          aria-label="Close"
-          onClick={onClose}
-        >
+        <IconButton label="Close" size="sm" onClick={onClose}>
           <CloseIcon size={16} />
-        </button>
+        </IconButton>
       </header>
       <div className="comms-drawer__scroll">
         <label className="comms-field">
@@ -400,14 +404,9 @@ function ComposeForm({
             <span className="comms-drawer__subject-of"> · {leadQuery.data.name}</span>
           ) : null}
         </h2>
-        <button
-          type="button"
-          className="sb-iconbtn sb-iconbtn--sm"
-          aria-label="Close"
-          onClick={onClose}
-        >
+        <IconButton label="Close" size="sm" onClick={onClose}>
           <CloseIcon size={16} />
-        </button>
+        </IconButton>
       </header>
 
       <div className="comms-drawer__scroll">
@@ -500,9 +499,9 @@ function ComposeForm({
                 </span>
               </span>
               <div className="comms-body">
-                <textarea
+                <Textarea
                   ref={bodyRef}
-                  className="sb-input comms-textarea"
+                  className="comms-textarea"
                   value={body}
                   rows={9}
                   onChange={(e) =>
