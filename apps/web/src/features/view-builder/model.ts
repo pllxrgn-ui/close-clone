@@ -265,6 +265,39 @@ export function wrapInGroup(node: BuilderNode, id: string, op: Combinator = 'and
   return replaceNode(node, id, (n) => ({ id: newId(), type: 'group', op, children: [n] }));
 }
 
+/** Deep-clone a subtree with fresh ids (its predicate exprs are immutable and
+ *  shared by reference). */
+export function cloneWithNewIds(node: BuilderNode): BuilderNode {
+  switch (node.type) {
+    case 'leaf':
+      return { id: newId(), type: 'leaf', expr: node.expr };
+    case 'not':
+      return { id: newId(), type: 'not', child: cloneWithNewIds(node.child) };
+    case 'group':
+      return { id: newId(), type: 'group', op: node.op, children: node.children.map(cloneWithNewIds) };
+  }
+}
+
+/** Insert a fresh-id clone of the node with `id` directly after it in its parent
+ *  group. No-op if `id` is not a group child (e.g. the root). */
+export function duplicateNode(node: BuilderNode, id: string): BuilderNode {
+  if (node.type === 'group') {
+    const idx = node.children.findIndex((c) => c.id === id);
+    if (idx !== -1) {
+      const target = node.children[idx];
+      if (!target) return node;
+      const children = [...node.children];
+      children.splice(idx + 1, 0, cloneWithNewIds(target));
+      return { ...node, children };
+    }
+    return { ...node, children: node.children.map((c) => duplicateNode(c, id)) };
+  }
+  if (node.type === 'not') {
+    return { ...node, child: duplicateNode(node.child, id) };
+  }
+  return node;
+}
+
 // ── Introspection ─────────────────────────────────────────────────────────────
 
 export function findNode(node: BuilderNode, id: string): BuilderNode | null {

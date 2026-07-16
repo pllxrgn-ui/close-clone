@@ -110,6 +110,12 @@ function builtinGroup(name: BuiltinFieldName): FieldOption['group'] {
   return 'Lead';
 }
 
+/** A user reference for owner/user-typed value editors (id stored, name shown). */
+export interface BuilderUser {
+  readonly id: string;
+  readonly name: string;
+}
+
 /** Options that drive a builtin select/user field, when the caller supplies a
  *  reference set (statuses, opportunity stages, users). */
 export interface CatalogRefs {
@@ -179,6 +185,30 @@ export function findFieldOption(
 ): FieldOption | undefined {
   const value = ref.kind === 'builtin' ? ref.name : `custom.${ref.key}`;
   return options.find((o) => o.value === value);
+}
+
+export interface AttributeGroup {
+  readonly label: FieldOption['group'];
+  readonly options: readonly FieldOption[];
+}
+
+const GROUP_ORDER: readonly FieldOption['group'][] = ['Lead', 'Opportunity', 'Contact', 'Custom'];
+
+/** Group field options into `<optgroup>`s in a stable order. `currentField`, if
+ *  absent from `options` (a saved view's since-removed custom field, or a failed
+ *  catalog load), is appended to its group so the picker never drops the value. */
+export function buildAttributeGroups(
+  options: readonly FieldOption[],
+  currentField?: FieldOption,
+): AttributeGroup[] {
+  const all =
+    currentField && !options.some((o) => o.value === currentField.value)
+      ? [...options, currentField]
+      : options;
+  return GROUP_ORDER.map((label) => ({
+    label,
+    options: all.filter((o) => o.group === label),
+  })).filter((g) => g.options.length > 0);
 }
 
 // ── Comparators ───────────────────────────────────────────────────────────────
