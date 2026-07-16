@@ -112,7 +112,10 @@ function mapOpportunityError(reply: FastifyReply, err: unknown): FastifyReply | 
   return null;
 }
 
-export function registerOpportunitiesRoutes(app: FastifyInstance, deps: OpportunitiesRouteDeps): void {
+export function registerOpportunitiesRoutes(
+  app: FastifyInstance,
+  deps: OpportunitiesRouteDeps,
+): void {
   const { db } = deps;
 
   // GET /api/v1/opportunities — board keyset (no leadId) OR per-lead array.

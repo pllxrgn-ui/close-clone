@@ -41,7 +41,9 @@ beforeAll(async () => {
 
   await ctx.db
     .insert(users)
-    .values([{ id: USER, email: 'rep@example.com', name: 'Rep', role: 'rep', idpSubject: 'idp|a' }]);
+    .values([
+      { id: USER, email: 'rep@example.com', name: 'Rep', role: 'rep', idpSubject: 'idp|a' },
+    ]);
   await ctx.db.insert(leads).values([
     { id: LEAD, name: 'Acme', ownerId: USER },
     { id: LEAD2, name: 'Globex', ownerId: USER },

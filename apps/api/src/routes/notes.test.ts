@@ -29,7 +29,9 @@ beforeAll(async () => {
   await ctx.client.exec(`SET TIME ZONE 'UTC'`);
   await ctx.db
     .insert(users)
-    .values([{ id: USER, email: 'rep@example.com', name: 'Rep', role: 'rep', idpSubject: 'idp|d1' }]);
+    .values([
+      { id: USER, email: 'rep@example.com', name: 'Rep', role: 'rep', idpSubject: 'idp|d1' },
+    ]);
   await ctx.db.insert(leads).values([{ id: LEAD, name: 'Acme', ownerId: USER }]);
 
   app = Fastify({ logger: false });
@@ -62,7 +64,12 @@ const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
 describe('POST /api/v1/notes', () => {
   test('final human note → 201, aiGenerated false, emits note_added', async () => {
-    const res = await post({ leadId: LEAD, bodyMd: 'Called, will follow up', authorId: USER, actorId: USER });
+    const res = await post({
+      leadId: LEAD,
+      bodyMd: 'Called, will follow up',
+      authorId: USER,
+      actorId: USER,
+    });
     expect(res.statusCode).toBe(201);
     const note = res.json<Record<string, unknown>>();
     expect(note.status).toBe('final');
@@ -197,9 +204,8 @@ describe('PATCH /api/v1/notes/:id', () => {
   test('empty patch → 400; unknown id → 404', async () => {
     const created = (await post({ leadId: LEAD, bodyMd: 'x' })).json<{ id: string }>();
     expect(
-      (
-        await app.inject({ method: 'PATCH', url: `/api/v1/notes/${created.id}`, payload: {} })
-      ).statusCode,
+      (await app.inject({ method: 'PATCH', url: `/api/v1/notes/${created.id}`, payload: {} }))
+        .statusCode,
     ).toBe(400);
     expect(
       (
@@ -225,8 +231,8 @@ describe('DELETE /api/v1/notes/:id', () => {
   });
 
   test('unknown id → 404', async () => {
-    expect((await app.inject({ method: 'DELETE', url: `/api/v1/notes/${MISSING}` })).statusCode).toBe(
-      404,
-    );
+    expect(
+      (await app.inject({ method: 'DELETE', url: `/api/v1/notes/${MISSING}` })).statusCode,
+    ).toBe(404);
   });
 });
