@@ -206,10 +206,13 @@ export interface EmailProvider {
   watch(tokens: OAuthTokens, callbackUrl: string): Promise<{ expiresAt: string }>;
 }
 
-// ASR/AI DTOs are declared with their adapters (tasks 3c+); the placeholder keeps
-// those interfaces compiling without asserting a premature shape. Telephony DTOs
-// (BrowserCallToken et al.) are defined in the appended section below (task 3a).
-export type Transcript = unknown;
+// The `Transcript` DTO the ASR/AI interfaces reference is defined in the appended
+// AI/ASR section at the file tail (tasks 3e/3g). A `typeof` reference resolves
+// module-wide, so the interfaces below type-check against the concrete shape while
+// the schema itself stays at the tail (append-only merge). The C2 method signatures
+// below are frozen; `ctx`/`threadCtx`/`fieldCatalog` stay `unknown` at the interface
+// boundary (the adapters parse them internally against the appended DTO schemas).
+export type Transcript = z.infer<typeof transcriptSchema>;
 
 export interface TelephonyProvider {
   createCallToken(userId: string): Promise<BrowserCallToken>;
@@ -384,3 +387,112 @@ export const inboundSmsEventSchema = z.object({
   receivedAt: z.string().datetime(),
 });
 export type InboundSmsEvent = z.infer<typeof inboundSmsEventSchema>;
+
+// ===========================================================================
+// ASR / AI DTOs (CONTRACTS §C2 ASRProvider/AIProvider · ARCHITECTURE §7 AI paths ·
+// §C6 I-AI). Appended by tasks 3e/3g. The C2 method signatures earlier in this
+// file are frozen — these are the concrete shapes they reference (`Transcript`)
+// plus the result / context DTOs the mock + real adapters validate against.
+// Kept at the file tail so the append is a trivial (conflict-free) merge.
+//
+// I-AI is a *service/route* invariant, not a provider one: these adapters only
+// PRODUCE candidate output. Nothing here writes a record — the confirm step lives
+// in `services/ai` + `routes/ai.ts`, which is where `confirmedBy` is recorded.
+// ===========================================================================
+
+/** A speaker turn in a call transcript. `speaker` is best-effort diarization. */
+export const transcriptSegmentSchema = z.object({
+  speaker: z.enum(['agent', 'customer', 'unknown']),
+  text: z.string(),
+  /** Segment start/end offset from call start, in seconds. */
+  startS: z.number().nonnegative(),
+  endS: z.number().nonnegative(),
+});
+export type TranscriptSegment = z.infer<typeof transcriptSegmentSchema>;
+
+/**
+ * The `ASRProvider.transcribe` result (CONTRACTS §C2) and the input to
+ * `AIProvider.summarizeCall`. `text` is the flattened transcript; `segments` is
+ * the diarized turn list. Deterministic in the mock (canned/derived), produced by
+ * Deepgram in real mode. `durationS`/`language` are best-effort metadata.
+ */
+export const transcriptSchema = z.object({
+  text: z.string(),
+  segments: z.array(transcriptSegmentSchema),
+  durationS: z.number().nonnegative().optional(),
+  language: z.string().optional(),
+});
+// `Transcript` is exported near the interface declarations (typed off this schema).
+
+/**
+ * Minimal call context handed to `AIProvider.summarizeCall` (the `ctx` operand of
+ * the frozen C2 signature). "Context sent to the provider is the minimum the
+ * feature needs" (ARCHITECTURE §7): identity labels + direction only — never the
+ * full lead record. The interface types `ctx` as `unknown`; the adapter parses it
+ * against this schema so the shape lives in exactly one place.
+ */
+export const callSummaryContextSchema = z.object({
+  leadName: z.string().optional(),
+  contactName: z.string().optional(),
+  direction: z.enum(['inbound', 'outbound']).optional(),
+});
+export type CallSummaryContext = z.infer<typeof callSummaryContextSchema>;
+
+/** `summarizeCall` result (CONTRACTS §C2). `actionItems` are free-text follow-ups. */
+export const callSummarySchema = z.object({
+  summary: z.string(),
+  actionItems: z.array(z.string()),
+});
+export type CallSummary = z.infer<typeof callSummarySchema>;
+
+/**
+ * Minimal thread context handed to `AIProvider.draftEmail` (the `threadCtx` operand
+ * of the frozen C2 signature). Just the thread subject and a bounded excerpt of the
+ * most recent messages — the minimum a draft needs (ARCHITECTURE §7).
+ */
+export const emailThreadContextSchema = z.object({
+  subject: z.string().optional(),
+  recentMessages: z
+    .array(
+      z.object({
+        from: z.string(),
+        body: z.string(),
+      }),
+    )
+    .default([]),
+});
+export type EmailThreadContext = z.infer<typeof emailThreadContextSchema>;
+
+/** `draftEmail` result (CONTRACTS §C2). Returned to the composer — never auto-sent. */
+export const emailDraftSchema = z.object({
+  subject: z.string().optional(),
+  body: z.string(),
+});
+export type EmailDraft = z.infer<typeof emailDraftSchema>;
+
+/** One custom field exposed to NL→Smart View so the model can reference it. */
+export const smartViewCatalogFieldSchema = z.object({
+  key: z.string(),
+  type: z.enum(['text', 'number', 'date', 'select', 'user']),
+  label: z.string().optional(),
+});
+export type SmartViewCatalogField = z.infer<typeof smartViewCatalogFieldSchema>;
+
+/**
+ * The `fieldCatalog` operand of `AIProvider.nlToSmartView` (frozen C2 signature):
+ * the "schema-of-fields" — the minimum the feature needs (ARCHITECTURE §7). Builtin
+ * field names plus the org's custom fields, so the model emits DSL that references
+ * only real fields. The emitted DSL is RE-PARSED by the same parser as user input,
+ * so an out-of-catalog reference surfaces as a visible parse error, never a guess.
+ */
+export const smartViewFieldCatalogSchema = z.object({
+  builtins: z.array(z.string()),
+  custom: z.array(smartViewCatalogFieldSchema).default([]),
+});
+export type SmartViewFieldCatalog = z.infer<typeof smartViewFieldCatalogSchema>;
+
+/** `nlToSmartView` result (CONTRACTS §C2). `dsl` MUST be re-parsed by the caller. */
+export const smartViewSuggestionSchema = z.object({
+  dsl: z.string(),
+});
+export type SmartViewSuggestion = z.infer<typeof smartViewSuggestionSchema>;
