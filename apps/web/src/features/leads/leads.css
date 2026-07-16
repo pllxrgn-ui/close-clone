@@ -723,7 +723,7 @@
 /* ── Right-rail cards ──────────────────────────────────────────────────────── */
 .rail-card {
   border: 1px solid var(--border-0);
-  border-radius: var(--radius-2);
+  border-radius: 0; /* LAW: 0 radius on panels */
   overflow: hidden;
 }
 .rail-card__head {
