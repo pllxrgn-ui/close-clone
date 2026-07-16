@@ -1,0 +1,25 @@
+/*
+ * Self-hosted webfonts (no CDN, no runtime fetch) — bundled from the pre-approved
+ * @fontsource packages. Each @font-face ships `font-display: swap` from the
+ * package, so text paints immediately in the fallback and swaps when the face
+ * loads (no invisible-text flash, no layout jank beyond the metric swap).
+ *
+ * Only the weights the Operator Grid identity actually uses are imported, to keep
+ * the font payload lean:
+ *   - IBM Plex Sans Condensed 600/700  → display face (large numerals, titles)
+ *   - Inter (variable, wght axis)       → body / UI text
+ *   - JetBrains Mono 400/500/700        → data face (ids, DSL, keycaps, metrics)
+ *
+ * Wired into the cascade by tokens.css (`@import './fonts.css'`), which main.tsx
+ * loads first — so faces are declared before any rule that references
+ * var(--font-display|body|mono).
+ */
+
+@import '@fontsource/ibm-plex-sans-condensed/600.css';
+@import '@fontsource/ibm-plex-sans-condensed/700.css';
+
+@import '@fontsource-variable/inter/wght.css';
+
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+@import '@fontsource/jetbrains-mono/700.css';

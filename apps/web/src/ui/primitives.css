@@ -1,0 +1,531 @@
+/*
+ * UI primitives — the hand-built base layer for the OPERATOR GRID identity.
+ * Achromatic chrome, square panels (0 radius) with 2px controls, dense 36px
+ * rows, a monospace data face and condensed display numerals. All color comes
+ * from tokens.css so both themes + the AA guarantees hold automatically.
+ *
+ * Motion law: only transform + opacity move; keyboard-driven selection (rows,
+ * options, rail) is INSTANT (0ms) — so J/K navigation never animates — while
+ * pointer controls keep a sub-160ms color/press response. Every :hover rule is
+ * gated to hover-capable + fine pointers (bottom of file) so touch never sticks.
+ */
+
+/* ── Button ──────────────────────────────────────────────────────────────── */
+.sb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: var(--control-h);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-1);
+  background: var(--surface-2);
+  color: var(--ink-0);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-press) var(--ease-out);
+}
+.sb-btn:active {
+  transform: scale(0.97);
+}
+.sb-btn:disabled,
+.sb-btn[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+.sb-btn--sm {
+  height: var(--control-h-sm);
+  padding: 0 var(--space-3);
+  font-size: var(--fs-micro);
+}
+.sb-btn--lg {
+  height: var(--control-h-lg);
+  padding: 0 var(--space-5);
+  font-size: var(--fs-base);
+}
+/* Primary — high-contrast ACHROMATIC fill (chrome carries no hue). */
+.sb-btn--primary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+  font-weight: var(--fw-semibold);
+}
+.sb-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+}
+/* Destructive — the one place chrome borrows the DNC state hue. */
+.sb-btn--danger {
+  background: var(--state-dnc-solid);
+  border-color: var(--state-dnc-solid);
+  color: var(--accent-ink);
+}
+.sb-btn[data-loading='true'] {
+  color: transparent;
+  position: relative;
+}
+.sb-btn[data-loading='true'] .sb-btn__spinner {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--bg); /* on the filled primary/danger variants */
+}
+/* Default + ghost are unfilled — spinner takes the ink color. */
+.sb-btn[data-loading='true']:not(.sb-btn--primary):not(.sb-btn--danger) .sb-btn__spinner {
+  color: var(--ink-0);
+}
+
+/* ── IconButton ──────────────────────────────────────────────────────────── */
+.sb-iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-h);
+  height: var(--control-h);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-1);
+  background: transparent;
+  color: var(--ink-1);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-press) var(--ease-out);
+}
+.sb-iconbtn:active {
+  transform: scale(0.97);
+}
+.sb-iconbtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+.sb-iconbtn--sm {
+  width: var(--control-h-sm);
+  height: var(--control-h-sm);
+}
+
+/* ── Input ───────────────────────────────────────────────────────────────── */
+.sb-input {
+  display: block;
+  width: 100%;
+  height: var(--control-h);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-1);
+  background: var(--surface-inset);
+  color: var(--ink-0);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+.sb-input::placeholder {
+  color: var(--ink-3);
+}
+.sb-input[aria-invalid='true'] {
+  border-color: var(--state-dnc-solid);
+}
+.sb-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--surface-1);
+}
+
+/* ── Select ──────────────────────────────────────────────────────────────── */
+.sb-select-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+}
+.sb-select {
+  appearance: none;
+  width: 100%;
+  height: var(--control-h);
+  padding: 0 var(--space-7) 0 var(--space-3);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-1);
+  background: var(--surface-inset);
+  color: var(--ink-0);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.sb-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.sb-select-wrap__chevron {
+  position: absolute;
+  right: var(--space-3);
+  pointer-events: none;
+  color: var(--ink-2);
+}
+
+/* ── Kbd (keycap; monospace data face) ───────────────────────────────────── */
+.sb-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border: 1px solid var(--border-1);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-1);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-medium);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* ── StatusPill (a state WORD — tracked uppercase, with its lamp dot) ─────── */
+.sb-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 18px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-1);
+  font-family: var(--font-body);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  padding-right: calc(var(--space-2) + 0.12em);
+  white-space: nowrap;
+  background: var(--surface-2);
+  color: var(--ink-1);
+}
+.sb-pill__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: currentColor;
+  flex: none;
+}
+.sb-pill--new-reply {
+  background: var(--state-new-reply-bg);
+  color: var(--state-new-reply-fg);
+}
+.sb-pill--overdue {
+  background: var(--state-overdue-bg);
+  color: var(--state-overdue-fg);
+}
+.sb-pill--in-sequence {
+  background: var(--state-in-sequence-bg);
+  color: var(--state-in-sequence-fg);
+}
+.sb-pill--dnc {
+  background: var(--state-dnc-bg);
+  color: var(--state-dnc-fg);
+}
+.sb-pill--won {
+  background: var(--state-won-bg);
+  color: var(--state-won-fg);
+}
+.sb-pill--lost {
+  background: var(--state-lost-bg);
+  color: var(--state-lost-fg);
+}
+.sb-pill--draft {
+  background: var(--state-draft-bg);
+  color: var(--state-draft-fg);
+}
+
+/* ── ListRow (dense 36px, square, keyboard-INSTANT selection) ────────────── */
+.sb-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--row-h);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--border-0);
+  border-left: 2px solid transparent;
+  background: var(--surface-0);
+  color: var(--ink-0);
+  font-size: var(--fs-sm);
+  text-align: left;
+  width: 100%;
+  cursor: default;
+  /* No background transition: J/K selection must be 0ms. */
+}
+button.sb-row,
+a.sb-row {
+  cursor: pointer;
+}
+.sb-row[aria-current='true'] {
+  background: var(--accent-weak-bg);
+  border-left-color: var(--focus);
+}
+.sb-row[data-accent] {
+  border-left-color: var(--row-accent, transparent);
+}
+
+/* ── EmptyState ──────────────────────────────────────────────────────────── */
+.sb-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-9) var(--space-5);
+  text-align: center;
+  color: var(--ink-2);
+}
+.sb-empty__icon {
+  color: var(--ink-3);
+}
+.sb-empty__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
+  color: var(--ink-0);
+}
+.sb-empty__desc {
+  max-width: 42ch;
+  color: var(--ink-2);
+}
+.sb-empty__actions {
+  margin-top: var(--space-2);
+  display: flex;
+  gap: var(--space-3);
+}
+
+/* ── Spinner (bounded loading indicator — rotate is transform-only) ──────── */
+.sb-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-top-color: currentColor;
+  border-radius: var(--radius-pill);
+  animation: sb-spin 0.7s linear infinite;
+}
+.sb-spinner--lg {
+  width: 24px;
+  height: 24px;
+  border-width: 3px;
+}
+@keyframes sb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Skeleton (loading placeholder; OPACITY pulse — transform/opacity only) ─ */
+.sb-skeleton {
+  display: block;
+  border-radius: var(--radius-1);
+  background: var(--surface-2);
+  animation: sb-skeleton-pulse 1.6s var(--ease-in-out) infinite;
+}
+@keyframes sb-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sb-skeleton {
+    animation: none;
+  }
+  .sb-spinner {
+    animation: none;
+  }
+}
+
+/* ── VisuallyHidden ──────────────────────────────────────────────────────── */
+.sb-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Lamp (status indicator — color IS the budget) ───────────────────────── */
+.sb-lamp {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-pill);
+  background: currentColor;
+  flex: none;
+}
+.sb-lamp--reply {
+  color: var(--state-reply);
+}
+.sb-lamp--overdue {
+  color: var(--state-overdue);
+}
+.sb-lamp--seq {
+  color: var(--state-seq);
+}
+.sb-lamp--dnc {
+  color: var(--state-dnc);
+}
+.sb-lamp--live {
+  color: var(--state-live);
+}
+.sb-lamp--idle {
+  color: var(--state-idle);
+}
+/* Glow — reply + live only, dark theme only (the token is `none` in light). */
+.sb-lamp--reply,
+.sb-lamp--live {
+  box-shadow: var(--lamp-glow);
+}
+/* Pulse — the ONLY ambient motion (reply + live), 2.2s opacity, ease-in-out. */
+.sb-lamp--reply:not([data-static]),
+.sb-lamp--live:not([data-static]) {
+  animation: sb-lamp-pulse var(--lamp-pulse-dur) var(--ease-in-out) infinite;
+}
+@keyframes sb-lamp-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sb-lamp--reply:not([data-static]),
+  .sb-lamp--live:not([data-static]) {
+    animation: none;
+  }
+}
+
+/* ── LampRail (4px rail + 9px node — a row's leading status edge) ─────────── */
+.sb-lamp-rail {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch; /* fills the row height when placed in a flex row */
+  width: 12px;
+  min-height: 20px;
+  flex: none;
+}
+.sb-lamp-rail--reply {
+  color: var(--state-reply);
+}
+.sb-lamp-rail--overdue {
+  color: var(--state-overdue);
+}
+.sb-lamp-rail--seq {
+  color: var(--state-seq);
+}
+.sb-lamp-rail--dnc {
+  color: var(--state-dnc);
+}
+.sb-lamp-rail--live {
+  color: var(--state-live);
+}
+.sb-lamp-rail--idle {
+  color: var(--state-idle);
+}
+.sb-lamp-rail__track {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: color-mix(in srgb, currentColor 30%, transparent);
+}
+.sb-lamp-rail__node {
+  position: relative; /* above the track */
+}
+
+/* ── StateLegend (the key to the lamps — lives in the ? overlay) ──────────── */
+.sb-state-legend__title {
+  margin-bottom: var(--space-3);
+  color: var(--ink-2);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+}
+.sb-state-legend__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sb-state-legend__row {
+  display: grid;
+  grid-template-columns: 12px minmax(72px, auto) 1fr;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 24px;
+}
+.sb-state-legend__lamp {
+  justify-self: center;
+}
+.sb-state-legend__name {
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-0);
+}
+.sb-state-legend__meaning {
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+}
+
+/* ── Hover states — gated to hover-capable, fine pointers (no sticky touch) ─ */
+@media (hover: hover) and (pointer: fine) {
+  .sb-btn:hover:not(:disabled):not([aria-disabled='true']) {
+    background: var(--surface-3);
+  }
+  .sb-btn--primary:hover {
+    background: var(--ink-mid);
+    border-color: var(--ink-mid);
+  }
+  .sb-btn--ghost:hover {
+    background: var(--surface-2);
+  }
+  .sb-btn--danger:hover {
+    filter: brightness(1.08);
+  }
+  .sb-iconbtn:hover:not(:disabled) {
+    background: var(--surface-2);
+    color: var(--ink-0);
+  }
+  .sb-input:hover:not(:disabled) {
+    border-color: var(--ink-3);
+  }
+  .sb-select:hover:not(:disabled) {
+    border-color: var(--ink-3);
+  }
+  .sb-row:hover {
+    background: var(--surface-1);
+  }
+}

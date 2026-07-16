@@ -1,0 +1,115 @@
+/*
+ * ─────────────────────────────────────────────────────────────────────────────
+ * WELCOME-SCOPED DESIGN TOKENS — "Operator Grid" law palette.
+ *
+ * ⚠ MERGE-DEDUP FLAG (for the re-skin track): these are the design law's tokens
+ * by their LAW NAMES and EXACT values. The committed styles/tokens.css still
+ * uses the pre-re-skin vocabulary (--surface-N, --ink-N, --state-NAME), so this
+ * page
+ * defines the law tokens locally, scoped to .sb-welcome, to render correctly
+ * TONIGHT. When the re-skin lands its global tokens.css, DELETE this file and
+ * let the globals apply — the names/values are identical by construction, and
+ * every consumer already reads var(--bg)/var(--panel)/var(--reply)/… etc.
+ *
+ * Theming mirrors tokens.css exactly: light is the base; dark applies via BOTH
+ * the OS media query AND the [data-theme] override (so the app's ThemeProvider
+ * toggle wins in both directions — attribute rules out-specify the base/media).
+ * The law is "dark default / light"; the cascade default only decides the
+ * matchMedia-less case (SSR/tests) and never a real themed render.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+.sb-welcome {
+  /* Type system — override the app font tokens IN SCOPE so reused primitives
+     (Kbd caps) adopt the law faces too. @fontsource-loaded, no CDN. */
+  --font-display: 'IBM Plex Sans Condensed', 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Segoe UI Mono', Menlo, monospace;
+
+  /* Motion curves (law) — the only easings used on this page. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+  /* Geometry (law): 2px controls / 0 panels+rows; 36px dense rows. */
+  --wc-r-control: 2px;
+  --wc-row-h: 36px;
+  --wc-maxw: 1080px;
+
+  /* ── Operator Grid palette — LIGHT base ── */
+  --bg: #ecedeb;
+  --panel: #f7f7f5;
+  --panel-raised: #ffffff;
+  --line: #d4d6d3;
+  --ink: #1b1e20;
+  --ink-dim: #5a6065;
+  --focus: #0b7fc4;
+
+  --reply: #0e7a57;
+  --overdue: #8f5b00;
+  --seq: #5a3ea6;
+  --dnc: #b01e33;
+  --live: #0b7fc4;
+  --idle: #9aa0a3;
+
+  /* Glow is reply+live only, dark theme only — off in light. */
+  --lamp-glow: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .sb-welcome {
+    --bg: #141719;
+    --panel: #1b1f23;
+    --panel-raised: #22272c;
+    --line: #30363c;
+    --ink: #e8ebec;
+    --ink-dim: #8c949c;
+    --focus: #56c8ff;
+
+    --reply: #2ee6a8;
+    --overdue: #ffb224;
+    --seq: #b18cff;
+    --dnc: #ff4f66;
+    --live: #56c8ff;
+    --idle: #4a5258;
+
+    --lamp-glow: 0 0 8px currentColor;
+  }
+}
+
+:root[data-theme='light'] .sb-welcome {
+  --bg: #ecedeb;
+  --panel: #f7f7f5;
+  --panel-raised: #ffffff;
+  --line: #d4d6d3;
+  --ink: #1b1e20;
+  --ink-dim: #5a6065;
+  --focus: #0b7fc4;
+
+  --reply: #0e7a57;
+  --overdue: #8f5b00;
+  --seq: #5a3ea6;
+  --dnc: #b01e33;
+  --live: #0b7fc4;
+  --idle: #9aa0a3;
+
+  --lamp-glow: none;
+}
+
+:root[data-theme='dark'] .sb-welcome {
+  --bg: #141719;
+  --panel: #1b1f23;
+  --panel-raised: #22272c;
+  --line: #30363c;
+  --ink: #e8ebec;
+  --ink-dim: #8c949c;
+  --focus: #56c8ff;
+
+  --reply: #2ee6a8;
+  --overdue: #ffb224;
+  --seq: #b18cff;
+  --dnc: #ff4f66;
+  --live: #56c8ff;
+  --idle: #4a5258;
+
+  --lamp-glow: 0 0 8px currentColor;
+}

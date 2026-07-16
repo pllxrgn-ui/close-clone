@@ -1,0 +1,365 @@
+@import './fonts.css';
+
+/*
+ * Switchboard design tokens — the "OPERATOR GRID" identity (locked).
+ *
+ * A dark-default operator console: achromatic chrome (bg / panel / line / ink),
+ * with COLOR SPENT ENTIRELY ON STATE (reply · overdue · seq · dnc · live · idle)
+ * so any list reads like a status board. Square panels + rows (0 radius), 2px
+ * radius on controls, dense 36px rows, condensed display numerals, a monospace
+ * data face, and a single cyan that doubles as focus + the "live" lamp.
+ *
+ * ── Token architecture ───────────────────────────────────────────────────────
+ * The LAW tokens (--bg, --panel, --panel-raised, --line, --ink, --ink-dim,
+ * --focus, and the six --state-*) are defined per THEME block below at the exact
+ * law hex values. A theme-independent ALIAS layer maps the names the primitives
+ * were built against (--surface-*, --ink-0..3, --border-*, --accent*, the pill
+ * triples) onto those law tokens via var(), so the whole component surface
+ * re-skins without touching a single .tsx — and both themes + the AA guarantees
+ * flow from one source of truth.
+ *
+ * ── Theming ──────────────────────────────────────────────────────────────────
+ * DARK is the default (bare :root). Light applies via @media
+ * (prefers-color-scheme: light). A manual [data-theme='dark'|'light'] on <html>
+ * re-asserts either palette and, being more specific than a bare :root, WINS
+ * over the media query in both directions (persisted by the theme module;
+ * mirrored by the pre-paint bootstrap in index.html).
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * WCAG AA CONTRAST (verified — scripts/contrast, sRGB relative luminance).
+ * Text pairs target >= 4.5:1; non-text/UI (lamps, borders, faint ink) >= 3:1.
+ * "idle" is the dim OFF lamp by design (>= 2:1, never carries text).
+ *
+ *   PAIR                        DARK              | LIGHT
+ *   ink / bg (primary text)     15.03  AAA        | 14.27  AAA
+ *   ink / panel                 13.83  AAA        | 15.62  AAA
+ *   ink-1 (mid) / bg            10.67  AAA        |  8.70  AAA
+ *   ink-2 (dim) / bg             5.86  AA         |  5.43  AA
+ *   ink-2 (dim) / panel-raised   4.90  AA         |  6.37  AA
+ *   ink-3 (faint) / bg  (UI)     4.13  AA-UI      |  3.79  AA-UI
+ *   focus / bg          (UI)     9.52  AA-UI      |  3.69  AA-UI
+ *   link (accent-strong) / bg    9.52  AA         |  4.93  AA
+ *   reply  lamp / panel (UI)    10.26             |  4.97
+ *   overdue lamp / panel (UI)    9.19             |  5.34
+ *   seq    lamp / panel (UI)     6.37             |  7.32
+ *   dnc    lamp / panel (UI)     5.18             |  6.36
+ *   live   lamp / panel (UI)     8.76             |  4.04
+ *   idle   lamp / panel (dim)    2.08             |  2.47
+ *   reply  pill text / wash      9.50  AA         |  4.58  AA
+ *   overdue pill text / wash     8.46  AA         |  4.88  AA
+ *   seq    pill text / wash      6.34  AA         |  6.46  AA
+ *   dnc    pill text / wash      5.26  AA         |  5.64  AA
+ *   won    pill text / wash      9.50  AA         |  4.58  AA
+ *   lost   pill text / wash      4.97  AA         |  5.43  AA
+ *   draft  pill text / wash      8.46  AA         |  4.88  AA
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+:root {
+  /* ── Typography ────────────────────────────────────────────────────────────
+   * display: IBM Plex Sans Condensed 600/700 — titles + large numerals.
+   * body:    Inter (variable) — UI/body text.
+   * data:    JetBrains Mono — ids, DSL, keycaps, aligned metrics.
+   * All self-hosted (fonts.css); tabular-nums applied at usage sites. */
+  --font-display: 'IBM Plex Sans Condensed', 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono:
+    'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Segoe UI Mono', Menlo, Consolas, monospace;
+
+  --fs-micro: 11px;
+  --fs-sm: 12px;
+  --fs-base: 13px; /* body default — dense but legible */
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --fs-display-sm: 24px;
+  --fs-display: 32px;
+  --fs-display-lg: 44px;
+
+  --lh-tight: 1.15;
+  --lh-base: 1.45;
+  --lh-loose: 1.6;
+
+  --fw-normal: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-display: 600; /* display face carries weight through condensed forms */
+  --fw-display-strong: 700;
+
+  /* Wide-tracked uppercase — section labels + state WORDS only. */
+  --tracking-label: 0.16em;
+  --tracking-label-wide: 0.24em;
+
+  /* ── Spacing (4 / 8 / 12 / 16 / 24 / 32, plus a 2px micro step) ───────────── */
+  --space-0: 0;
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 8px;
+  --space-4: 12px;
+  --space-5: 16px;
+  --space-6: 20px;
+  --space-7: 24px;
+  --space-8: 32px;
+  --space-9: 40px;
+  --space-10: 48px;
+
+  /* ── Density — dense operator defaults; 36px rows ────────────────────────── */
+  --control-h-sm: 24px;
+  --control-h: 30px;
+  --control-h-lg: 36px;
+  --row-h: 36px; /* law: dense 36px rows */
+  --topbar-h: 44px;
+  --rail-w: 208px;
+
+  /* ── Radius — 2px controls / 0 panels + rows ─────────────────────────────── */
+  --radius-1: 2px; /* controls: buttons, inputs, chips, keycaps */
+  --radius-2: 0; /* panels */
+  --radius-3: 0; /* panels (large) */
+  --radius-pill: 999px; /* lamp dots + spinner only */
+
+  /* ── Focus ring — 2px, 2px offset, the cyan (single source of truth) ─────── */
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring: var(--focus);
+
+  /* ── Motion — law curves; transitions over keyframes; ALL UI < 300ms ─────── */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease: var(--ease-out); /* default enter curve (alias for legacy refs) */
+  --dur-fast: 120ms; /* tooltips / hovers */
+  --dur: 180ms; /* dropdowns / popovers */
+  --dur-press: 130ms; /* press affordance (scale 0.97) */
+  --lamp-pulse-dur: 2.2s; /* the only ambient motion */
+
+  /* ── Etched grid texture — landing hero + board headers ONLY (44px cell) ─── */
+  --etch-size: 44px;
+
+  /* ── z-index scale ───────────────────────────────────────────────────────── */
+  --z-rail: 10;
+  --z-topbar: 20;
+  --z-overlay: 100;
+  --z-toast: 200;
+
+  /* ══ DARK palette (default) ═══════════════════════════════════════════════ */
+  color-scheme: dark;
+
+  --bg: #141719;
+  --panel: #1b1f23;
+  --panel-raised: #22272c;
+  --panel-hover: #2a3037;
+  --panel-inset: #101315;
+  --line: #30363c;
+  --line-strong: #414852;
+
+  --ink: #e8ebec;
+  --ink-mid: #c2c8ce;
+  --ink-dim: #8c949c;
+  --ink-faint: #727a82;
+
+  --focus: #56c8ff;
+  --link: #56c8ff;
+  --sel-bg: #16242e; /* current/active row wash (focus-tinted, near-achromatic) */
+  --selection: #1e3a4a; /* ::selection */
+
+  /* State — the entire color budget (dark law values) */
+  --state-reply: #2ee6a8;
+  --state-overdue: #ffb224;
+  --state-seq: #b18cff;
+  --state-dnc: #ff4f66;
+  --state-live: #56c8ff;
+  --state-idle: #4a5258;
+
+  /* Pill washes (desaturated dark tints; text = the state token) */
+  --state-new-reply-bg: #0c2a21;
+  --state-overdue-bg: #2e2410;
+  --state-in-sequence-bg: #221a38;
+  --state-dnc-bg: #331319;
+  --state-won-bg: #0c2a21;
+  --state-lost-bg: #20262c;
+  --state-draft-bg: #2e2410;
+
+  --lamp-glow: 0 0 8px currentColor; /* reply + live lamps, dark only */
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-2: 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+
+  /* ══ ALIAS layer (theme-independent; resolves against the active palette) ══
+   * The primitives + shell reference these names; they forward to law tokens. */
+  --surface-0: var(--bg);
+  --surface-1: var(--panel);
+  --surface-2: var(--panel-raised);
+  --surface-3: var(--panel-hover);
+  --surface-inset: var(--panel-inset);
+  --surface-sunken: var(--bg);
+
+  --ink-0: var(--ink);
+  --ink-1: var(--ink-mid);
+  --ink-2: var(--ink-dim);
+  --ink-3: var(--ink-faint);
+
+  --border-0: var(--line);
+  --border-1: var(--line-strong);
+
+  --accent: var(--focus);
+  --accent-ink: var(--bg); /* dark text on a cyan fill — legible both themes */
+  --accent-strong: var(--link);
+  --accent-weak-bg: var(--sel-bg);
+  --accent-hover: var(--focus);
+
+  --selection-bg: var(--selection);
+
+  /* Pill fg/solid forward to the six state tokens (won→reply, lost→idle/dim,
+   * draft→overdue) — text/bg AA-verified in the table above. */
+  --state-new-reply-fg: var(--state-reply);
+  --state-new-reply-solid: var(--state-reply);
+  --state-overdue-fg: var(--state-overdue);
+  --state-overdue-solid: var(--state-overdue);
+  --state-in-sequence-fg: var(--state-seq);
+  --state-in-sequence-solid: var(--state-seq);
+  --state-dnc-fg: var(--state-dnc);
+  --state-dnc-solid: var(--state-dnc);
+  --state-won-fg: var(--state-reply);
+  --state-won-solid: var(--state-reply);
+  --state-lost-fg: var(--ink-dim);
+  --state-lost-solid: var(--state-idle);
+  --state-draft-fg: var(--state-overdue);
+  --state-draft-solid: var(--state-overdue);
+}
+
+/* ══ LIGHT palette — follows the OS when no [data-theme] is set ══════════════ */
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+
+    --bg: #ecedeb;
+    --panel: #f7f7f5;
+    --panel-raised: #ffffff;
+    --panel-hover: #ececea;
+    --panel-inset: #f0f0ee;
+    --line: #d4d6d3;
+    --line-strong: #bcbebb;
+
+    --ink: #1b1e20;
+    --ink-mid: #3b4247;
+    --ink-dim: #5a6065;
+    --ink-faint: #727880;
+
+    --focus: #0b7fc4;
+    --link: #0a6aa6;
+    --sel-bg: #e2eef6;
+    --selection: #cde6f5;
+
+    --state-reply: #0e7a57;
+    --state-overdue: #8f5b00;
+    --state-seq: #5a3ea6;
+    --state-dnc: #b01e33;
+    --state-live: #0b7fc4;
+    --state-idle: #9aa0a3;
+
+    --state-new-reply-bg: #dcf3ea;
+    --state-overdue-bg: #f6ecd7;
+    --state-in-sequence-bg: #ece6fa;
+    --state-dnc-bg: #fbe4e8;
+    --state-won-bg: #dcf3ea;
+    --state-lost-bg: #ecedeb;
+    --state-draft-bg: #f6ecd7;
+
+    --lamp-glow: none; /* light theme prints solid dots — no glow */
+
+    --shadow-1: 0 1px 2px rgba(16, 20, 26, 0.1);
+    --shadow-2: 0 10px 30px -12px rgba(16, 20, 26, 0.22);
+  }
+}
+
+/* ══ Manual overrides — win over the media query in BOTH directions ═════════ */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #141719;
+  --panel: #1b1f23;
+  --panel-raised: #22272c;
+  --panel-hover: #2a3037;
+  --panel-inset: #101315;
+  --line: #30363c;
+  --line-strong: #414852;
+
+  --ink: #e8ebec;
+  --ink-mid: #c2c8ce;
+  --ink-dim: #8c949c;
+  --ink-faint: #727a82;
+
+  --focus: #56c8ff;
+  --link: #56c8ff;
+  --sel-bg: #16242e;
+  --selection: #1e3a4a;
+
+  --state-reply: #2ee6a8;
+  --state-overdue: #ffb224;
+  --state-seq: #b18cff;
+  --state-dnc: #ff4f66;
+  --state-live: #56c8ff;
+  --state-idle: #4a5258;
+
+  --state-new-reply-bg: #0c2a21;
+  --state-overdue-bg: #2e2410;
+  --state-in-sequence-bg: #221a38;
+  --state-dnc-bg: #331319;
+  --state-won-bg: #0c2a21;
+  --state-lost-bg: #20262c;
+  --state-draft-bg: #2e2410;
+
+  --lamp-glow: 0 0 8px currentColor;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-2: 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --bg: #ecedeb;
+  --panel: #f7f7f5;
+  --panel-raised: #ffffff;
+  --panel-hover: #ececea;
+  --panel-inset: #f0f0ee;
+  --line: #d4d6d3;
+  --line-strong: #bcbebb;
+
+  --ink: #1b1e20;
+  --ink-mid: #3b4247;
+  --ink-dim: #5a6065;
+  --ink-faint: #727880;
+
+  --focus: #0b7fc4;
+  --link: #0a6aa6;
+  --sel-bg: #e2eef6;
+  --selection: #cde6f5;
+
+  --state-reply: #0e7a57;
+  --state-overdue: #8f5b00;
+  --state-seq: #5a3ea6;
+  --state-dnc: #b01e33;
+  --state-live: #0b7fc4;
+  --state-idle: #9aa0a3;
+
+  --state-new-reply-bg: #dcf3ea;
+  --state-overdue-bg: #f6ecd7;
+  --state-in-sequence-bg: #ece6fa;
+  --state-dnc-bg: #fbe4e8;
+  --state-won-bg: #dcf3ea;
+  --state-lost-bg: #ecedeb;
+  --state-draft-bg: #f6ecd7;
+
+  --lamp-glow: none;
+
+  --shadow-1: 0 1px 2px rgba(16, 20, 26, 0.1);
+  --shadow-2: 0 10px 30px -12px rgba(16, 20, 26, 0.22);
+}
+
+/* Comfortable density override — opt-in, loosens the dense defaults. */
+:root[data-density='comfortable'] {
+  --control-h-sm: 28px;
+  --control-h: 34px;
+  --control-h-lg: 40px;
+  --row-h: 44px;
+}

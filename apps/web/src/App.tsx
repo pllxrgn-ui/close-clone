@@ -1,20 +1,21 @@
 import type { JSX } from 'react';
+import { BrowserRouter } from 'react-router-dom';
+import { AppProviders } from './app/AppProviders.tsx';
+import { AppRoutes } from './app/AppRoutes.tsx';
+import { ROUTER_FUTURE } from './app/routerFuture.ts';
 
 /**
- * App shell placeholder (ARCHITECTURE §2: Inbox · Lead page · Smart Views ·
- * Dialer · Command palette · Settings). Task 0c ships the shell only; the
- * keyboard-first surfaces land in later phases.
+ * Composition root: providers (theme · react-query · auth) wrap the browser
+ * router and the route tree. Kept thin so tests can mount AppRoutes under a
+ * MemoryRouter with the same providers.
  */
 export function App(): JSX.Element {
   return (
-    <div className="app-shell">
-      <header className="app-shell__header">
-        <h1>Switchboard</h1>
-      </header>
-      <main className="app-shell__main">
-        <p>Communication-first sales CRM — app shell placeholder.</p>
-      </main>
-    </div>
+    <AppProviders>
+      <BrowserRouter future={ROUTER_FUTURE}>
+        <AppRoutes />
+      </BrowserRouter>
+    </AppProviders>
   );
 }
 
