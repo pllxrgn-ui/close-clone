@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
-import type { ActivityType } from '@switchboard/shared';
+import { noteSchema, type ActivityType } from '@switchboard/shared';
 
 import { activities, leads, notes, users, type ActivityRow } from '../db/index.ts';
 import { createTestDb, type TestDb } from '../db/test-helpers.ts';
@@ -234,5 +234,17 @@ describe('DELETE /api/v1/notes/:id', () => {
     expect(
       (await app.inject({ method: 'DELETE', url: `/api/v1/notes/${MISSING}` })).statusCode,
     ).toBe(404);
+  });
+});
+
+describe('DTO conformance (§C1/§C7 Note shape)', () => {
+  test('POST result and list items all parse as noteSchema', async () => {
+    const created = (await post({ leadId: LEAD, bodyMd: 'body', authorId: USER })).json();
+    expect(() => noteSchema.strict().parse(created)).not.toThrow();
+
+    const list = await app.inject({ method: 'GET', url: `/api/v1/notes?leadId=${LEAD}` });
+    for (const item of list.json<unknown[]>()) {
+      expect(() => noteSchema.strict().parse(item)).not.toThrow();
+    }
   });
 });

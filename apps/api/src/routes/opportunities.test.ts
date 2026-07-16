@@ -1,7 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
-import type { ActivityType } from '@switchboard/shared';
+import { opportunitySchema, type ActivityType } from '@switchboard/shared';
 
 import {
   activities,
@@ -336,5 +336,33 @@ describe('DELETE /api/v1/opportunities/:id', () => {
   test('unknown id → 404 NOT_FOUND', async () => {
     const res = await app.inject({ method: 'DELETE', url: `/api/v1/opportunities/${MISSING}` });
     expect(res.statusCode).toBe(404);
+  });
+});
+
+describe('DTO conformance (drop-in for MSW → the frozen §C1/§C7 shape)', () => {
+  test('POST body, board items, and per-lead items all parse as opportunitySchema', async () => {
+    const created = await createOpp({
+      leadId: LEAD,
+      contactId: CONTACT,
+      valueCents: 123456,
+      stageId: STAGE_A,
+      closeDate: '2026-10-01',
+      ownerId: USER,
+    });
+    // The created resource is a valid §C7 Opportunity DTO (strict — no extra keys).
+    expect(() => opportunitySchema.strict().parse(created)).not.toThrow();
+
+    const board = await app.inject({ method: 'GET', url: '/api/v1/opportunities' });
+    for (const item of board.json<{ items: unknown[] }>().items) {
+      expect(() => opportunitySchema.strict().parse(item)).not.toThrow();
+    }
+
+    const perLead = await app.inject({
+      method: 'GET',
+      url: `/api/v1/opportunities?leadId=${LEAD}`,
+    });
+    for (const item of perLead.json<unknown[]>()) {
+      expect(() => opportunitySchema.strict().parse(item)).not.toThrow();
+    }
   });
 });

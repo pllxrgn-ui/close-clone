@@ -1,7 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
-import type { ActivityType } from '@switchboard/shared';
+import { taskSchema, type ActivityType } from '@switchboard/shared';
 
 import { activities, leads, tasks, users, type ActivityRow } from '../db/index.ts';
 import { createTestDb, type TestDb } from '../db/test-helpers.ts';
@@ -265,5 +265,31 @@ describe('DELETE /api/v1/tasks/:id', () => {
   test('unknown id → 404', async () => {
     const res = await app.inject({ method: 'DELETE', url: `/api/v1/tasks/${MISSING}` });
     expect(res.statusCode).toBe(404);
+  });
+});
+
+describe('DTO conformance (drop-in for the web inbox `completeTask` → §C1/§C7 Task)', () => {
+  test('POST result, the PATCH-complete result, and list items all parse as taskSchema', async () => {
+    const created = await createTask({
+      leadId: LEAD,
+      title: 'T',
+      dueAt: DUE_LATE,
+      assigneeId: USER,
+    });
+    expect(() => taskSchema.strict().parse(created)).not.toThrow();
+
+    // The web's completeTask sends { completedAt } and binds the returned Task.
+    const completed = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/tasks/${String(created.id)}`,
+      payload: { completedAt: COMPLETED_AT },
+    });
+    expect(() => taskSchema.strict().parse(completed.json())).not.toThrow();
+    expect(completed.json<{ completedAt: string }>().completedAt).toBe(COMPLETED_AT);
+
+    const list = await app.inject({ method: 'GET', url: `/api/v1/tasks?leadId=${LEAD}` });
+    for (const item of list.json<unknown[]>()) {
+      expect(() => taskSchema.strict().parse(item)).not.toThrow();
+    }
   });
 });
