@@ -4,7 +4,7 @@
 
 **Wave A readiness: MERGED to main** (07-16) — SSO+RBAC, API tokens/webhooks/rate-limits, observability, deploy kit. api suite now **1,260 green**. Security headers wired into server.ts; the infra-gated production composition (real healthz, global OIDC guards, BullMQ webhook worker) is documented in deploy/WIRING.md and deferred to the deploy step per verify-before-completion (D-031).
 
-**Wave B:** 5h security review + 3 fixes ✅ (23c113a; no critical, core certified solid, 1271 api tests; report docs/security/2026-07-16-review.md). 5d Playwright E2E still building in the `e2e-suite` worktree.
+**Wave B: COMPLETE.** 5h security review + 3 fixes ✅ (no critical; core certified solid; report docs/security/2026-07-16-review.md). 5d Playwright E2E ✅ — merged, **13 specs actually executed green (browsers installed), 3× stable**, CI-wired (`.github/workflows/e2e.yml`): full §8 rep loop + all surfaces + keyboard + DNC-send-disabled + theme/reduced-motion. Repo prettier-clean (CI format:check green).
 
 **Phase 3 (mock-first): in progress** on `phase3-integrations` worktree — Twilio adapter + signature-verified ingress → sequential dialer/voicemail/recording (§4.5 default-OFF + consent) → SMS (STOP + quiet hours) → AI call summaries/drafting/NL→SmartView (confirm-before-commit, I-AI). Real Twilio/Deepgram/Haiku = HUMAN_TODO (accounts); adapters unit-tested vs synthetic fixtures.
 
