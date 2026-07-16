@@ -4,7 +4,8 @@
  *
  * ⚠ MERGE-DEDUP FLAG (for the re-skin track): these are the design law's tokens
  * by their LAW NAMES and EXACT values. The committed styles/tokens.css still
- * uses the pre-re-skin vocabulary (--surface-*/--ink-N/--state-*), so this page
+ * uses the pre-re-skin vocabulary (--surface-N, --ink-N, --state-NAME), so this
+ * page
  * defines the law tokens locally, scoped to .sb-welcome, to render correctly
  * TONIGHT. When the re-skin lands its global tokens.css, DELETE this file and
  * let the globals apply — the names/values are identical by construction, and

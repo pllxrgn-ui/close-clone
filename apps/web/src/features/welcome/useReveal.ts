@@ -7,9 +7,13 @@ import { prefersReducedMotion } from './useIgnition.ts';
  * rises 8px and fades in once, the first time it crosses the viewport. This is
  * NOT choreography — it is a single, independent per-element entrance.
  *
- * Degrades safely: when IntersectionObserver is unavailable (jsdom, old
- * engines) or the visitor prefers reduced motion, the element starts revealed
- * so the content is always present and never depends on scrolling.
+ * Robust by design — the content must never get stuck hidden:
+ *   - reduced motion or no IntersectionObserver → revealed from the start;
+ *   - already in view at mount → revealed immediately (no wait on a callback);
+ *   - IntersectionObserver drives the on-scroll reveal (the requested path);
+ *   - a passive scroll listener is a belt-and-suspenders fallback for any
+ *     environment where IO is present but its callbacks never arrive.
+ * All listeners are torn down the moment the element reveals.
  */
 export interface RevealResult<T extends HTMLElement> {
   ref: RefObject<T | null>;
@@ -25,22 +29,41 @@ export function useReveal<T extends HTMLElement = HTMLElement>(): RevealResult<T
   useEffect(() => {
     if (revealed) return;
     const node = ref.current;
-    if (!node) return;
+    if (!node) {
+      setRevealed(true);
+      return;
+    }
+
+    const inView = (): boolean => {
+      const rect = node.getBoundingClientRect();
+      const vh = window.innerHeight || document.documentElement.clientHeight;
+      return rect.top < vh * 0.9 && rect.bottom > 0;
+    };
+
+    if (inView()) {
+      setRevealed(true);
+      return;
+    }
 
     const observer = new IntersectionObserver(
       (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setRevealed(true);
-            observer.disconnect();
-            break;
-          }
-        }
+        if (entries.some((entry) => entry.isIntersecting)) setRevealed(true);
       },
       { threshold: 0.2, rootMargin: '0px 0px -10% 0px' },
     );
     observer.observe(node);
-    return () => observer.disconnect();
+
+    const onScroll = (): void => {
+      if (inView()) setRevealed(true);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
   }, [revealed]);
 
   return { ref, revealed };
