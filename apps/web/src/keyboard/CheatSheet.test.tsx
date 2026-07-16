@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import * as axe from 'axe-core';
 import { KeyboardProvider } from './KeyboardProvider.tsx';
 import { useKeyBindings } from './useKeyBindings.ts';
 import { CheatSheet } from './CheatSheet.tsx';
@@ -99,5 +100,24 @@ describe('CheatSheet', () => {
     renderSheet(false);
     const dialog = await screen.findByRole('dialog', { name: 'Keyboard shortcuts' });
     expect(dialog).toHaveAttribute('aria-modal', 'true');
+  });
+
+  test('includes the state-lamp legend (?-reachable), grouped by state', async () => {
+    renderSheet(false);
+    const legend = await screen.findByRole('region', { name: 'Status lamp legend' });
+    expect(legend).toBeInTheDocument();
+    expect(screen.getByText('Do not contact')).toBeInTheDocument();
+  });
+
+  test('the shortcuts + legend overlay has no serious/critical axe violations', async () => {
+    renderSheet(false);
+    await screen.findByRole('dialog', { name: 'Keyboard shortcuts' });
+    const results = await axe.run(document.body, {
+      rules: { 'color-contrast': { enabled: false } },
+    });
+    const blocking = results.violations.filter(
+      (v) => v.impact === 'serious' || v.impact === 'critical',
+    );
+    expect(blocking.map((v) => `${v.id}: ${v.help}`).join('\n')).toBe('');
   });
 });
