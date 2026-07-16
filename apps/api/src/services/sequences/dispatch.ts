@@ -1,7 +1,11 @@
 import { createHash } from 'node:crypto';
 import { and, eq, lte, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import type { EmailProvider, OutboundEmail } from '@switchboard/shared/providers';
+import type {
+  EmailProvider,
+  OutboundEmail,
+  TelephonyProvider,
+} from '@switchboard/shared/providers';
 import {
   contacts,
   emailAccounts,
@@ -11,6 +15,7 @@ import {
   sequenceEnrollments,
   sequenceSteps,
   sequences,
+  smsMessages,
   tasks,
   templates,
   users,
@@ -20,6 +25,15 @@ import { recordActivity } from '../activity/index.ts';
 import type { TokenCipher } from '../sync/token-cipher.ts';
 import { renderTemplate, type MergeContext } from '../email/merge.ts';
 import type { ProviderForAccount } from '../email/send.ts';
+import {
+  isWithinAllowedHours,
+  parseQuietHours,
+  resolveQuietHoursTimezone,
+} from '../sms/quiet-hours.ts';
+import { inferTimezoneFromNumber } from '../sms/area-code-timezone.ts';
+import { appendOptOutLanguage, bodyHasOptOutLanguage } from '../sms/opt-out-language.ts';
+import { isPhoneSuppressed } from '../telephony/suppression.ts';
+import { phoneMatchKey } from '../telephony/phone.ts';
 import { buildListUnsubscribeHeaders, type UnsubscribeHeaderConfig } from './unsubscribe.ts';
 import { isEmailSuppressed } from './suppression.ts';
 import {
@@ -28,6 +42,7 @@ import {
   parseSendingWindow,
   resolveWindowTimezone,
 } from './window.ts';
+import { minutesUntilQuietOpen } from './sms-window.ts';
 import { SEND_JOB_NAME, wakeupJobId } from './job-names.ts';
 import type { QueueDriver } from '../../queue/index.ts';
 
@@ -53,8 +68,24 @@ import type { QueueDriver } from '../../queue/index.ts';
  * and SENT leaves a CLAIMED row the sweeper expires to FAILED_TIMEOUT — never an
  * automatic re-send (idempotency key makes a manual retry safe too).
  *
+ * The `sms` channel runs the SAME three-phase discipline against the telephony
+ * provider (I-QUIET recipient-local 8am–9pm + I-DNC + phone suppression incl. STOP
+ * opt-out re-checked INSIDE the claim txn; provider.sendSms keyed idempotent on the
+ * intent id OUTSIDE it; the phase-C re-lock loses to a pause landing during the
+ * network window). First-contact §4.5 opt-out language is appended before send.
+ *
  * No enums / namespaces / parameter properties (host type-stripping constraint).
  */
+
+/** SMS-channel wiring for sequence dispatch (CONTRACTS §C2/§C6 I-QUIET/I-DNC). */
+export interface SmsDispatchConfig {
+  /** Only `sendSms` is used; the rails are re-checked in dispatch, not here. */
+  provider: Pick<TelephonyProvider, 'sendSms'>;
+  /** Default outbound sender number (the org's Twilio number). */
+  fromNumber?: string;
+  /** Override the appended first-contact opt-out sentence (§4.5). */
+  optOutLanguage?: string;
+}
 
 export interface DispatchDeps {
   db: Db;
@@ -66,6 +97,8 @@ export interface DispatchDeps {
   now: () => Date;
   /** List-Unsubscribe header wiring (CONTRACTS §C6 I-SEND-5). */
   unsubscribe: UnsubscribeHeaderConfig;
+  /** Telephony wiring for `sms` steps (CONTRACTS §C6 I-QUIET/I-DNC). */
+  sms: SmsDispatchConfig;
 }
 
 export type DispatchResultKind =
@@ -127,6 +160,12 @@ async function loadOrgConfig(exec: Db): Promise<OrgConfig> {
     companyTimezone: row.companyTimezone,
     sendingWindow: row.sendingWindow,
   };
+}
+
+/** The org's `quiet_hours` jsonb (untyped in the contract; parsed by the SMS rail). */
+async function loadQuietHours(exec: Db): Promise<unknown> {
+  const rows = await exec.select({ quietHours: orgSettings.quietHours }).from(orgSettings).limit(1);
+  return rows[0]?.quietHours ?? null;
 }
 
 async function markTerminal(
@@ -191,7 +230,17 @@ interface EmailReadyPayload {
   recipient: string;
 }
 
-type PhaseAOutcome = { kind: 'terminal'; result: DispatchResult } | EmailReadyPayload;
+interface SmsReadyPayload {
+  kind: 'sms_ready';
+  ctx: ClaimedContext;
+  toNumber: string;
+  fromNumber: string;
+  /** Final body actually sent (may include appended first-contact opt-out text). */
+  body: string;
+}
+
+type PhaseAOutcome =
+  { kind: 'terminal'; result: DispatchResult } | EmailReadyPayload | SmsReadyPayload;
 
 /**
  * Process one intent end-to-end. Idempotent by construction: a non-SCHEDULED /
@@ -265,15 +314,9 @@ export async function processIntent(deps: DispatchDeps, intentId: string): Promi
     }
 
     if (claim.channel === 'sms') {
-      // SMS-in-sequences is a documented v1 gap (DECISIONS D-034): the SMS send
-      // engine (services/sms) exists and is rail-enforcing, but wiring sequence
-      // dispatch to it (recipient-local quiet-hours per enrollment, opt-out state)
-      // is deferred. Until then an SMS step is safely SKIPPED, never silently sent.
-      await markTerminal(tx, intentId, 'SKIPPED', 'sms_channel_unavailable');
-      return {
-        kind: 'terminal',
-        result: { kind: 'skipped', intentId, reason: 'sms_channel_unavailable' },
-      };
+      // SMS channel: full I-QUIET / I-DNC / phone-suppression rails, all inside
+      // this claim txn; the provider.sendSms happens OUTSIDE it (phase B/C).
+      return prepareSmsIntent(tx, deps, ctx, enrollment.createdAt, now);
     }
 
     if (claim.channel === 'call_task') {
@@ -493,6 +536,7 @@ export async function processIntent(deps: DispatchDeps, intentId: string): Promi
   });
 
   if (phaseA.kind === 'terminal') return phaseA.result;
+  if (phaseA.kind === 'sms_ready') return finishSmsSend(deps, phaseA, intentId, nowIso);
 
   // --- Phase B: provider.send OUTSIDE the transaction (idempotencyKey=intentId).
   const provider: EmailProvider = deps.providerFor({
@@ -618,6 +662,312 @@ async function materializeCallTask(
   });
   await finishIfComplete(exec, ctx.enrollmentId, ctx.leadId, ctx.contactId, nowIso);
   return { kind: 'sent', intentId: ctx.intentId };
+}
+
+// --- SMS channel -------------------------------------------------------------
+
+/** True iff a prior OUTBOUND sms row exists to `key` under this lead (first-contact
+ *  gate, §4.5). Mirrors `services/sms/send.ts#hasPriorOutboundSms` so a sequence
+ *  SMS and a one-off SMS agree on who counts as first contact. */
+async function hasPriorOutboundSms(exec: Db, leadId: string, key: string): Promise<boolean> {
+  if (key === '') return false;
+  const result = await exec.execute(sql`
+    SELECT 1
+    FROM sms_messages
+    WHERE lead_id = ${leadId}
+      AND direction = 'outbound'
+      AND right(regexp_replace(to_number, '[^0-9]', '', 'g'), 10) = ${key}
+    LIMIT 1
+  `);
+  return (result as { rows: unknown[] }).rows.length > 0;
+}
+
+/**
+ * Phase A for an `sms` step: re-check every SMS rail INSIDE the claim txn (I-DNC,
+ * phone suppression incl. STOP opt-out, I-QUIET recipient-local window), render the
+ * body, and append first-contact opt-out language (§4.5). Returns an `sms_ready`
+ * payload the caller sends OUTSIDE the txn, or a terminal SKIP/BLOCK/DEFER. The
+ * rails re-evaluate the CURRENT row state, so an opt-out / DNC / quiet-hours change
+ * that lands between scheduling and this claim can never yield a SENT.
+ */
+async function prepareSmsIntent(
+  tx: Db,
+  deps: DispatchDeps,
+  ctx: ClaimedContext,
+  enrollmentCreatedAt: string,
+  now: Date,
+): Promise<PhaseAOutcome> {
+  const stepRows = await tx
+    .select({ templateId: sequenceSteps.templateId, condition: sequenceSteps.condition })
+    .from(sequenceSteps)
+    .where(eq(sequenceSteps.id, ctx.stepId))
+    .limit(1);
+  const step = stepRows[0]!;
+
+  // Condition gate (skipIfReplied): a reply on EITHER channel since enrollment.
+  const condition = stepConditionSchema.parse(step.condition ?? null);
+  if (condition?.skipIfReplied === true) {
+    const replied = await tx.execute(sql`
+      SELECT 1 FROM activities
+      WHERE lead_id = ${ctx.leadId}
+        AND type IN ('email_received', 'sms_received')
+        AND occurred_at >= ${enrollmentCreatedAt}
+      LIMIT 1
+    `);
+    if ((replied as { rows: unknown[] }).rows.length > 0) {
+      await markTerminal(tx, ctx.intentId, 'SKIPPED', 'condition_skip_replied');
+      return {
+        kind: 'terminal',
+        result: { kind: 'skipped', intentId: ctx.intentId, reason: 'condition_skip_replied' },
+      };
+    }
+  }
+
+  const fromNumber = deps.sms.fromNumber ?? null;
+  if (fromNumber === null || fromNumber.length === 0) {
+    await markTerminal(tx, ctx.intentId, 'SKIPPED', 'no_sms_from_number');
+    return {
+      kind: 'terminal',
+      result: { kind: 'skipped', intentId: ctx.intentId, reason: 'no_sms_from_number' },
+    };
+  }
+  if (step.templateId === null) {
+    await markTerminal(tx, ctx.intentId, 'SKIPPED', 'no_template');
+    return {
+      kind: 'terminal',
+      result: { kind: 'skipped', intentId: ctx.intentId, reason: 'no_template' },
+    };
+  }
+
+  const leadRows = await tx
+    .select({
+      name: leads.name,
+      url: leads.url,
+      description: leads.description,
+      custom: leads.custom,
+      dnc: leads.dnc,
+    })
+    .from(leads)
+    .where(and(eq(leads.id, ctx.leadId), sql`${leads.deletedAt} is null`))
+    .limit(1);
+  const lead = leadRows[0];
+  if (lead === undefined) {
+    await markTerminal(tx, ctx.intentId, 'SKIPPED', 'lead_not_found');
+    return {
+      kind: 'terminal',
+      result: { kind: 'skipped', intentId: ctx.intentId, reason: 'lead_not_found' },
+    };
+  }
+
+  const contactRows = await tx
+    .select({
+      name: contacts.name,
+      title: contacts.title,
+      emails: contacts.emails,
+      phones: contacts.phones,
+      dnc: contacts.dnc,
+    })
+    .from(contacts)
+    .where(and(eq(contacts.id, ctx.contactId), sql`${contacts.deletedAt} is null`))
+    .limit(1);
+  const contact = contactRows[0];
+  if (contact === undefined) {
+    await markTerminal(tx, ctx.intentId, 'SKIPPED', 'contact_not_found');
+    return {
+      kind: 'terminal',
+      result: { kind: 'skipped', intentId: ctx.intentId, reason: 'contact_not_found' },
+    };
+  }
+  const toNumber = contact.phones[0]?.phone ?? null;
+  if (toNumber === null || toNumber.length === 0) {
+    await markTerminal(tx, ctx.intentId, 'SKIPPED', 'no_recipient_phone');
+    return {
+      kind: 'terminal',
+      result: { kind: 'skipped', intentId: ctx.intentId, reason: 'no_recipient_phone' },
+    };
+  }
+
+  // I-DNC: lead + contact DNC inside the txn → BLOCKED (never an override prompt).
+  if (lead.dnc) {
+    await markTerminal(tx, ctx.intentId, 'BLOCKED', 'lead_dnc');
+    return {
+      kind: 'terminal',
+      result: { kind: 'blocked', intentId: ctx.intentId, reason: 'lead_dnc' },
+    };
+  }
+  if (contact.dnc) {
+    await markTerminal(tx, ctx.intentId, 'BLOCKED', 'contact_dnc');
+    return {
+      kind: 'terminal',
+      result: { kind: 'blocked', intentId: ctx.intentId, reason: 'contact_dnc' },
+    };
+  }
+
+  // I-DNC / suppression: an active phone suppression (incl. a STOP opt-out) → BLOCKED.
+  const toKey = phoneMatchKey(toNumber);
+  if (await isPhoneSuppressed(tx, toKey)) {
+    await markTerminal(tx, ctx.intentId, 'BLOCKED', 'suppressed');
+    return {
+      kind: 'terminal',
+      result: { kind: 'blocked', intentId: ctx.intentId, reason: 'suppressed' },
+    };
+  }
+
+  // I-QUIET: 8am–9pm recipient-local (area-code inferred, fallback company tz). Outside
+  // the window → DEFER to the next open (never sent outside the window).
+  const org = await loadOrgConfig(tx);
+  const quiet = parseQuietHours(await loadQuietHours(tx));
+  const recipientTz = inferTimezoneFromNumber(toNumber);
+  const tz = resolveQuietHoursTimezone(quiet, recipientTz, org.companyTimezone);
+  if (!isWithinAllowedHours(now, tz, quiet)) {
+    const deferMs = Math.max(60_000, minutesUntilQuietOpen(now, tz, quiet) * 60_000);
+    await deferIntent(tx, ctx.intentId, new Date(now.getTime() + deferMs).toISOString());
+    return {
+      kind: 'terminal',
+      result: { kind: 'deferred', intentId: ctx.intentId, reason: 'outside_quiet_hours' },
+    };
+  }
+
+  // Render the body (SMS templates carry no subject). Direct load: a sequence send
+  // is a SYSTEM action, so it bypasses the owner/shared template visibility gate.
+  const templateRows = await tx
+    .select({ body: templates.body })
+    .from(templates)
+    .where(eq(templates.id, step.templateId))
+    .limit(1);
+  const template = templateRows[0];
+  if (template === undefined) {
+    await markTerminal(tx, ctx.intentId, 'SKIPPED', 'template_not_found');
+    return {
+      kind: 'terminal',
+      result: { kind: 'skipped', intentId: ctx.intentId, reason: 'template_not_found' },
+    };
+  }
+  let user: { name: string; email: string } | null = null;
+  if (ctx.enrolledBy !== null) {
+    const userRows = await tx
+      .select({ name: users.name, email: users.email })
+      .from(users)
+      .where(eq(users.id, ctx.enrolledBy))
+      .limit(1);
+    user = userRows[0] ?? null;
+  }
+  const mergeCtx: MergeContext = {
+    lead: { name: lead.name, url: lead.url, description: lead.description, custom: lead.custom },
+    contact: {
+      name: contact.name,
+      title: contact.title,
+      email: contact.emails[0]?.email ?? null,
+      phone: toNumber,
+    },
+    user,
+  };
+  const rendered = renderTemplate({ subject: null, body: template.body }, mergeCtx, {
+    format: 'text',
+  });
+
+  // §4.5 first-contact opt-out language: appended only on the first outbound SMS to
+  // this number and only when the body does not already carry STOP text.
+  let body = rendered.body;
+  const firstContact = !(await hasPriorOutboundSms(tx, ctx.leadId, toKey));
+  if (firstContact && !bodyHasOptOutLanguage(body)) {
+    body = appendOptOutLanguage(body, deps.sms.optOutLanguage);
+  }
+
+  // Claim commits here; provider.sendSms happens OUTSIDE the txn (phase B/C).
+  return { kind: 'sms_ready', ctx, toNumber, fromNumber, body };
+}
+
+/**
+ * Phase B/C for an `sms` step: send OUTSIDE the txn (idempotency key = intent id),
+ * then re-lock the enrollment — a pause that landed during the network window wins
+ * (no SENT after pause, mirroring the email I-SEND-2 seam). Persists the outbound
+ * `sms_messages` row (ON CONFLICT dedupes a same-sid retry) and emits exactly one
+ * `sequence_step_sent`.
+ */
+async function finishSmsSend(
+  deps: DispatchDeps,
+  phaseA: SmsReadyPayload,
+  intentId: string,
+  nowIso: string,
+): Promise<DispatchResult> {
+  let providerSid: string;
+  try {
+    const res = await deps.sms.provider.sendSms(
+      phaseA.fromNumber,
+      phaseA.toNumber,
+      phaseA.body,
+      intentId,
+    );
+    providerSid = res.sid;
+  } catch (err) {
+    await deps.db.transaction(async (txRaw) => {
+      await markTerminal(
+        txRaw as Db,
+        intentId,
+        'FAILED',
+        err instanceof Error ? err.message : String(err),
+      );
+    });
+    return { kind: 'failed', intentId, reason: 'provider_error' };
+  }
+
+  return deps.db.transaction(async (txRaw): Promise<DispatchResult> => {
+    const tx = txRaw as Db;
+    const enrRows = await tx
+      .select({ state: sequenceEnrollments.state })
+      .from(sequenceEnrollments)
+      .where(eq(sequenceEnrollments.id, phaseA.ctx.enrollmentId))
+      .for('update');
+    if (enrRows[0]!.state !== 'active') {
+      await markTerminal(tx, intentId, 'SKIPPED', 'paused_during_send');
+      return { kind: 'paused_during_send', intentId, reason: 'paused_during_send' };
+    }
+
+    const inserted = await tx
+      .insert(smsMessages)
+      .values({
+        leadId: phaseA.ctx.leadId,
+        contactId: phaseA.ctx.contactId,
+        ...(phaseA.ctx.enrolledBy !== null ? { userId: phaseA.ctx.enrolledBy } : {}),
+        direction: 'outbound',
+        fromNumber: phaseA.fromNumber,
+        toNumber: phaseA.toNumber,
+        body: phaseA.body,
+        providerSid,
+        status: 'sent',
+        sentAt: nowIso,
+      })
+      .onConflictDoNothing({ target: smsMessages.providerSid })
+      .returning({ id: smsMessages.id });
+    const smsMessageId = inserted[0]?.id ?? null;
+
+    await tx
+      .update(sendIntents)
+      .set({ state: 'SENT', sentAt: nowIso, providerMessageId: providerSid, updatedAt: sql`now()` })
+      .where(eq(sendIntents.id, intentId));
+    await recordActivity(tx, {
+      leadId: phaseA.ctx.leadId,
+      contactId: phaseA.ctx.contactId,
+      ...(phaseA.ctx.enrolledBy !== null ? { userId: phaseA.ctx.enrolledBy } : {}),
+      type: 'sequence_step_sent',
+      occurredAt: nowIso,
+      payload: {
+        enrollmentId: phaseA.ctx.enrollmentId,
+        stepId: phaseA.ctx.stepId,
+        channel: 'sms',
+        ...(smsMessageId !== null ? { smsMessageId } : {}),
+      },
+    });
+    await finishIfComplete(
+      tx,
+      phaseA.ctx.enrollmentId,
+      phaseA.ctx.leadId,
+      phaseA.ctx.contactId,
+      nowIso,
+    );
+    return { kind: 'sent', intentId, providerMessageId: providerSid };
+  });
 }
 
 /** Re-enqueue a wake-up for a deferred intent (window/cap). Called post-commit. */
