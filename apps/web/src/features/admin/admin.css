@@ -254,13 +254,7 @@
   margin-top: var(--space-5);
 }
 
-/* ── Fields (shared form controls) ────────────────────────────────────────── */
-.admin-field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  min-width: 0;
-}
+/* ── Field grid modifiers (on the shared ui/ Field primitive) ─────────────── */
 .admin-field--wide {
   grid-column: 1 / -1;
 }
@@ -268,44 +262,13 @@
   flex: 1;
   min-height: 0;
 }
-.admin-field__label {
-  font-size: var(--fs-micro);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
-  color: var(--ink-3);
+/* Let Field cells shrink inside the auto-fit grid instead of forcing overflow. */
+.admin-cf__form-grid > .sb-field {
+  min-width: 0;
 }
-.admin-check {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--fs-base);
-  color: var(--ink-1);
-  height: var(--control-h);
-}
-.admin-check input {
-  accent-color: var(--focus);
-}
-.admin-textarea {
-  width: 100%;
-  resize: vertical;
-  background: var(--panel-inset);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-1);
-  color: var(--ink-0);
-  padding: var(--space-3);
-  font-size: var(--fs-base);
-  line-height: var(--lh-base);
-}
-.admin-textarea:focus-visible {
-  outline: var(--focus-ring-width) solid var(--focus-ring);
-  outline-offset: 1px;
-  border-color: var(--focus);
-}
-.admin-form-error {
-  margin: var(--space-3) 0 0;
-  color: var(--state-dnc);
-  font-size: var(--fs-sm);
+/* Give the standalone Required checkbox the input row's height so it aligns. */
+.admin-cf__check {
+  min-height: var(--control-h);
 }
 
 /* ── Templates + snippets ─────────────────────────────────────────────────── */

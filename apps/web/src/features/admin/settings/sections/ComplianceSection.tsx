@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent, JSX, ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, EmptyState, Input, Skeleton } from '../../../../ui/index.ts';
+import { Button, ErrorState, Input, Skeleton } from '../../../../ui/index.ts';
 import { ApiError } from '../../../../api/index.ts';
 import { useToast } from '../../../../feedback/ToastProvider.tsx';
 import { getOrgSettings, updateDailySendCap } from '../../api.ts';
@@ -66,12 +66,12 @@ export function ComplianceSection(): JSX.Element {
           ))}
         </div>
       ) : settingsQuery.isError || !settings ? (
-        <EmptyState
+        <ErrorState
           title="Couldn’t load compliance settings"
           description={
-            settingsQuery.error instanceof ApiError ? settingsQuery.error.message : 'Try again.'
+            settingsQuery.error instanceof ApiError ? settingsQuery.error.message : undefined
           }
-          actions={<Button onClick={() => void settingsQuery.refetch()}>Retry</Button>}
+          onRetry={() => void settingsQuery.refetch()}
         />
       ) : (
         <div className="admin-rails">

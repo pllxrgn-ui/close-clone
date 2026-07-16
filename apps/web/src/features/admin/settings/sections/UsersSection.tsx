@@ -1,6 +1,6 @@
 import type { JSX } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Button, EmptyState, Skeleton } from '../../../../ui/index.ts';
+import { EmptyState, ErrorState, Skeleton } from '../../../../ui/index.ts';
 import { listUsers } from '../../../../api/reference.ts';
 import { ApiError } from '../../../../api/index.ts';
 import { USERS_QUERY_KEY } from '../../queryKeys.ts';
@@ -37,10 +37,10 @@ export function UsersSection(): JSX.Element {
           ))}
         </div>
       ) : usersQuery.isError ? (
-        <EmptyState
+        <ErrorState
           title="Couldn’t load users"
           description={errorText(usersQuery.error)}
-          actions={<Button onClick={() => void usersQuery.refetch()}>Retry</Button>}
+          onRetry={() => void usersQuery.refetch()}
         />
       ) : (usersQuery.data ?? []).length === 0 ? (
         <EmptyState title="No users" description="No one has access to this workspace yet." />

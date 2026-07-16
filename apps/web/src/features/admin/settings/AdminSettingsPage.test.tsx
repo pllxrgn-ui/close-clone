@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ToastProvider } from '../../../feedback/ToastProvider.tsx';
@@ -84,6 +85,19 @@ describe('custom fields', () => {
     expect(adminStore.customFields.some((f) => f.key === 'account_tier')).toBe(true);
   });
 
+  test('renders a failed-to-load ErrorState with a retry when the list load fails', async () => {
+    server.use(
+      http.get('*/api/v1/admin/custom-fields', () =>
+        HttpResponse.json({ error: { code: 'INTERNAL', message: 'boom' } }, { status: 500 }),
+      ),
+    );
+    renderSettings('custom-fields');
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/Couldn’t load custom fields/);
+    expect(within(alert).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  });
+
   test('surfaces a validation error for a duplicate key', async () => {
     const user = userEvent.setup();
     renderSettings('custom-fields');
@@ -116,6 +130,29 @@ describe('templates', () => {
 
     await screen.findByText(/^Saved/);
     expect(adminStore.templates.some((t) => t.body === 'Rewritten body for the demo.')).toBe(true);
+  });
+
+  test('surfaces a save failure as a field error in the drawer', async () => {
+    const user = userEvent.setup();
+    renderSettings('templates');
+
+    await screen.findByRole('heading', { name: /Templates/, level: 1 });
+    const firstEdit = (await screen.findAllByRole('button', { name: /Edit/ }))[0];
+    if (!firstEdit) throw new Error('no edit button');
+    await user.click(firstEdit);
+
+    const dialog = await screen.findByRole('dialog');
+    server.use(
+      http.patch('*/api/v1/templates/:id', () =>
+        HttpResponse.json(
+          { error: { code: 'VALIDATION_FAILED', message: 'name cannot be empty' } },
+          { status: 400 },
+        ),
+      ),
+    );
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('name cannot be empty');
   });
 });
 

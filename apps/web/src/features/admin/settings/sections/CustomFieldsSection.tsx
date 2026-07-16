@@ -1,7 +1,15 @@
 import { useId, useMemo, useState } from 'react';
 import type { FormEvent, JSX } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, EmptyState, Input, Select, Skeleton } from '../../../../ui/index.ts';
+import {
+  Button,
+  Checkbox,
+  ErrorState,
+  Field,
+  Input,
+  Select,
+  Skeleton,
+} from '../../../../ui/index.ts';
 import { ApiError } from '../../../../api/index.ts';
 import { useToast } from '../../../../feedback/ToastProvider.tsx';
 import { createCustomField, listCustomFields } from '../../api.ts';
@@ -78,12 +86,12 @@ export function CustomFieldsSection(): JSX.Element {
           ))}
         </div>
       ) : fieldsQuery.isError ? (
-        <EmptyState
+        <ErrorState
           title="Couldn’t load custom fields"
           description={
-            fieldsQuery.error instanceof ApiError ? fieldsQuery.error.message : 'Try again.'
+            fieldsQuery.error instanceof ApiError ? fieldsQuery.error.message : undefined
           }
-          actions={<Button onClick={() => void fieldsQuery.refetch()}>Retry</Button>}
+          onRetry={() => void fieldsQuery.refetch()}
         />
       ) : (
         <div className="admin-cf">
@@ -171,33 +179,28 @@ function CreateFieldForm({
     mutation.mutate();
   };
 
-  const errorId = `${baseId}-error`;
-
   return (
     <form className="admin-cf__form" onSubmit={onSubmit} aria-labelledby={`${baseId}-legend`}>
       <h2 id={`${baseId}-legend`} className="admin-subhead">
         New field
       </h2>
       <div className="admin-cf__form-grid">
-        <label className="admin-field">
-          <span className="admin-field__label">Entity</span>
+        <Field label="Entity">
           <Select value={entity} onChange={(e) => setEntity(e.target.value as typeof entity)}>
             <option value="lead">Lead</option>
             <option value="contact">Contact</option>
             <option value="opportunity">Opportunity</option>
           </Select>
-        </label>
-        <label className="admin-field">
-          <span className="admin-field__label">Label</span>
+        </Field>
+        <Field label="Label">
           <Input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             placeholder="Account tier"
             required
           />
-        </label>
-        <label className="admin-field">
-          <span className="admin-field__label">Key</span>
+        </Field>
+        <Field label="Key" error={error}>
           <Input
             value={key}
             onChange={(e) => setKey(e.target.value)}
@@ -207,9 +210,8 @@ function CreateFieldForm({
             className="admin-mono"
             required
           />
-        </label>
-        <label className="admin-field">
-          <span className="admin-field__label">Type</span>
+        </Field>
+        <Field label="Type">
           <Select value={type} onChange={(e) => setType(e.target.value as CustomFieldType)}>
             {(Object.keys(TYPE_META) as CustomFieldType[]).map((t) => (
               <option key={t} value={t}>
@@ -217,31 +219,23 @@ function CreateFieldForm({
               </option>
             ))}
           </Select>
-        </label>
+        </Field>
         {type === 'select' ? (
-          <label className="admin-field admin-field--wide">
-            <span className="admin-field__label">Options (comma-separated)</span>
+          <Field label="Options (comma-separated)" className="admin-field--wide">
             <Input
               value={options}
               onChange={(e) => setOptions(e.target.value)}
               placeholder="Gold, Silver, Bronze"
             />
-          </label>
+          </Field>
         ) : null}
-        <label className="admin-check">
-          <input
-            type="checkbox"
-            checked={required}
-            onChange={(e) => setRequired(e.target.checked)}
-          />
-          <span>Required</span>
-        </label>
+        <Checkbox
+          className="admin-cf__check"
+          label="Required"
+          checked={required}
+          onChange={(e) => setRequired(e.target.checked)}
+        />
       </div>
-      {error ? (
-        <p id={errorId} className="admin-form-error" role="alert">
-          {error}
-        </p>
-      ) : null}
       <div className="admin-cf__form-actions">
         <Button type="submit" variant="primary" loading={mutation.isPending}>
           Add field

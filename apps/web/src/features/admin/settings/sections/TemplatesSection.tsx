@@ -2,7 +2,7 @@ import { useId, useState } from 'react';
 import type { FormEvent, JSX } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Snippet, Template } from '@switchboard/shared';
-import { Button, EmptyState, Input, Skeleton } from '../../../../ui/index.ts';
+import { Button, ErrorState, Field, Input, Skeleton, Textarea } from '../../../../ui/index.ts';
 import { Modal } from '../../../../ui/Modal.tsx';
 import { ApiError } from '../../../../api/index.ts';
 import { useToast } from '../../../../feedback/ToastProvider.tsx';
@@ -33,6 +33,7 @@ export function TemplatesSection(): JSX.Element {
 
   const loading = templatesQuery.isLoading || snippetsQuery.isLoading;
   const errored = templatesQuery.isError || snippetsQuery.isError;
+  const loadError = templatesQuery.error ?? snippetsQuery.error;
 
   return (
     <section className="admin-section" aria-labelledby="admin-tpl-title">
@@ -53,19 +54,13 @@ export function TemplatesSection(): JSX.Element {
           ))}
         </div>
       ) : errored ? (
-        <EmptyState
+        <ErrorState
           title="Couldn’t load templates"
-          description="Try again."
-          actions={
-            <Button
-              onClick={() => {
-                void templatesQuery.refetch();
-                void snippetsQuery.refetch();
-              }}
-            >
-              Retry
-            </Button>
-          }
+          description={loadError instanceof ApiError ? loadError.message : undefined}
+          onRetry={() => {
+            void templatesQuery.refetch();
+            void snippetsQuery.refetch();
+          }}
         />
       ) : (
         <>
@@ -195,45 +190,36 @@ function EditorDrawerBody({
         <div className="admin-drawer__body">
           {isTemplate ? (
             <>
-              <label className="admin-field">
-                <span className="admin-field__label">Name</span>
+              <Field label="Name">
                 <Input value={name} onChange={(e) => setName(e.target.value)} required />
-              </label>
-              <label className="admin-field">
-                <span className="admin-field__label">Subject</span>
+              </Field>
+              <Field label="Subject">
                 <Input
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   placeholder="(no subject)"
                 />
-              </label>
+              </Field>
             </>
           ) : (
-            <label className="admin-field">
-              <span className="admin-field__label">Shortcut</span>
+            <Field label="Shortcut">
               <Input
                 value={shortcut}
                 onChange={(e) => setShortcut(e.target.value)}
                 className="admin-mono"
                 required
               />
-            </label>
+            </Field>
           )}
-          <label className="admin-field admin-field--grow">
-            <span className="admin-field__label">Body</span>
-            <textarea
-              className="admin-textarea admin-mono"
+          <Field label="Body" className="admin-field--grow" error={error}>
+            <Textarea
+              className="admin-mono"
               value={body}
               onChange={(e) => setBody(e.target.value)}
               rows={isTemplate ? 12 : 5}
               required
             />
-          </label>
-          {error ? (
-            <p className="admin-form-error" role="alert">
-              {error}
-            </p>
-          ) : null}
+          </Field>
         </div>
         <footer className="admin-drawer__actions">
           <Button variant="ghost" onClick={onClose}>
