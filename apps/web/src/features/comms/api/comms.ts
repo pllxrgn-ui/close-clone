@@ -69,15 +69,27 @@ export function listSequenceSteps(
   });
 }
 
+/** Bare enrollment row returned by the real `GET /sequences/:id/enrollments`
+ *  (CONTRACTS §C7 `enrollmentsForSequence`): ids + lifecycle state, no display
+ *  names. The `sequenceId` is the one queried (attached client-side). */
+export interface SequenceEnrollmentRow {
+  id: string;
+  sequenceId: string;
+  leadId: string;
+  contactId: string;
+  state: SequenceEnrollment['state'];
+  pausedReason: string | null;
+}
+
+/** Real path (CONTRACTS §C7): `GET /sequences/:id/enrollments` → `{ items }`. */
 export function listSequenceEnrollments(
-  sequenceId?: string,
+  sequenceId: string,
   signal?: AbortSignal,
-): Promise<SequenceEnrollment[]> {
-  const query = sequenceId ? { sequenceId } : undefined;
-  return apiRequest<SequenceEnrollment[]>('/sequence-enrollments', {
-    ...(query ? { query } : {}),
-    ...(signal ? { signal } : {}),
-  });
+): Promise<SequenceEnrollmentRow[]> {
+  return apiRequest<{ items: Omit<SequenceEnrollmentRow, 'sequenceId'>[] }>(
+    `/sequences/${sequenceId}/enrollments`,
+    signal ? { signal } : {},
+  ).then((res) => res.items.map((row) => ({ ...row, sequenceId })));
 }
 
 /** Enriched enrollment row for the detail roster (enrollment + display names). */
@@ -101,13 +113,41 @@ export function listSequenceRoster(
   return apiRequest<EnrollmentRow[]>(`/sequences/${sequenceId}/roster`, signal ? { signal } : {});
 }
 
+/** Enrolled target in the real bulk-enroll result (carries the new enrollment id). */
+export interface EnrolledTarget {
+  leadId: string;
+  contactId: string;
+  enrollmentId: string;
+}
+
+/** Skipped target in the real bulk-enroll result (soft-deleted / already-enrolled). */
+export interface SkippedTarget {
+  leadId: string;
+  contactId: string;
+  reason: string;
+}
+
+/** Real `POST /sequences/:id/enroll` result (CONTRACTS §C7 `EnrollResult`). */
+export interface EnrollResult {
+  enrolled: EnrolledTarget[];
+  skipped: SkippedTarget[];
+}
+
+/**
+ * Enroll ONE contact via the real bulk route: the engine only exposes a bulk
+ * `{ targets: [...] }` enroll (which owns intent scheduling + the send-time
+ * never-event rails), so a single enroll is a 1-element targets array. The result
+ * reports the target under `enrolled` (with its new enrollment id) or `skipped`
+ * (with a reason such as `already_enrolled`) — a duplicate/soft-deleted target is
+ * NOT an HTTP error, so callers branch on the arrays, not a thrown status.
+ */
 export function enrollInSequence(
   sequenceId: string,
-  input: { leadId: string; contactId: string },
-): Promise<SequenceEnrollment> {
-  return apiRequest<SequenceEnrollment>(`/sequences/${sequenceId}/enroll`, {
+  target: { leadId: string; contactId: string },
+): Promise<EnrollResult> {
+  return apiRequest<EnrollResult>(`/sequences/${sequenceId}/enroll`, {
     method: 'POST',
-    body: input,
+    body: { targets: [target] },
   });
 }
 

@@ -192,60 +192,76 @@ describe('POST /emails/send', () => {
   });
 });
 
-describe('POST /sequences/:id/enroll', () => {
+describe('POST /sequences/:id/enroll (bulk targets, real shape)', () => {
   test('adds an enrollment, ticks the active count, and emits sequence_enrolled', async () => {
     const seqId = activeSequenceId();
     const { lead, contact } = pickEnrollable(seqId);
     const activeBefore = enrollmentCounts(seqId).active;
     const timelineBefore = timelineCount(lead.id, 'sequence_enrolled');
 
-    const { status } = await enroll(seqId, { leadId: lead.id, contactId: contact.id });
+    const { status, json } = await enroll(seqId, {
+      targets: [{ leadId: lead.id, contactId: contact.id }],
+    });
 
-    expect(status).toBe(201);
+    expect(status).toBe(200);
+    expect((json as { enrolled: unknown[] }).enrolled).toHaveLength(1);
+    expect((json as { skipped: unknown[] }).skipped).toHaveLength(0);
     expect(enrollmentCounts(seqId).active).toBe(activeBefore + 1);
     expect(timelineCount(lead.id, 'sequence_enrolled')).toBe(timelineBefore + 1);
   });
 
-  test('a duplicate active enrollment is refused (409 CONFLICT)', async () => {
+  test('a duplicate active enrollment is reported under skipped (not an HTTP error)', async () => {
     const existing = commsStore.enrollments.find((e) => e.state === 'active');
     if (!existing) throw new Error('fixture has no active enrollment');
     const { status, json } = await enroll(existing.sequenceId, {
-      leadId: existing.leadId,
-      contactId: existing.contactId,
+      targets: [{ leadId: existing.leadId, contactId: existing.contactId }],
     });
-    expect(status).toBe(409);
-    expect(errorCode(json)).toBe('CONFLICT');
+    expect(status).toBe(200);
+    const body = json as { enrolled: unknown[]; skipped: { reason: string }[] };
+    expect(body.enrolled).toHaveLength(0);
+    expect(body.skipped[0]?.reason).toBe('already_enrolled');
   });
 
-  test('enrolling a DNC contact is refused (422 SUPPRESSED)', async () => {
+  test('a DNC contact IS enrolled (the engine blocks at send time, not at enroll)', async () => {
     const seqId = activeSequenceId();
-    const dnc = db.contacts.find((c) => c.dnc && c.deletedAt === null);
-    if (!dnc) throw new Error('fixture has no DNC contact');
-    const { status, json } = await enroll(seqId, { leadId: dnc.leadId, contactId: dnc.id });
-    expect(status).toBe(422);
-    expect(errorCode(json)).toBe('SUPPRESSED');
+    const dnc = db.contacts.find(
+      (c) =>
+        c.dnc &&
+        c.deletedAt === null &&
+        !commsStore.enrollments.some(
+          (e) => e.sequenceId === seqId && e.contactId === c.id && e.state !== 'finished',
+        ),
+    );
+    if (!dnc) throw new Error('fixture has no un-enrolled DNC contact');
+    const { status, json } = await enroll(seqId, {
+      targets: [{ leadId: dnc.leadId, contactId: dnc.id }],
+    });
+    expect(status).toBe(200);
+    expect((json as { enrolled: unknown[] }).enrolled).toHaveLength(1);
   });
 
   test('an archived sequence cannot take enrollments (422)', async () => {
     const archived = commsStore.sequences.find((s) => s.status === 'archived');
     if (!archived) throw new Error('fixture has no archived sequence');
     const { lead, contact } = pickEnrollable(archived.id);
-    const { status } = await enroll(archived.id, { leadId: lead.id, contactId: contact.id });
+    const { status } = await enroll(archived.id, {
+      targets: [{ leadId: lead.id, contactId: contact.id }],
+    });
     expect(status).toBe(422);
   });
 
   test('enrolling into a missing sequence is 404', async () => {
+    const { lead, contact } = pickEnrollable(activeSequenceId());
     const { status, json } = await enroll('00000000-0000-0000-0000-000000000000', {
-      leadId: 'L1',
-      contactId: 'c1',
+      targets: [{ leadId: lead.id, contactId: contact.id }],
     });
     expect(status).toBe(404);
     expect(errorCode(json)).toBe('NOT_FOUND');
   });
 
-  test('missing leadId/contactId is 400', async () => {
+  test('a malformed target (missing contactId) is 400', async () => {
     const seqId = activeSequenceId();
-    const { status, json } = await enroll(seqId, { leadId: 'L1' });
+    const { status, json } = await enroll(seqId, { targets: [{ leadId: 'L1' }] });
     expect(status).toBe(400);
     expect(errorCode(json)).toBe('VALIDATION_FAILED');
   });

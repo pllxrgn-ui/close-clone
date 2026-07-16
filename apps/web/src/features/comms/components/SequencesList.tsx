@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { JSX } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import {
   Button,
   EmptyState,
@@ -31,9 +31,16 @@ export function SequencesList(): JSX.Element {
     queryKey: ['comms', 'steps', 'all'],
     queryFn: () => listSequenceSteps(),
   });
-  const enrollmentsQuery = useQuery({
-    queryKey: ['comms', 'enrollments', 'all'],
-    queryFn: () => listSequenceEnrollments(),
+
+  const sequences = useMemo(() => sequencesQuery.data ?? [], [sequencesQuery.data]);
+
+  // The real API exposes enrollments per-sequence only (GET /sequences/:id/
+  // enrollments), so the list's active/paused counts fan out one query per row.
+  const enrollmentQueries = useQueries({
+    queries: sequences.map((seq) => ({
+      queryKey: ['comms', 'enrollments', seq.id],
+      queryFn: () => listSequenceEnrollments(seq.id),
+    })),
   });
 
   const stepCounts = useMemo(() => {
@@ -44,14 +51,17 @@ export function SequencesList(): JSX.Element {
 
   const counts = useMemo(() => {
     const map = new Map<string, { active: number; paused: number }>();
-    for (const e of enrollmentsQuery.data ?? []) {
-      const cur = map.get(e.sequenceId) ?? { active: 0, paused: 0 };
-      if (e.state === 'active') cur.active += 1;
-      else if (e.state === 'paused') cur.paused += 1;
-      map.set(e.sequenceId, cur);
-    }
+    sequences.forEach((seq, i) => {
+      const rows = enrollmentQueries[i]?.data ?? [];
+      const cur = { active: 0, paused: 0 };
+      for (const e of rows) {
+        if (e.state === 'active') cur.active += 1;
+        else if (e.state === 'paused') cur.paused += 1;
+      }
+      map.set(seq.id, cur);
+    });
     return map;
-  }, [enrollmentsQuery.data]);
+  }, [sequences, enrollmentQueries]);
 
   if (sequencesQuery.isLoading) {
     return (
@@ -75,8 +85,6 @@ export function SequencesList(): JSX.Element {
       </div>
     );
   }
-
-  const sequences = sequencesQuery.data ?? [];
 
   return (
     <div className="seq-page">

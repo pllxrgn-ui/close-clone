@@ -91,16 +91,26 @@ function EnrollBody({
   const mutation = useMutation({
     mutationFn: (input: { leadId: string; contactId: string }) =>
       enrollInSequence(sequenceId, input),
-    onSuccess: (enrollment) => {
-      toast(`Enrolled in ${sequenceName}`);
-      onEnrolled();
-      onClose();
-      void enrollment;
+    onSuccess: (result) => {
+      // The real bulk-enroll returns arrays, not an HTTP error, for a
+      // duplicate/soft-deleted target — branch on them (this single target either
+      // enrolled or was skipped with a reason).
+      if (result.enrolled.length > 0) {
+        toast(`Enrolled in ${sequenceName}`);
+        onEnrolled();
+        onClose();
+        return;
+      }
+      const reason = result.skipped[0]?.reason;
+      if (reason === 'already_enrolled') {
+        toast('That contact is already enrolled in this sequence.');
+      } else {
+        toast('Could not enroll contact');
+      }
     },
     onError: (err) => {
-      if (err instanceof ApiError && err.code === 'CONFLICT') {
-        toast('That contact is already enrolled in this sequence.');
-      } else if (err instanceof ApiError && err.code === 'SUPPRESSED') {
+      // Genuine transport/validation failures (e.g. archived sequence → 422).
+      if (err instanceof ApiError && err.code === 'SUPPRESSED') {
         toast('That contact is on the do-not-contact list.');
       } else {
         toast(err instanceof ApiError ? err.message : 'Could not enroll contact');

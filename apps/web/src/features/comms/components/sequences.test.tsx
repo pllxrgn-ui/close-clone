@@ -5,9 +5,46 @@ import { http, HttpResponse } from 'msw';
 import { server } from '../../../mocks/server.ts';
 import { commsHandlers } from '../mocks/commsHandlers.ts';
 import { commsStore, enrollmentCounts, resetCommsStore } from '../data/store.ts';
+import { db } from '../../../mocks/fixtures.ts';
 import { SequencesList } from './SequencesList.tsx';
 import { SequenceDetail } from './SequenceDetail.tsx';
 import { api, makeContact, renderComms } from '../test/harness.tsx';
+
+/** A real fixture lead (unique name) + live non-DNC contact not enrolled in `seqId`.
+ *  The enroll handler now validates targets against the fixture db (matching the
+ *  real API), so the drawer must enroll an actual lead/contact, not a synthetic id. */
+function pickRealEnrollable(seqId: string): {
+  leadId: string;
+  leadName: string;
+  contactId: string;
+  contactName: string;
+} {
+  const nameCounts = new Map<string, number>();
+  for (const l of db.leads) nameCounts.set(l.name, (nameCounts.get(l.name) ?? 0) + 1);
+  const taken = new Set(
+    commsStore.enrollments.filter((e) => e.sequenceId === seqId).map((e) => e.contactId),
+  );
+  for (const lead of db.leads) {
+    if (lead.dnc || lead.deletedAt !== null || nameCounts.get(lead.name) !== 1) continue;
+    const contact = db.contacts.find(
+      (c) => c.leadId === lead.id && c.deletedAt === null && !c.dnc && !taken.has(c.id),
+    );
+    if (contact) {
+      return {
+        leadId: lead.id,
+        leadName: lead.name,
+        contactId: contact.id,
+        contactName: contact.name,
+      };
+    }
+  }
+  throw new Error('fixture has no unique-named enrollable lead');
+}
+
+/** Escape a fixture name for a substring accessible-name RegExp matcher. */
+function rx(s: string): RegExp {
+  return new RegExp(s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+}
 
 let user: ReturnType<typeof userEvent.setup>;
 
@@ -52,21 +89,28 @@ describe('SequenceDetail — compliance + ladder', () => {
 describe('SequenceDetail — mutations tick the counts', () => {
   test('enrolling a contact increments the active count', async () => {
     const seqId = onboardingId();
+    const target = pickRealEnrollable(seqId);
     server.use(
       http.get(api('/search'), () =>
         HttpResponse.json({
           items: [
-            { type: 'lead', id: 'LX', leadId: 'LX', title: 'Zephyr Corp', subtitle: 'Potential' },
+            {
+              type: 'lead',
+              id: target.leadId,
+              leadId: target.leadId,
+              title: target.leadName,
+              subtitle: 'Potential',
+            },
           ],
         }),
       ),
       http.get(api('/contacts'), () =>
         HttpResponse.json([
           makeContact({
-            id: 'CX',
-            leadId: 'LX',
-            name: 'Zoe Zephyr',
-            emails: [{ email: 'zoe@zephyr.com', type: 'work' }],
+            id: target.contactId,
+            leadId: target.leadId,
+            name: target.contactName,
+            emails: [{ email: 'target@fixture.test', type: 'work' }],
           }),
         ]),
       ),
@@ -74,17 +118,17 @@ describe('SequenceDetail — mutations tick the counts', () => {
 
     renderComms(<SequenceDetail sequenceId={seqId} />, '/sequences/x');
     await screen.findByRole('heading', { name: 'Onboarding', level: 1 });
-    expect(enrollmentCounts(seqId).active).toBe(6);
+    const activeBefore = enrollmentCounts(seqId).active;
 
     await user.click(screen.getByRole('button', { name: /Enroll/ }));
     const dialog = await screen.findByRole('dialog');
-    await user.type(within(dialog).getByLabelText('Search leads'), 'Zephyr');
-    await user.click(await within(dialog).findByRole('button', { name: /Zephyr Corp/ }));
-    await user.click(await within(dialog).findByRole('radio', { name: /Zoe Zephyr/ }));
+    await user.type(within(dialog).getByLabelText('Search leads'), target.leadName);
+    await user.click(await within(dialog).findByRole('button', { name: rx(target.leadName) }));
+    await user.click(await within(dialog).findByRole('radio', { name: rx(target.contactName) }));
     await user.click(within(dialog).getByRole('button', { name: 'Enroll' }));
 
     expect(await screen.findByText(/Enrolled in Onboarding/)).toBeInTheDocument();
-    await waitFor(() => expect(enrollmentCounts(seqId).active).toBe(7));
+    await waitFor(() => expect(enrollmentCounts(seqId).active).toBe(activeBefore + 1));
   });
 
   test('pausing an active enrollment moves it to paused', async () => {

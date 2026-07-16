@@ -93,15 +93,18 @@ describe('admin ⇄ comms MSW route collisions (production handler order)', () =
   });
 
   // ── Symptom 2a: single enroll (the drawer POST body) ────────────────────────
-  test('POST /sequences/:id/enroll with a single {leadId,contactId} body succeeds', async () => {
+  // The drawer now POSTs the REAL bulk shape `{ targets: [one] }`; the admin bulk
+  // handler falls through (no `leadIds`), so comms answers with `{ enrolled, skipped }`.
+  test('POST /sequences/:id/enroll with a 1-element {targets} body succeeds', async () => {
     const { leadId, contactId } = pickEnrollableContact(ONBOARDING);
     const before = enrollmentCounts(ONBOARDING).active;
 
-    const enrollment = await enrollInSequence(ONBOARDING, { leadId, contactId });
+    const result = await enrollInSequence(ONBOARDING, { leadId, contactId });
 
-    expect(enrollment.state).toBe('active');
-    expect(enrollment.sequenceId).toBe(ONBOARDING);
-    expect(enrollment.contactId).toBe(contactId);
+    expect(result.enrolled).toHaveLength(1);
+    expect(result.enrolled[0]?.contactId).toBe(contactId);
+    expect(result.enrolled[0]?.enrollmentId).toBeTruthy();
+    expect(result.skipped).toHaveLength(0);
     expect(enrollmentCounts(ONBOARDING).active).toBe(before + 1);
   });
 
