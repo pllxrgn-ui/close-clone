@@ -10,6 +10,7 @@ import { ThemeProvider } from '../theme/ThemeProvider.tsx';
 import { ToastProvider } from '../feedback/ToastProvider.tsx';
 import { ROUTER_FUTURE } from '../app/routerFuture.ts';
 import { db } from '../mocks/fixtures.ts';
+import { CommsProvider } from '../features/comms/index.ts';
 import { CommandPalette } from './CommandPalette.tsx';
 
 function makeClient(): QueryClient {
@@ -35,11 +36,13 @@ function Harness({
       <ThemeProvider>
         <MemoryRouter initialEntries={[initialPath]} future={ROUTER_FUTURE}>
           <ToastProvider>
-            <button type="button" onClick={() => setOpen(true)}>
-              open palette
-            </button>
-            <CommandPalette open={open} onClose={() => setOpen(false)} />
-            <LocationDisplay />
+            <CommsProvider>
+              <button type="button" onClick={() => setOpen(true)}>
+                open palette
+              </button>
+              <CommandPalette open={open} onClose={() => setOpen(false)} />
+              <LocationDisplay />
+            </CommsProvider>
           </ToastProvider>
         </MemoryRouter>
       </ThemeProvider>

@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
 import { server } from '../../../mocks/server.ts';
+import { CommsProvider } from '../../comms/index.ts';
 import { LeadDetail } from './LeadDetail.tsx';
 import {
   makeActivity,
@@ -60,7 +61,9 @@ function renderDetail(leadId: string) {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[`/leads/${leadId}`]}>
-        <LeadDetail leadId={leadId} />
+        <CommsProvider>
+          <LeadDetail leadId={leadId} />
+        </CommsProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -82,11 +85,16 @@ describe('LeadDetail — header', () => {
     expect(within(header).getByText('Do not contact')).toBeInTheDocument();
   });
 
-  test('next-action bar buttons are Phase-4 disabled placeholders', async () => {
+  test('next-action bar: Email launches the composer, the rest stay Phase-4 placeholders', async () => {
     renderDetail(lead.id);
     const group = await screen.findByRole('group', { name: /Lead actions/ });
-    const call = within(group).getByRole('button', { name: /Call/ });
-    expect(call).toBeDisabled();
+    // Email is now the live composer launcher — an enabled control, not a stub.
+    expect(within(group).getByRole('button', { name: 'Email' })).toBeEnabled();
+    // Call/SMS/Task/Enroll remain disabled Phase-4 placeholders.
+    expect(within(group).getByRole('button', { name: /Call/ })).toBeDisabled();
+    expect(within(group).getByRole('button', { name: /SMS/ })).toBeDisabled();
+    expect(within(group).getByRole('button', { name: /Task/ })).toBeDisabled();
+    expect(within(group).getByRole('button', { name: /Enroll/ })).toBeDisabled();
   });
 });
 

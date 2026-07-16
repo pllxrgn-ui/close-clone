@@ -7,6 +7,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
 import { KeyboardProvider } from '../../keyboard/index.ts';
 import { server } from '../../mocks/server.ts';
+import { CommsProvider } from '../comms/index.ts';
 import { LeadsSurface } from './components/LeadsSurface.tsx';
 import { LeadDetail } from './components/LeadDetail.tsx';
 import { installVirtualizerEnv } from './test/harness.tsx';
@@ -120,7 +121,9 @@ describe('lead page — axe', () => {
     const { container } = render(
       <QueryClientProvider client={client}>
         <MemoryRouter initialEntries={[`/leads/${lead.id}`]}>
-          <LeadDetail leadId={lead.id} />
+          <CommsProvider>
+            <LeadDetail leadId={lead.id} />
+          </CommsProvider>
         </MemoryRouter>
       </QueryClientProvider>,
     );

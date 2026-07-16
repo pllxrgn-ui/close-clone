@@ -7,6 +7,7 @@ import { MemoryRouter, Route, Routes, useParams } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
 import type { Lead, SmartView } from '@switchboard/shared';
 import { KeyboardProvider } from '../../../keyboard/index.ts';
+import { ToastProvider } from '../../../feedback/index.ts';
 import { server } from '../../../mocks/server.ts';
 import { LeadsSurface } from './LeadsSurface.tsx';
 import { makeLead, makeSmartView } from '../test/factories.ts';
@@ -47,15 +48,17 @@ function renderAt(path: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <KeyboardProvider>
-        <MemoryRouter initialEntries={[path]}>
-          <Routes>
-            <Route path="/leads" element={<LeadsSurface viewId={null} />} />
-            <Route path="/views/:id" element={<ViewRoute />} />
-            <Route path="/leads/:id" element={<div data-testid="lead-detail" />} />
-          </Routes>
-        </MemoryRouter>
-      </KeyboardProvider>
+      <ToastProvider>
+        <KeyboardProvider>
+          <MemoryRouter initialEntries={[path]}>
+            <Routes>
+              <Route path="/leads" element={<LeadsSurface viewId={null} />} />
+              <Route path="/views/:id" element={<ViewRoute />} />
+              <Route path="/leads/:id" element={<div data-testid="lead-detail" />} />
+            </Routes>
+          </MemoryRouter>
+        </KeyboardProvider>
+      </ToastProvider>
     </QueryClientProvider>,
   );
 }
@@ -191,8 +194,9 @@ describe('LeadsSurface — filter, selection, reduced motion', () => {
     expect(await screen.findByText('Bravo Corp')).toBeInTheDocument();
   });
 
-  test('selecting rows reveals the bulk bar with Phase-4 disabled actions', async () => {
+  test('selecting rows reveals the bulk bar with the live LeadBulkActions', async () => {
     useReferenceHandlers();
+    server.use(http.get(api('/sequences'), () => HttpResponse.json([])));
     const leads = [makeLead({ name: 'North Labs' }), makeLead({ name: 'Cedar Systems' })];
     server.use(http.get(api('/leads'), () => HttpResponse.json({ items: leads })));
     renderAt('/leads');
@@ -202,8 +206,11 @@ describe('LeadsSurface — filter, selection, reduced motion', () => {
 
     const bulk = screen.getByRole('region', { name: /1 leads selected/ });
     expect(bulk).toBeInTheDocument();
-    const sequenceBtn = within(bulk).getByRole('button', { name: /Add to sequence/ });
-    expect(sequenceBtn).toBeDisabled();
+    // The Phase-4 disabled placeholders are gone; the admin feature's live bulk
+    // actions render instead — real, enabled controls that mutate through C7.
+    expect(within(bulk).queryByRole('button', { name: /Add to sequence/ })).toBeNull();
+    expect(within(bulk).getByRole('button', { name: /Export CSV/ })).toBeEnabled();
+    expect(within(bulk).getByRole('button', { name: /Enroll in sequence/ })).toBeInTheDocument();
 
     await userEvent.click(within(bulk).getByRole('button', { name: 'Clear selection' }));
     expect(screen.queryByRole('region', { name: /selected/ })).toBeNull();
