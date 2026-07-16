@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch src/index.ts",
+    "dev:mock": "node --experimental-strip-types src/dev/server.ts",
     "start": "node src/index.ts",
     "admin": "node --experimental-transform-types src/cli/index.ts",
     "build": "tsc --noEmit",
