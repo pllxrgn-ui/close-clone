@@ -14,8 +14,9 @@ export interface LeadsListParams extends PageParams {
 export const SEARCH_HIT_KINDS = ['lead', 'contact', 'opportunity'] as const;
 export type SearchHitKind = (typeof SEARCH_HIT_KINDS)[number];
 
+/** Item shape pinned to the real API (C7): discriminator field is `type`. */
 export interface SearchHit {
-  kind: SearchHitKind;
+  type: SearchHitKind;
   id: string;
   /** The lead this hit routes to (a contact/opportunity resolves to its lead). */
   leadId: string;

@@ -99,10 +99,10 @@ export function useLeadCommands(query: string, onRun: () => void): Command[] {
   return useMemo(() => {
     if (!data) return [];
     return data.items
-      .filter((hit) => hit.kind === 'lead' || hit.kind === 'contact')
+      .filter((hit) => hit.type === 'lead' || hit.type === 'contact')
       .slice(0, 6)
       .map((hit) => ({
-        id: `lead:${hit.kind}:${hit.id}`,
+        id: `lead:${hit.type}:${hit.id}`,
         title: hit.title,
         group: 'Leads' as const,
         ...(hit.subtitle !== undefined ? { subtitle: hit.subtitle } : {}),

@@ -18,16 +18,22 @@ const InboxPage = lazy(() =>
   import('../pages/InboxPage.tsx').then((m) => ({ default: m.InboxPage })),
 );
 const LeadsPage = lazy(() =>
-  import('../pages/LeadsPage.tsx').then((m) => ({ default: m.LeadsPage })),
+  import('../features/leads/index.ts').then((m) => ({ default: m.LeadsRoutePage })),
 );
 const LeadDetailPage = lazy(() =>
-  import('../pages/LeadDetailPage.tsx').then((m) => ({ default: m.LeadDetailPage })),
+  import('../features/leads/index.ts').then((m) => ({ default: m.LeadDetailRoutePage })),
 );
 const ViewsPage = lazy(() =>
   import('../pages/ViewsPage.tsx').then((m) => ({ default: m.ViewsPage })),
 );
 const ViewDetailPage = lazy(() =>
-  import('../pages/ViewDetailPage.tsx').then((m) => ({ default: m.ViewDetailPage })),
+  import('../features/leads/index.ts').then((m) => ({ default: m.ViewRoutePage })),
+);
+const ViewBuilderPage = lazy(() =>
+  import('../features/view-builder/index.ts').then((m) => ({ default: m.ViewBuilderPage })),
+);
+const WelcomePage = lazy(() =>
+  import('../features/welcome/index.ts').then((m) => ({ default: m.WelcomePage })),
 );
 const ReportsPage = lazy(() =>
   import('../pages/ReportsPage.tsx').then((m) => ({ default: m.ReportsPage })),
@@ -52,6 +58,7 @@ export function AppRoutes(): JSX.Element {
     <Suspense fallback={<BootFallback />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/welcome" element={<WelcomePage />} />
         <Route path="/" element={<RequireAuth />}>
           <Route element={<AppShell />}>
             <Route index element={<Navigate to="/inbox" replace />} />
@@ -59,7 +66,9 @@ export function AppRoutes(): JSX.Element {
             <Route path="leads" element={<LeadsPage />} />
             <Route path="leads/:id" element={<LeadDetailPage />} />
             <Route path="views" element={<ViewsPage />} />
+            <Route path="views/new" element={<ViewBuilderPage />} />
             <Route path="views/:id" element={<ViewDetailPage />} />
+            <Route path="views/:id/edit" element={<ViewBuilderPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="*" element={<NotFoundPage />} />

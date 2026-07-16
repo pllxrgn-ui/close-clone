@@ -34,7 +34,7 @@ describe('app shell + routing (authenticated)', () => {
     const leadsLink = screen.getByRole('link', { name: /Leads/ });
     await userEvent.click(leadsLink);
 
-    expect(await screen.findByRole('heading', { name: 'Leads', level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'All leads', level: 1 })).toBeInTheDocument();
     expect(leadsLink).toHaveAttribute('aria-current', 'page');
   });
 
@@ -44,7 +44,7 @@ describe('app shell + routing (authenticated)', () => {
 
     await userEvent.keyboard('gl');
 
-    expect(await screen.findByRole('heading', { name: 'Leads', level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'All leads', level: 1 })).toBeInTheDocument();
   });
 
   test('"/" focuses the global search input', async () => {
@@ -59,7 +59,7 @@ describe('app shell + routing (authenticated)', () => {
 
   test('a lead-detail route reflects its :id param', async () => {
     renderRoutes('/leads/abc-123', { user: USER });
-    expect(await screen.findByText('abc-123')).toBeInTheDocument();
+    expect(await screen.findByText('Lead not found')).toBeInTheDocument();
   });
 
   test('an unknown authenticated route renders 404 within the shell', async () => {

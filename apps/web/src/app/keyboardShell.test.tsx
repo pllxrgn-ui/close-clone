@@ -85,7 +85,7 @@ describe('keyboard layer wired into the shell', () => {
     await screen.findByRole('heading', { name: 'Inbox', level: 1 });
     await userEvent.keyboard('gl');
     await waitFor(() =>
-      expect(screen.getByRole('heading', { name: 'Leads', level: 1 })).toBeInTheDocument(),
+      expect(screen.getByRole('heading', { name: 'All leads', level: 1 })).toBeInTheDocument(),
     );
   });
 });

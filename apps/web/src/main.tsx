@@ -8,11 +8,12 @@ import './styles/overlays.css';
 import App from './App.tsx';
 
 /*
- * This is a communication-first CRM running fully in MOCK_MODE for now: there is
- * no real backend, so the MSW worker always backs the REST surface (C7 shapes).
- * When a real API lands, gate this on an env flag.
+ * API mode (VITE_API_MODE): "real" talks to the local API through the Vite /api
+ * proxy (see vite.config.ts) and never loads the MSW chunk; anything else (the
+ * default) backs the REST surface with the MSW worker + fixtures (C7 shapes).
  */
 async function enableMocking(): Promise<void> {
+  if (import.meta.env.VITE_API_MODE === 'real') return;
   const { worker } = await import('./mocks/browser.ts');
   await worker.start({ onUnhandledRequest: 'bypass' });
 }

@@ -45,7 +45,7 @@ describe('global search → lead page', () => {
       http.get(api('/search'), () =>
         HttpResponse.json({
           items: [
-            { kind: 'lead', id: target.id, leadId: target.id, title: target.name, subtitle: 'Qualified' },
+            { type: 'lead', id: target.id, leadId: target.id, title: target.name, subtitle: 'Qualified' },
           ],
         }),
       ),

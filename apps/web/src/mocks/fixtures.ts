@@ -387,7 +387,7 @@ function buildSearchIndex(leads: Lead[], contacts: Contact[], statuses: LeadStat
   const hits: SearchHit[] = [];
   for (const lead of leads) {
     hits.push({
-      kind: 'lead',
+      type: 'lead',
       id: lead.id,
       leadId: lead.id,
       title: lead.name,
@@ -397,7 +397,7 @@ function buildSearchIndex(leads: Lead[], contacts: Contact[], statuses: LeadStat
   const leadName = new Map(leads.map((l) => [l.id, l.name]));
   for (const contact of contacts) {
     hits.push({
-      kind: 'contact',
+      type: 'contact',
       id: contact.id,
       leadId: contact.leadId,
       title: contact.name,

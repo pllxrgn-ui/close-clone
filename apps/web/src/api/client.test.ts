@@ -61,7 +61,7 @@ describe('search endpoint', () => {
   test('returns hits for a matching query', async () => {
     const res = await search('Labs');
     expect(res.items.length).toBeGreaterThan(0);
-    expect(res.items[0]?.kind).toBeDefined();
+    expect(res.items[0]?.type).toBeDefined();
   });
 
   // failure path: empty query → VALIDATION_FAILED
