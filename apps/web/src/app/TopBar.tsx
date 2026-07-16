@@ -24,6 +24,9 @@ export function TopBar({ searchRef, onOpenPalette }: TopBarProps): JSX.Element {
       <div className="sb-topbar__brand">
         <BoltIcon size={18} />
         <span className="sb-topbar__org">Switchboard</span>
+        <span className="sb-topbar__demo" title="This is a demo build backed by synthetic sample data — no real accounts or messages.">
+          Demo · sample data
+        </span>
       </div>
 
       <form

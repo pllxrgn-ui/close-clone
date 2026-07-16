@@ -59,6 +59,17 @@
   font-size: var(--fs-lg);
   color: var(--ink-0);
 }
+.sb-topbar__demo {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--state-seq);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
 .sb-topbar__search {
   position: relative;
   display: flex;
