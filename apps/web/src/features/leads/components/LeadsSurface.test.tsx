@@ -242,7 +242,9 @@ describe('LeadsSurface — filter, selection, reduced motion', () => {
     // The Phase-4 disabled placeholders are gone; the admin feature's live bulk
     // actions render instead — real, enabled controls that mutate through C7.
     expect(within(bulk).queryByRole('button', { name: /Add to sequence/ })).toBeNull();
-    expect(within(bulk).getByRole('button', { name: /Export CSV/ })).toBeEnabled();
+    // findBy: LeadBulkActions is a lazy boundary now (audit #6) — the live
+    // actions hydrate a tick after the bar appears.
+    expect(await within(bulk).findByRole('button', { name: /Export CSV/ })).toBeEnabled();
     expect(within(bulk).getByRole('button', { name: /Enroll in sequence/ })).toBeInTheDocument();
 
     await userEvent.click(within(bulk).getByRole('button', { name: 'Clear selection' }));

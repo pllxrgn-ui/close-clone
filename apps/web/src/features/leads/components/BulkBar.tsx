@@ -1,8 +1,14 @@
 import type { JSX } from 'react';
-import { IconButton } from '../../../ui/index.ts';
+import { Suspense, lazy } from 'react';
+import { IconButton, Spinner } from '../../../ui/index.ts';
 import { XIcon } from '../icons.tsx';
-import { LeadBulkActions } from '../../admin/index.ts';
 import type { Lead } from '@switchboard/shared';
+
+// Lazy: the admin feature must not ride in the leads chunk (audit #6) — the
+// bar only exists after a selection, so the fetch cost hides behind the click.
+const LeadBulkActions = lazy(() =>
+  import('../../admin/index.ts').then((m) => ({ default: m.LeadBulkActions })),
+);
 
 /*
  * Bulk-action bar shown when one or more leads are selected. The live actions
@@ -24,7 +30,9 @@ export function BulkBar({ count, onClear, selectedLeads }: BulkBarProps): JSX.El
         <strong>{count.toLocaleString('en-US')}</strong> selected
       </span>
       <div className="bulk-bar__actions">
-        <LeadBulkActions selectedLeads={selectedLeads} onDone={onClear} />
+        <Suspense fallback={<Spinner label="Loading actions" />}>
+          <LeadBulkActions selectedLeads={selectedLeads} onDone={onClear} />
+        </Suspense>
       </div>
       <IconButton label="Clear selection" onClick={onClear} className="bulk-bar__clear">
         <XIcon size={16} />

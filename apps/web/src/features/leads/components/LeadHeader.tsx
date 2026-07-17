@@ -2,7 +2,14 @@ import type { JSX } from 'react';
 import { Link } from 'react-router-dom';
 import type { Lead } from '@switchboard/shared';
 import { Button, StatusPill } from '../../../ui/index.ts';
-import { LeadComposerLauncher } from '../../comms/index.ts';
+import { Suspense, lazy } from 'react';
+
+// Lazy: keeps the comms feature out of the leads chunk (audit #6); the
+// launcher is one control in the actions row and hydrates in the same paint
+// in practice (chunk is shared with the comms routes).
+const LeadComposerLauncher = lazy(() =>
+  import('../../comms/index.ts').then((m) => ({ default: m.LeadComposerLauncher })),
+);
 import type { StatusTone } from '../../../ui/index.ts';
 import { initials } from '../../../lib/format.ts';
 import {
@@ -90,7 +97,9 @@ export function LeadHeader({ lead, statusLabel, ownerName }: LeadHeaderProps): J
       </div>
 
       <div className="lead-header__actions" role="group" aria-label="Lead actions">
-        <LeadComposerLauncher leadId={lead.id} />
+        <Suspense fallback={null}>
+          <LeadComposerLauncher leadId={lead.id} />
+        </Suspense>
         {NEXT_ACTIONS.map((action) => {
           const Icon = action.icon;
           return (

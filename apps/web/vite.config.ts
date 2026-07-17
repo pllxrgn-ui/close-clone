@@ -17,6 +17,28 @@ export default defineConfig({
   build: {
     // Route-level code splitting relies on dynamic import(); keep chunks lean.
     target: 'es2022',
+    rollupOptions: {
+      output: {
+        // Split the stable framework layer out of the entry so app-code churn
+        // never invalidates the (large, rarely-changing) vendor cache entries.
+        // Function form: the object form misses pnpm's nested .pnpm paths
+        // (react-dom stayed in the entry chunk).
+        manualChunks(id: string): string | undefined {
+          if (!id.includes('node_modules')) return undefined;
+          // ONE react chunk: react-router-dom imports react-dom imports react —
+          // splitting them creates a chunk cycle that breaks module init on the
+          // entry route (found by the E2E welcome-boot check).
+          if (
+            /node_modules\/(react|react-dom|scheduler|react-router|react-router-dom)\//.test(id)
+          ) {
+            return 'react';
+          }
+          if (/node_modules\/@tanstack\//.test(id)) return 'query';
+          if (/node_modules\/zod\//.test(id)) return 'zod';
+          return undefined;
+        },
+      },
+    },
   },
   test: {
     environment: 'jsdom',
