@@ -110,6 +110,7 @@
   --row-h: 36px; /* law: dense 36px rows */
   --topbar-h: 44px;
   --rail-w: 208px;
+  --rail-w-collapsed: 48px; /* icon-only rail (48 = 16px glyph + hit target) */
 
   /* ── Radius — 2px controls / 0 panels + rows ─────────────────────────────── */
   --radius-1: 2px; /* controls: buttons, inputs, chips, keycaps */

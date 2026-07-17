@@ -8,6 +8,7 @@ import { ToastProvider } from '../feedback/index.ts';
 import { CommsProvider } from '../features/comms/index.ts';
 import { LeftRail } from './LeftRail.tsx';
 import { TopBar } from './TopBar.tsx';
+import { useRailCollapsed } from './railState.ts';
 import { useShellKeymap } from './useShellKeymap.ts';
 
 function PageLoading(): JSX.Element {
@@ -56,14 +57,15 @@ function ShellChrome(): JSX.Element {
   }, []);
 
   useShellKeymap({ searchRef, togglePalette, toggleCheatSheet });
+  const rail = useRailCollapsed();
 
   return (
-    <div className="sb-app">
+    <div className="sb-app" data-rail={rail.collapsed ? 'collapsed' : undefined}>
       <a className="sb-skip" href="#main-content">
         Skip to content
       </a>
       <TopBar searchRef={searchRef} onOpenPalette={openPalette} />
-      <LeftRail />
+      <LeftRail collapsed={rail.collapsed} onToggleCollapse={rail.toggle} />
       <main className="sb-main" id="main-content" tabIndex={-1}>
         <Suspense fallback={<PageLoading />}>
           <Outlet />

@@ -15,6 +15,11 @@
   height: 100vh;
   background: var(--surface-0);
 }
+/* Collapsed rail — icon-only. NO width transition: grid-template-columns is a
+ * layout property (law §4), and a preference toggle should land instantly. */
+.sb-app[data-rail='collapsed'] {
+  grid-template-columns: var(--rail-w-collapsed) minmax(0, 1fr);
+}
 
 /* Skip link — hidden above the viewport, slides in on focus via TRANSFORM
  * (never animates a layout property). */
@@ -51,6 +56,11 @@
   gap: var(--space-2);
   color: var(--ink-0); /* full ink — same weight as the landing wordmark */
   min-width: calc(var(--rail-w) - var(--space-4) * 2);
+}
+/* Collapsed: the brand lockup stops reserving the full rail column so the
+ * search field reclaims the space (the mark + wordmark stay put). */
+.sb-app[data-rail='collapsed'] .sb-topbar__brand {
+  min-width: auto;
 }
 .sb-topbar__org {
   font-family: var(--font-display);
@@ -236,6 +246,50 @@
   opacity: 1;
 }
 
+/* Foot group — about the TOOL (support, settings) + the collapse control.
+ * margin-top:auto pins it to the bottom of the rail column; the hairline
+ * separates it from the work surfaces above. */
+.sb-rail__foot {
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-0);
+}
+.sb-rail__collapse {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  height: var(--control-h-lg);
+  margin-top: var(--space-2);
+  padding: 0 var(--space-3);
+  border: none;
+  border-left: 2px solid transparent; /* aligns the glyph with the nav items */
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  text-align: left;
+  cursor: pointer;
+  /* A preference toggle — instant, no press bounce. */
+}
+
+/* ── Collapsed rail (icon-only) ──────────────────────────────────────────── */
+.sb-rail[data-collapsed] {
+  padding-left: 0;
+  padding-right: 0;
+}
+.sb-rail[data-collapsed] .sb-rail__item,
+.sb-rail[data-collapsed] .sb-rail__collapse {
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  /* The 2px active edge stays; balance it on the right so the glyph is
+   * optically centred in the 48px column. */
+  border-right: 2px solid transparent;
+}
+
 /* ── Main region + pages ─────────────────────────────────────────────────── */
 .sb-main {
   grid-area: main;
@@ -417,6 +471,50 @@
   text-overflow: ellipsis;
 }
 
+/* ── Support & FAQs ──────────────────────────────────────────────────────── */
+.sb-help {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  max-width: 68ch; /* prose measure — this page is read, not scanned */
+}
+.sb-help__section-title {
+  margin: 0 0 var(--space-3);
+  color: var(--ink-2);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+}
+.sb-help__lede {
+  margin: 0;
+  color: var(--ink-1);
+  font-size: var(--fs-base);
+  line-height: var(--lh-loose);
+}
+.sb-help__faq {
+  margin: var(--space-4) 0 0;
+}
+.sb-help__faq-item {
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--border-0);
+}
+.sb-help__q {
+  color: var(--ink-0);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+}
+.sb-help__a {
+  margin: var(--space-2) 0 0;
+  color: var(--ink-2);
+  font-size: var(--fs-base);
+  line-height: var(--lh-loose);
+}
+.sb-help__a strong {
+  color: var(--ink-1);
+  font-weight: var(--fw-semibold);
+}
+
 /* ── Login screen ────────────────────────────────────────────────────────── */
 .sb-login {
   min-height: 100vh;
@@ -582,6 +680,10 @@
   }
   .sb-rail__item:hover .sb-rail__kbd {
     opacity: 1;
+  }
+  .sb-rail__collapse:hover {
+    background: var(--surface-2);
+    color: var(--ink-0);
   }
   .sb-demo__opt:hover {
     background: var(--surface-1);

@@ -6,11 +6,14 @@ import {
   Command,
   CornerDownLeft,
   Inbox,
+  LifeBuoy,
   ListFilter,
   Minus,
   Monitor,
   Moon,
   MoreHorizontal,
+  PanelLeftClose,
+  PanelLeftOpen,
   Search,
   Settings,
   Sun,
@@ -63,3 +66,6 @@ export const CheckIcon = toIcon(Check);
 export const MinusIcon = toIcon(Minus);
 export const AlertTriangleIcon = toIcon(TriangleAlert);
 export const EllipsisIcon = toIcon(MoreHorizontal);
+export const SupportIcon = toIcon(LifeBuoy);
+export const PanelLeftCloseIcon = toIcon(PanelLeftClose);
+export const PanelLeftOpenIcon = toIcon(PanelLeftOpen);

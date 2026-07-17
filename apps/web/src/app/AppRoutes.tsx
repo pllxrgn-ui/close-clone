@@ -50,6 +50,7 @@ const SettingsPageReal = lazy(() =>
 const WelcomePage = lazy(() =>
   import('../features/welcome/index.ts').then((m) => ({ default: m.WelcomePage })),
 );
+const HelpPage = lazy(() => import('../pages/HelpPage.tsx').then((m) => ({ default: m.HelpPage })));
 const NotFoundPage = lazy(() =>
   import('../pages/NotFoundPage.tsx').then((m) => ({ default: m.NotFoundPage })),
 );
@@ -82,6 +83,7 @@ export function AppRoutes(): JSX.Element {
             <Route path="views/:id" element={<ViewDetailPage />} />
             <Route path="views/:id/edit" element={<ViewBuilderPage />} />
             <Route path="reports" element={<ReportsPageReal />} />
+            <Route path="help" element={<HelpPage />} />
             <Route path="settings" element={<SettingsPageReal />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>

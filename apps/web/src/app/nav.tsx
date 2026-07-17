@@ -1,6 +1,13 @@
 import type { JSX } from 'react';
 import type { IconProps } from '../ui/icons.tsx';
-import { InboxIcon, LeadsIcon, ReportsIcon, SettingsIcon, ViewsIcon } from '../ui/icons.tsx';
+import {
+  InboxIcon,
+  LeadsIcon,
+  ReportsIcon,
+  SettingsIcon,
+  SupportIcon,
+  ViewsIcon,
+} from '../ui/icons.tsx';
 
 /** Kanban glyph for the Pipeline rail item (lucide-style, stroke 1.5). */
 function PipelineIcon({ size = 16 }: IconProps): JSX.Element {
@@ -31,14 +38,26 @@ export interface NavItem {
   icon: (props: IconProps) => import('react').JSX.Element;
 }
 
-export const NAV_ITEMS: readonly NavItem[] = [
+/** The daily work surfaces — the rail's main list. */
+export const PRIMARY_NAV: readonly NavItem[] = [
   { to: '/inbox', label: 'Inbox', key: 'i', icon: InboxIcon },
   { to: '/leads', label: 'Leads', key: 'l', icon: LeadsIcon },
   { to: '/pipeline', label: 'Pipeline', key: 'p', icon: PipelineIcon },
   { to: '/views', label: 'Views', key: 'v', icon: ViewsIcon },
   { to: '/reports', label: 'Reports', key: 'r', icon: ReportsIcon },
+];
+
+/**
+ * About the tool, not the work — pinned to the bottom of the rail, under a
+ * divider, so the daily surfaces stay at the top where the eye lands.
+ */
+export const FOOTER_NAV: readonly NavItem[] = [
+  { to: '/help', label: 'Support & FAQs', key: 'h', icon: SupportIcon },
   { to: '/settings', label: 'Settings', key: 's', icon: SettingsIcon },
 ];
+
+/** Every rail destination — the single source for the `g <key>` chords. */
+export const NAV_ITEMS: readonly NavItem[] = [...PRIMARY_NAV, ...FOOTER_NAV];
 
 /** `g <key>` chord destinations, derived from NAV_ITEMS. */
 export const NAV_CHORD_KEYS: Record<string, string> = Object.fromEntries(
