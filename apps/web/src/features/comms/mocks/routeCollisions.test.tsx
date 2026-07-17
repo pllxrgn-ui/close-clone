@@ -79,6 +79,31 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('admin ⇄ comms MSW route collisions (production handler order)', () => {
+  // ── The GET /sequences dead-shadow contract (audit #5) ──────────────────────
+  // Admin's GET /sequences is registered before comms', so first-match-wins
+  // makes ADMIN the source of the sequence LIST while comms serves the step
+  // ladders and rosters. That split stays coherent ONLY while both stores seed
+  // the same sequence identities — previously enforced by a comment in
+  // comms/data/store.ts (and broken once: "every sequence showed 0 steps ·
+  // 0 active"). This pins the invariant as an executable contract.
+  test('comms step/roster seeds align 1:1 with the sequences admin serves', () => {
+    const adminSeqs = new Map(adminStore.sequences.map((s) => [s.id, s]));
+    const commsSeqs = commsStore.sequences;
+
+    // Same id set, both directions — no orphaned ladders, no stepless rows.
+    expect(commsSeqs.map((s) => s.id).sort()).toEqual([...adminSeqs.keys()].sort());
+
+    for (const seq of commsSeqs) {
+      const twin = adminSeqs.get(seq.id);
+      // The UI renders admin's name/status above comms' ladder — they must agree.
+      expect(twin?.name).toBe(seq.name);
+      expect(twin?.status).toBe(seq.status);
+      // Every displayed sequence has a real ladder to serve (the 0-steps bug).
+      const ladder = commsStore.steps.filter((step) => step.sequenceId === seq.id);
+      expect(ladder.length).toBeGreaterThan(0);
+    }
+  });
+
   // ── Symptom 1: the enroll drawer's "Find a lead" source ─────────────────────
   test('GET /search resolves real fixture leads (the drawer + palette source)', async () => {
     const leadHit = db.searchIndex.find((h) => h.type === 'lead');
