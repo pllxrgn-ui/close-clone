@@ -103,11 +103,15 @@ curl -sI http://localhost:${WEB_HTTP_PORT:-8080}/ \
 
 ## Notes / current state (honest)
 
-- **App surface at bring-up:** the api's production composition root
-  (`apps/api/src/index.ts`) currently serves `/healthz` and runs migrations; wiring
-  the full REST / provider / worker graph into it is a separate in-flight task. This
-  kit hosts whatever `src/index.ts` grows into with **no Dockerfile change**. Once
-  wired, re-run steps 4–6 to see real routes.
+- **App surface at bring-up:** DONE (D-044) — the composition root
+  (`apps/api/src/main.ts`, run by `index.ts`) serves the full graph: migrations,
+  the session-OR-bearer gate, healthz (pg + queue depth), the product-CRUD /
+  inbox / smart-views / reports / bulk / admin routes, telephony + AI + token +
+  webhook-CRUD, and the sequence/telephony/webhook workers. Verified in-container
+  (2026-07-18): every route group reachable + correctly guarded (unauth 401,
+  `/wh/twilio/*` 403 sig-check). Real provider integrations (Gmail/Twilio/
+  Deepgram/Haiku, real IdP) stay unmounted until their accounts land — set
+  `MOCK_MODE=0` + the credential group to enable each.
 - **Worker service:** profile-gated OFF until `apps/api/src/worker.ts` exists (v1
   runs sweep/send in-process in `api`). See `README.md` → Workers.
 - **Real integrations:** to turn any on, set `MOCK_MODE=0` and fill the matching
