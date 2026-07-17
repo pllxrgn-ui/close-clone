@@ -43,7 +43,13 @@ export interface EmailSendRouteDeps {
 const addressList = z.array(z.string().min(3).max(320)).max(100);
 
 const sendBodySchema = z.object({
-  actorId: z.string().uuid(),
+  /**
+   * OPTIONAL since the auth mount (review finding F3): the authenticated
+   * principal is the source of truth for attribution. Kept for the pre-auth
+   * seam (the embedded test server mounts no auth), but it can never be used to
+   * act as someone else — see {@link resolveActorId}.
+   */
+  actorId: z.string().uuid().optional(),
   accountId: z.string().uuid(),
   leadId: z.string().uuid(),
   contactId: z.string().uuid().optional(),
@@ -74,6 +80,38 @@ function mapSendError(reply: FastifyReply, err: unknown): FastifyReply | null {
   return null;
 }
 
+/** A caller tried to attribute a send to someone other than themselves. */
+class ActorSpoofError extends Error {
+  constructor() {
+    super('actorId does not match the authenticated principal');
+  }
+}
+
+/**
+ * Resolve who this send is attributed to (review finding F3, deploy/WIRING.md §2).
+ *
+ * The authenticated principal ALWAYS wins — `request.actor` is set by the
+ * session guard (a user) or the Bearer pre-handler (an api token), so neither a
+ * session cookie nor a scoped token can act as another user by putting an id in
+ * the payload. A body `actorId` that disagrees is refused (FORBIDDEN) rather
+ * than silently rewritten: it is either a client bug or an impersonation
+ * attempt, and both deserve to be seen.
+ *
+ * With no principal (the embedded/test server mounts no auth) the body value is
+ * used — production mounts a GLOBAL requireSession over `/api/v1/*`, so that
+ * path is unreachable there.
+ */
+export function resolveActorId(
+  principalId: string | undefined,
+  bodyActorId: string | undefined,
+): string | null {
+  if (principalId !== undefined) {
+    if (bodyActorId !== undefined && bodyActorId !== principalId) throw new ActorSpoofError();
+    return principalId;
+  }
+  return bodyActorId ?? null;
+}
+
 export function registerEmailSendRoutes(app: FastifyInstance, deps: EmailSendRouteDeps): void {
   // POST /api/v1/emails/send
   app.post('/api/v1/emails/send', async (request, reply) => {
@@ -88,8 +126,26 @@ export function registerEmailSendRoutes(app: FastifyInstance, deps: EmailSendRou
       d.idempotencyKey ??
       (typeof headerKey === 'string' && headerKey.length > 0 ? headerKey : undefined);
 
+    // F3: attribution comes from the authenticated principal, never the payload.
+    // ActorHint.id is nullable (the audit layer's system actor has none); only a
+    // real id counts as a principal here.
+    const principalId = request.actor?.id ?? undefined;
+    let actorId: string | null;
+    try {
+      actorId = resolveActorId(principalId, d.actorId);
+    } catch {
+      return sendError(reply, 'FORBIDDEN', 'actorId does not match the authenticated principal');
+    }
+    if (actorId === null) {
+      return sendError(
+        reply,
+        'VALIDATION_FAILED',
+        'actorId is required without an authenticated principal',
+      );
+    }
+
     const input: SendOneOffInput = {
-      actorId: d.actorId,
+      actorId,
       accountId: d.accountId,
       leadId: d.leadId,
       ...(d.contactId !== undefined ? { contactId: d.contactId } : {}),

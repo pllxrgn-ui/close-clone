@@ -198,3 +198,87 @@ describe('idempotent double-POST', () => {
     expect(providerFor({ address: 'rep@mock.test', provider: 'mock' }).sendCallCount).toBe(1);
   });
 });
+
+/*
+ * Review finding F3 (deploy/WIRING.md §2): `actorId` used to come from the
+ * REQUEST BODY, so any caller could attribute a send to another user. The
+ * production composition root mounts auth globally, which sets `request.actor`;
+ * these pin that the principal — never the payload — decides attribution.
+ */
+describe('POST /api/v1/emails/send — actor attribution (F3)', () => {
+  /** Mount the route behind a preHandler that fakes an authenticated principal. */
+  async function appAs(principalId: string): Promise<FastifyInstance> {
+    const authed = Fastify({ logger: false });
+    authed.addHook('preHandler', async (request) => {
+      request.actor = { id: principalId, type: 'user' };
+    });
+    registerEmailSendRoutes(authed, { db: ctx.db, providerFor, cipher });
+    await authed.ready();
+    return authed;
+  }
+
+  const body = (extra: Record<string, unknown> = {}): Record<string, unknown> => ({
+    accountId,
+    leadId: lead,
+    to: ['dana@acme.test'],
+    body: 'Hi',
+    ...extra,
+  });
+
+  test('a spoofed body actorId is refused — a caller cannot send AS someone else', async () => {
+    const other = await seedUser(ctx.db, { email: 'victim@example.com' });
+    const authed = await appAs(rep);
+    try {
+      const res = await authed.inject({
+        method: 'POST',
+        url: '/api/v1/emails/send',
+        payload: body({ actorId: other }),
+      });
+      expect(res.statusCode).toBe(403);
+      expect(res.json<{ error: { code: string } }>().error.code).toBe('FORBIDDEN');
+      // Nothing was sent on the victim's behalf.
+      expect(providerFor({ address: 'rep@mock.test', provider: 'mock' }).sendCallCount).toBe(0);
+    } finally {
+      await authed.close();
+    }
+  });
+
+  test('the principal attributes the send when the body omits actorId', async () => {
+    const authed = await appAs(rep);
+    try {
+      const res = await authed.inject({
+        method: 'POST',
+        url: '/api/v1/emails/send',
+        payload: body(),
+      });
+      expect(res.statusCode).toBe(200);
+      expect(
+        (await activitiesFor(ctx.db, lead)).filter((a) => a.type === 'email_sent'),
+      ).toHaveLength(1);
+    } finally {
+      await authed.close();
+    }
+  });
+
+  test('a body actorId equal to the principal still works (no regression)', async () => {
+    const authed = await appAs(rep);
+    try {
+      const res = await authed.inject({
+        method: 'POST',
+        url: '/api/v1/emails/send',
+        payload: body({ actorId: rep }),
+      });
+      expect(res.statusCode).toBe(200);
+    } finally {
+      await authed.close();
+    }
+  });
+
+  // failure path: with no principal AND no body actorId there is nobody to
+  // attribute to — refuse rather than invent one.
+  test('no principal and no body actorId is a validation error', async () => {
+    const res = await post(body());
+    expect(res.statusCode).toBe(400);
+    expect(res.json<{ error: { code: string } }>().error.code).toBe('VALIDATION_FAILED');
+  });
+});
