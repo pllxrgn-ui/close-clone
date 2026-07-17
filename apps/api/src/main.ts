@@ -31,6 +31,10 @@ import {
   registerSecurityHeaders,
 } from './observability/index.ts';
 import { requireAdmin, requireSession } from './auth/guards.ts';
+import { SessionCodec } from './auth/session/session.ts';
+import { OidcTxnCodec } from './auth/session/txn.ts';
+import { OidcClient } from './auth/oidc/index.ts';
+import { registerOidcAuthRoutes } from './auth/routes.ts';
 import type { SessionReader } from './auth/types.ts';
 import { registerDevAuthRoutes } from './dev/auth.ts';
 import { resolveCurrentUserId } from './dev/util.ts';
@@ -107,10 +111,12 @@ function buildSessionReader(config: AppConfig): SessionReader {
       return userId === null ? null : { userId };
     };
   }
-  // Real mode: the OIDC session cookie codec. Wired when OIDC config lands
-  // (HUMAN_TODO: OIDC_ISSUER/CLIENT_ID/CLIENT_SECRET) — see assertRealModeConfig,
-  // which refuses to boot rather than silently leaving the API unauthenticated.
-  throw new Error('real-mode session reader requires OIDC configuration');
+  // Real mode: the signed OIDC session cookie the login callback issued. Its
+  // `read` returns exactly the SessionReader shape (userId + optional sliding-
+  // renewal Set-Cookie the guard echoes). `secure` defaults on (TLS-terminated
+  // upstream, ARCHITECTURE §8).
+  const codec = new SessionCodec({ secret: config.sessionSecret });
+  return (request) => codec.read(request.headers.cookie);
 }
 
 /**
@@ -157,7 +163,23 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
   const probeQueue = new Queue('sequences', { connection });
 
   // ── Providers ─────────────────────────────────────────────────────────────
-  const registry = createProviderRegistry({ mockMode: config.mockMode });
+  // Gmail gates ONLY email/sequences-email — a missing account pauses that
+  // feature, never the boot (guide §1/§4.6). The eager registry throws in real
+  // mode without Gmail config, so build it only when configured; SSO, leads,
+  // pipeline etc. run without a Google account. The sender registry is lazy
+  // (throws per-send, not at construction), so it is always safe to build.
+  const gmailConfigured = config.mockMode || (env['GOOGLE_CLIENT_ID'] ?? '') !== '';
+  const gmail =
+    !config.mockMode && gmailConfigured
+      ? {
+          clientId: env['GOOGLE_CLIENT_ID']!,
+          clientSecret: env['GOOGLE_CLIENT_SECRET'] ?? '',
+          address: env['GMAIL_SENDER_ADDRESS'] ?? '',
+        }
+      : undefined;
+  const registry = gmailConfigured
+    ? createProviderRegistry({ mockMode: config.mockMode, ...(gmail ? { gmail } : {}) })
+    : null;
   const senderRegistry = createEmailSenderRegistry({ mockMode: config.mockMode });
   const cipher = new TokenCipher(config.sessionSecret);
 
@@ -204,6 +226,9 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
     url.startsWith('/wh/') ||
     url.startsWith('/healthz') ||
     url.startsWith('/api/v1/unsubscribe') ||
+    // The login/callback routes issue the session — they cannot require one.
+    url.startsWith('/api/v1/auth/login') ||
+    url.startsWith('/api/v1/auth/callback') ||
     (config.mockMode && url.startsWith('/api/v1/auth/dev-'));
 
   app.addHook('preHandler', async (request, reply) => {
@@ -214,6 +239,25 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
 
   if (config.mockMode) {
     registerDevAuthRoutes(app, { db, sessionSecret: config.sessionSecret });
+  } else {
+    // Real SSO: the login → IdP → callback flow that MINTS the session cookie
+    // the reader above reads. assertRealModeConfig already proved these env
+    // vars are present, so the non-null assertions are safe.
+    const oidcClient = new OidcClient({
+      issuer: env['OIDC_ISSUER']!,
+      clientId: env['OIDC_CLIENT_ID']!,
+      clientSecret: env['OIDC_CLIENT_SECRET']!,
+    });
+    const webOrigin = env['WEB_ORIGIN'] ?? env['PUBLIC_WEBHOOK_URL'] ?? '';
+    registerOidcAuthRoutes(app, {
+      db,
+      client: oidcClient,
+      session: new SessionCodec({ secret: config.sessionSecret }),
+      txn: new OidcTxnCodec({ secret: config.sessionSecret }),
+      redirectUri: `${webOrigin}/api/v1/auth/callback`,
+      postLoginRedirect: `${webOrigin}/inbox`,
+      loginErrorRedirect: `${webOrigin}/login`,
+    });
   }
 
   registerRoutes(app, {
@@ -221,14 +265,21 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
     emailSend: { providerFor: senderRegistry.providerFor, cipher },
     sequences: { queue, now: () => new Date() },
     unsubscribe: { secret: env['LIST_UNSUBSCRIBE_SECRET'] ?? config.sessionSecret },
-    email: {
-      db,
-      provider: registry.email,
-      cipher,
-      verifier: new MockGmailPushVerifier(),
-      redirectUri: `${env['PUBLIC_WEBHOOK_URL'] ?? ''}/api/v1/oauth/gmail/callback`,
-      providerName: config.mockMode ? 'mock' : 'gmail',
-    },
+    // Email sync routes only when a provider exists (mock, or real + Gmail
+    // configured). Absent → the routes are simply not mounted; the rest of the
+    // API is unaffected.
+    ...(registry !== null
+      ? {
+          email: {
+            db,
+            provider: registry.email,
+            cipher,
+            verifier: new MockGmailPushVerifier(),
+            redirectUri: `${env['PUBLIC_WEBHOOK_URL'] ?? ''}/api/v1/oauth/gmail/callback`,
+            providerName: config.mockMode ? 'mock' : 'gmail',
+          },
+        }
+      : {}),
     // F4: import is a bulk-write surface (multipart CSV → dry-run → commit) —
     // never leave it on its injected default. Guard + a real authenticated actor.
     imports: {
@@ -267,7 +318,7 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
       // this. It exists for the misconfigured case (a number set, credentials
       // missing): refuse loudly → the intent lands FAILED/provider_error with
       // this message, rather than a step silently disappearing.
-      provider: registry.telephony ?? {
+      provider: registry?.telephony ?? {
         sendSms: (): Promise<never> => {
           throw new Error('telephony provider not configured (TWILIO_* unset): cannot send SMS');
         },
