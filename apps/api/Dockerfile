@@ -20,12 +20,19 @@ FROM ${NODE_IMAGE} AS base
 ENV PNPM_HOME=/pnpm
 ENV PNPM_STORE_DIR=/pnpm/store
 ENV PATH=/pnpm:$PATH
+# COREPACK_DEFAULT_TO_LATEST=0: without it, corepack ignores the pinned version
+# above whenever it cannot see a `packageManager` field and downloads its own
+# "latest" (a pnpm 12 alpha), which broke `pnpm fetch` below. Pin, never drift.
+ENV COREPACK_DEFAULT_TO_LATEST=0
 RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 WORKDIR /app
 
 # ---- deps: warm the content-addressable store from the lockfile (cache layer) ----
 FROM base AS deps
-COPY pnpm-lock.yaml ./
+# package.json comes along for its `packageManager` pin — the lockfile alone
+# leaves corepack guessing (see COREPACK_DEFAULT_TO_LATEST above). It changes
+# about as rarely as the lockfile, so the cache layer is just as stable.
+COPY package.json pnpm-lock.yaml ./
 RUN pnpm fetch
 
 # ---- build: full install + the typecheck gate (fails the image on any TS error) ----

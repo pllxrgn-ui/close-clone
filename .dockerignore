@@ -1,0 +1,50 @@
+# Build-context excludes. Without this, `COPY . .` shipped the HOST's 302MB of
+# node_modules (built for Windows) into the image: pnpm then tried to wipe the
+# incompatible modules dir and aborted for want of a TTY, so the image never
+# built. Keep the context to sources + manifests; the image installs its own
+# dependencies from the frozen lockfile.
+
+# Dependencies — always reinstalled inside the image
+node_modules
+**/node_modules
+
+# Build output + caches
+dist
+**/dist
+build
+**/build
+.turbo
+**/.turbo
+*.tsbuildinfo
+**/*.tsbuildinfo
+coverage
+**/coverage
+.vite
+**/.vite
+
+# VCS + local tooling
+.git
+.github
+.gitignore
+.claude
+.vscode
+.idea
+
+# Secrets and local env — must never enter an image layer
+.env
+.env.*
+!.env.example
+deploy/.env
+
+# Test / dev artefacts
+e2e
+**/playwright-report
+**/test-results
+fixtures/out
+**/.tmp-imports
+deploy/backups
+
+# Docs (not needed at runtime; keep images lean)
+*.md
+docs
+!README.md
