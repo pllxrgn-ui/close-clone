@@ -36,31 +36,8 @@ function Glyph({
   );
 }
 
-/** The wordmark glyph — a patch panel of jacks (a switchboard). */
-export function BoardMark({ size = 20, className }: WelcomeIconProps): JSX.Element {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <rect x="3" y="3" width="18" height="18" rx="2.5" />
-      <circle cx="8" cy="9" r="1.15" fill="currentColor" stroke="none" />
-      <circle cx="12" cy="9" r="1.15" fill="currentColor" stroke="none" />
-      <circle cx="16" cy="9" r="1.15" fill="currentColor" stroke="none" />
-      <circle cx="8" cy="15" r="1.15" />
-      <circle cx="12" cy="15" r="1.15" />
-      <circle cx="16" cy="15" r="1.15" />
-    </svg>
-  );
-}
+/** The wordmark glyph — promoted to ui/ (the app top bar shares it); re-exported here. */
+export { BoardMark } from '../../ui/BoardMark.tsx';
 
 /** Phone handset (lucide "phone"). */
 export function PhoneIcon(props: WelcomeIconProps): JSX.Element {

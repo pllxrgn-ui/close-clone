@@ -1,7 +1,7 @@
 import type { JSX } from 'react';
 import { Link } from 'react-router-dom';
 import { VERSION } from '@switchboard/shared';
-import { BoltIcon } from '../../../../ui/icons.tsx';
+import { BoardMark } from '../../../../ui/BoardMark.tsx';
 import { ExternalLinkIcon } from '../../icons.tsx';
 
 /*
@@ -56,7 +56,7 @@ export function AboutSection(): JSX.Element {
 
         <div className="admin-about__cta">
           <Link to="/welcome" className="admin-about__link">
-            <BoltIcon size={15} />
+            <BoardMark size={15} />
             Open the product tour
             <ExternalLinkIcon size={14} />
           </Link>

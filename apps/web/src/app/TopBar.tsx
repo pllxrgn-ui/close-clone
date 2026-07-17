@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import type { User } from '@switchboard/shared';
 import { initials } from '../lib/format.ts';
 import { Kbd } from '../ui/index.ts';
-import { BoltIcon, CommandIcon, SearchIcon } from '../ui/icons.tsx';
+import { BoardMark } from '../ui/BoardMark.tsx';
+import { CommandIcon, SearchIcon } from '../ui/icons.tsx';
 import { KbdCombo } from '../keyboard/index.ts';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import { ThemeToggle } from './ThemeToggle.tsx';
@@ -22,7 +23,7 @@ export function TopBar({ searchRef, onOpenPalette }: TopBarProps): JSX.Element {
   return (
     <header className="sb-topbar">
       <div className="sb-topbar__brand">
-        <BoltIcon size={18} />
+        <BoardMark size={18} />
         <span className="sb-topbar__org">Switchboard</span>
         <span
           className="sb-topbar__demo"

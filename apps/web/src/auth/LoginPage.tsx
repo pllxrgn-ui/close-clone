@@ -6,7 +6,7 @@ import { useAuth } from './AuthProvider.tsx';
 import { listDevUsers } from './devAuth.ts';
 import { initials } from '../lib/format.ts';
 import { Spinner } from '../ui/index.ts';
-import { BoltIcon } from '../ui/icons.tsx';
+import { BoardMark } from '../ui/BoardMark.tsx';
 
 interface LocationState {
   from?: string;
@@ -40,7 +40,7 @@ export function LoginPage(): JSX.Element {
     <main className="sb-login">
       <div className="sb-login__card">
         <div className="sb-login__brand">
-          <BoltIcon size={20} />
+          <BoardMark size={20} />
           <span>Switchboard</span>
         </div>
         <h1 className="sb-login__title">Sign in</h1>
