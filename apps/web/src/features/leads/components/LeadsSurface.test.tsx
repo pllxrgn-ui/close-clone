@@ -172,6 +172,39 @@ describe('LeadsSurface — Smart View selection', () => {
   });
 });
 
+describe('LeadsSurface — partial-scope honesty (audit #3)', () => {
+  // Sort/filter operate on loaded rows; with pages still unfetched the UI must
+  // say so rather than imply a whole-dataset ordering.
+  test('filtering while more pages exist shows the partial-scope note', async () => {
+    useReferenceHandlers();
+    const pageOne = Array.from({ length: 100 }, (_, i) =>
+      makeLead({ name: `Lead ${String(i + 1).padStart(3, '0')}` }),
+    );
+    server.use(
+      http.get(api('/leads'), ({ request }) => {
+        const cursor = new URL(request.url).searchParams.get('cursor');
+        if (cursor) return HttpResponse.json({ items: [makeLead({ name: 'Tail Lead' })] });
+        return HttpResponse.json({ items: pageOne, nextCursor: 'page-2' });
+      }),
+    );
+
+    renderAt('/leads?q=lead');
+    await screen.findByText('Lead 001');
+    expect(await screen.findByText(/loaded leads — scroll to load the rest/)).toBeInTheDocument();
+  });
+
+  // failure path: a fully-loaded list must NOT carry the partial disclaimer
+  test('no partial-scope note once every page is loaded', async () => {
+    useReferenceHandlers();
+    server.use(
+      http.get(api('/leads'), () => HttpResponse.json({ items: [makeLead({ name: 'Only One' })] })),
+    );
+    renderAt('/leads?q=only');
+    await screen.findByText('Only One');
+    expect(screen.queryByText(/loaded leads — scroll/)).toBeNull();
+  });
+});
+
 describe('LeadsSurface — filter, selection, reduced motion', () => {
   test('the filter narrows loaded rows and can be cleared', async () => {
     useReferenceHandlers();

@@ -215,6 +215,15 @@
   background: var(--surface-2);
 }
 
+/* Partial-scope note — sort/filter honesty while pages remain unfetched. */
+.leads-partial-note {
+  margin: 0;
+  padding: var(--space-2) var(--space-5);
+  border-bottom: 1px solid var(--border-0);
+  color: var(--ink-2);
+  font-size: var(--fs-micro);
+}
+
 .leads-content {
   flex: 1;
   min-height: 0;

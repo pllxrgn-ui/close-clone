@@ -167,6 +167,15 @@ export function LeadsSurface({ viewId }: LeadsSurfaceProps): JSX.Element {
   const countEstimate = viewId ? previewQuery.data?.countEstimate : undefined;
   const viewName = viewId ? (activeView?.name ?? 'View') : 'All leads';
 
+  // Sort + filter operate on LOADED rows only. When more pages exist, say so
+  // plainly instead of letting the header imply a whole-dataset sort — the
+  // "top deal" of a partial window is not the top deal (audit #3, scoped
+  // honestly rather than moving sort server-side, which would also narrow the
+  // filter: the server's q matches name only, this filter matches
+  // name/description/status/owner).
+  const partialScope =
+    viewId === null && allLeadsQuery.hasNextPage === true && (sort !== null || q.trim() !== '');
+
   return (
     <div className="leads-surface" data-reduced-motion={reducedMotion ? 'true' : undefined}>
       <SmartViewsSidebar
@@ -221,6 +230,13 @@ export function LeadsSurface({ viewId }: LeadsSurfaceProps): JSX.Element {
             ) : null}
           </div>
         </header>
+
+        {partialScope ? (
+          <p className="leads-partial-note" role="status">
+            Sorted and filtered within the {rows.length.toLocaleString('en-US')} loaded leads —
+            scroll to load the rest.
+          </p>
+        ) : null}
 
         <div className="leads-content">
           {dataError ? (
