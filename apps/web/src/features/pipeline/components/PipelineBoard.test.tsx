@@ -74,8 +74,9 @@ const LEADS = [
 ];
 const USERS = [{ id: 'u1', name: 'Dana Owner', email: 'dana@x.test', isActive: true }];
 
-function renderBoard() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function renderBoard(
+  client: QueryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+) {
   return render(
     <QueryClientProvider client={client}>
       <KeyboardProvider>
@@ -147,6 +148,37 @@ describe('PipelineBoard — render', () => {
     renderBoard();
     const overdue = await screen.findByRole('listitem', { name: /Umbrella Freight/ });
     expect(overdue.querySelector('.pl-card__date.is-overdue')).not.toBeNull();
+  });
+});
+
+describe('PipelineBoard — lead-name resolution (caching)', () => {
+  // The lead-name join drains every page of GET /leads to label cards. That
+  // drain is ~25 serial round-trips at 5k leads; with default query freshness it
+  // re-ran on EVERY board mount (and window focus). It must run once per session
+  // and then serve from cache — otherwise the board's biggest network cost repeats
+  // on every navigation back to it.
+  test('resolves lead names once and serves the rest from cache across remounts', async () => {
+    let leadsCalls = 0;
+    server.use(
+      ...pipelineHandlers,
+      http.get(api('/leads'), () => {
+        leadsCalls += 1;
+        return HttpResponse.json({ items: LEADS });
+      }),
+      http.get(api('/users'), () => HttpResponse.json(USERS)),
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    const { unmount } = renderBoard(client);
+    await screen.findByRole('listitem', { name: /Acme Robotics/ });
+    expect(leadsCalls).toBe(1);
+
+    unmount();
+
+    renderBoard(client);
+    // Names render immediately from cache — no second drain on remount.
+    expect(await screen.findByRole('listitem', { name: /Acme Robotics/ })).toBeInTheDocument();
+    expect(leadsCalls).toBe(1);
   });
 });
 

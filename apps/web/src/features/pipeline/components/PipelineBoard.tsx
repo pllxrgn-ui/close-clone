@@ -68,9 +68,17 @@ export function PipelineBoard(): JSX.Element {
     queryKey: STAGES_KEY,
     queryFn: ({ signal }) => listOpportunityStages(signal),
   });
+  // Lead names label the cards. Resolving them drains every page of GET /leads
+  // (~25 serial round-trips at 5k leads — the board's biggest network cost). It
+  // is the same id→name map for the whole session, so cache it hard: fetch once,
+  // then serve from cache on every remount/refocus instead of re-draining. (The
+  // ideal — resolving names for only the ~30 rendered cards/column — needs a
+  // batch `GET /leads?ids=` the contract doesn't offer yet; see the report.)
   const leadNamesQuery = useQuery({
     queryKey: LEAD_NAMES_KEY,
     queryFn: ({ signal }) => fetchLeadNames(signal),
+    staleTime: Infinity,
+    gcTime: Infinity,
   });
   const usersQuery = useQuery({ queryKey: USERS_KEY, queryFn: () => listUsers() });
 

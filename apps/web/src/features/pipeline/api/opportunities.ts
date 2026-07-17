@@ -36,6 +36,13 @@ export function listOpportunityStages(signal?: AbortSignal): Promise<Opportunity
  * Lead id → name, joined client-side (the board shows the company on each card).
  * The real API returns opportunities without a lead label, so the UI resolves it
  * from `GET /leads` exactly as it will against Postgres.
+ *
+ * This drains the keyset cursor to completion — ~25 serial round-trips at 5k
+ * leads — because `GET /leads` offers no id-set filter and no total count, so the
+ * page walk cannot be scoped to the rendered cards nor parallelized. The caller
+ * caches the result for the whole session (staleTime/gcTime Infinity) so the
+ * drain runs once, not on every board mount. A batch `GET /leads?ids=` would let
+ * this resolve only the ~30 rendered cards/column instead; see the task report.
  */
 export async function fetchLeadNames(signal?: AbortSignal): Promise<Map<string, string>> {
   const names = new Map<string, string>();
