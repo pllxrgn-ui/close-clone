@@ -28,28 +28,38 @@ export async function fetchAllOpportunities(signal?: AbortSignal): Promise<Oppor
   return out;
 }
 
+/** GET /leads?ids= batch cap — mirrors the route's MAX_LIMIT (CONTRACTS 1.3.3). */
+const LEAD_IDS_BATCH = 200;
+
 /**
- * Lead id → name, joined client-side (the board shows the company on each card).
- * The real API returns opportunities without a lead label, so the UI resolves it
- * from `GET /leads` exactly as it will against Postgres.
- *
- * This drains the keyset cursor to completion — ~25 serial round-trips at 5k
- * leads — because `GET /leads` offers no id-set filter and no total count, so the
- * page walk cannot be scoped to the rendered cards nor parallelized. The caller
- * caches the result for the whole session (staleTime/gcTime Infinity) so the
- * drain runs once, not on every board mount. A batch `GET /leads?ids=` would let
- * this resolve only the ~30 rendered cards/column instead; see the task report.
+ * Lead id → name for exactly the given ids, via the batch `GET /leads?ids=`
+ * filter (CONTRACTS 1.3.3) — the board resolves names for its RENDERED cards
+ * only, instead of the historical full-cursor drain of every lead in the org.
+ * Batches of 200 fetch in parallel; ids the server no longer knows (deleted
+ * leads) are simply absent and render the caller's 'Unknown lead' fallback.
  */
-export async function fetchLeadNames(signal?: AbortSignal): Promise<Map<string, string>> {
+export async function fetchLeadNames(
+  leadIds: Iterable<string>,
+  signal?: AbortSignal,
+): Promise<Map<string, string>> {
+  const ids = [...new Set(leadIds)];
   const names = new Map<string, string>();
-  let cursor: string | undefined;
-  do {
-    const query: Record<string, string | number | undefined> = { limit: OPPORTUNITIES_PAGE };
-    if (cursor !== undefined) query.cursor = cursor;
-    const page = await apiRequest<Page<Lead>>('/leads', { query, ...(signal ? { signal } : {}) });
+  if (ids.length === 0) return names;
+  const batches: string[][] = [];
+  for (let i = 0; i < ids.length; i += LEAD_IDS_BATCH) {
+    batches.push(ids.slice(i, i + LEAD_IDS_BATCH));
+  }
+  const pages = await Promise.all(
+    batches.map((batch) =>
+      apiRequest<Page<Lead>>('/leads', {
+        query: { ids: batch.join(','), limit: LEAD_IDS_BATCH },
+        ...(signal ? { signal } : {}),
+      }),
+    ),
+  );
+  for (const page of pages) {
     for (const lead of page.items) names.set(lead.id, lead.name);
-    cursor = page.nextCursor;
-  } while (cursor !== undefined);
+  }
   return names;
 }
 

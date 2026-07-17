@@ -361,6 +361,43 @@ describe('PipelineBoard — bounded rendering (large real datasets)', () => {
     expect(screen.queryByRole('button', { name: /Show all/ })).toBeNull();
   });
 
+  // CONTRACTS 1.3.3: names resolve via GET /leads?ids= for RENDERED cards only;
+  // expanding a column fetches exactly the newly revealed ids, once.
+  test('name resolution requests only rendered leadIds; expanding fetches the delta', async () => {
+    const { opps, leads } = crowd(COLUMN_RENDER_CAP + 5);
+    resetStore({ opportunities: [...opps], stages: STAGES });
+    const urls: string[] = [];
+    server.use(
+      ...pipelineHandlers,
+      http.get(api('/leads'), ({ request }) => {
+        urls.push(request.url);
+        // Honor the ids filter like the real route — otherwise every name
+        // resolves on batch one and there is no delta left to observe.
+        const wanted = new Set(
+          (new URL(request.url).searchParams.get('ids') ?? '').split(',').filter(Boolean),
+        );
+        return HttpResponse.json({ items: leads.filter((l) => wanted.has(l.id)) });
+      }),
+      http.get(api('/users'), () => HttpResponse.json(USERS)),
+    );
+    const idsOf = (url: string): string[] =>
+      (new URL(url).searchParams.get('ids') ?? '').split(',').filter(Boolean);
+
+    renderBoard();
+    await screen.findByRole('listitem', { name: /Crowd 001/ });
+    expect(urls).toHaveLength(1);
+    expect(idsOf(urls[0] ?? '')).toHaveLength(COLUMN_RENDER_CAP);
+
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: `Show all ${COLUMN_RENDER_CAP + 5} deals in Discovery`,
+      }),
+    );
+    await screen.findByRole('listitem', { name: /Crowd 035/ });
+    await waitFor(() => expect(urls).toHaveLength(2));
+    expect(idsOf(urls[1] ?? '')).toHaveLength(5);
+  });
+
   test('a keyboard move into a crowded column keeps the moved card rendered and focused', async () => {
     // Tiny deal in Proposal sorts dead-last in Discovery after the move.
     const tinyOpp = mkOpp('tiny', 'l-tiny', 's-prop', 'USD', 1, 10, '2026-09-01');

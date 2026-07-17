@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, isNull, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, ilike, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 
 import { activities, leads, leadStatuses, users, type Db } from '../../db/index.ts';
 import { recordActivity } from '../activity/index.ts';
@@ -170,6 +170,8 @@ export interface ListLeadsParams {
   ownerId?: string;
   /** Optional case-insensitive substring filter on name. */
   q?: string;
+  /** Batch id filter (≤ MAX_LIMIT ids) — label/name resolution without draining. */
+  ids?: string[];
   cursor?: CursorParts;
   limit?: number;
 }
@@ -182,6 +184,9 @@ export async function listLeads(db: Db, params: ListLeadsParams): Promise<Page<L
   if (params.ownerId !== undefined) conds.push(eq(leads.ownerId, params.ownerId));
   if (params.q !== undefined && params.q.length > 0) {
     conds.push(ilike(leads.name, `%${params.q}%`));
+  }
+  if (params.ids !== undefined && params.ids.length > 0) {
+    conds.push(inArray(leads.id, params.ids));
   }
   if (params.cursor !== undefined) {
     conds.push(

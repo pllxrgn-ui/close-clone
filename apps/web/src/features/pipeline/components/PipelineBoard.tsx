@@ -24,7 +24,6 @@ import { useCardDrag } from './useCardDrag.ts';
 import { usePipelineKeyboard } from './usePipelineKeyboard.ts';
 
 const OPPS_KEY = ['pipeline', 'opportunities'] as const;
-const LEAD_NAMES_KEY = ['pipeline', 'lead-names'] as const;
 
 const FLASH_MS = 600;
 const EMPTY_OPPS: Opportunity[] = [];
@@ -61,18 +60,6 @@ export function PipelineBoard(): JSX.Element {
     queryFn: ({ signal }) => fetchAllOpportunities(signal),
   });
   const stagesQuery = useQuery(opportunityStagesQuery());
-  // Lead names label the cards. Resolving them drains every page of GET /leads
-  // (~25 serial round-trips at 5k leads — the board's biggest network cost). It
-  // is the same id→name map for the whole session, so cache it hard: fetch once,
-  // then serve from cache on every remount/refocus instead of re-draining. (The
-  // ideal — resolving names for only the ~30 rendered cards/column — needs a
-  // batch `GET /leads?ids=` the contract doesn't offer yet; see the report.)
-  const leadNamesQuery = useQuery({
-    queryKey: LEAD_NAMES_KEY,
-    queryFn: ({ signal }) => fetchLeadNames(signal),
-    staleTime: Infinity,
-    gcTime: Infinity,
-  });
   const usersQuery = useQuery(usersQueryOptions());
 
   const opps = oppsQuery.data ?? EMPTY_OPPS;
@@ -88,18 +75,6 @@ export function PipelineBoard(): JSX.Element {
   const expandColumn = useCallback((stageId: string): void => {
     setExpandedCols((prev) => new Set(prev).add(stageId));
   }, []);
-
-  const leadNameOf = useCallback(
-    (leadId: string): string => leadNamesQuery.data?.get(leadId) ?? 'Unknown lead',
-    [leadNamesQuery.data],
-  );
-  const ownerNameOf = useCallback(
-    (ownerId: string | null): string | null => {
-      if (!ownerId) return null;
-      return usersQuery.data?.find((u) => u.id === ownerId)?.name ?? null;
-    },
-    [usersQuery.data],
-  );
 
   // ── Focus / active card (roving tabindex) ──────────────────────────────────
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -125,6 +100,52 @@ export function PipelineBoard(): JSX.Element {
     }
     return map;
   }, [board, expandedCols, effectiveActiveId]);
+
+  // ── Lead-name resolution — RENDERED cards only (CONTRACTS 1.3.3 ids batch) ─
+  // Names accumulate in a monotonic session cache; expanding a column fetches
+  // only the ids not yet resolved. The missing-set is computed one render
+  // behind the merge below, but a repeated signature is served from the query
+  // cache (staleTime Infinity), so no duplicate network ever fires.
+  const namesCacheRef = useRef(new Map<string, string>());
+  const missingLeadIds = useMemo(() => {
+    const missing = new Set<string>();
+    for (const cards of visibleByStage.values()) {
+      for (const card of cards) {
+        if (!namesCacheRef.current.has(card.leadId)) missing.add(card.leadId);
+      }
+    }
+    return [...missing].sort();
+    // The cache's size is a legitimate dep: batches landing below shrink this
+    // set on the following render, disabling the query once nothing is missing.
+  }, [visibleByStage, namesCacheRef.current.size]);
+
+  const leadNamesQuery = useQuery({
+    queryKey: ['pipeline', 'lead-names', missingLeadIds.join(',')] as const,
+    queryFn: ({ signal }) => fetchLeadNames(missingLeadIds, signal),
+    enabled: missingLeadIds.length > 0,
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
+  const leadNames = useMemo(() => {
+    // Idempotent monotonic merge — safe under StrictMode double-invocation.
+    if (leadNamesQuery.data) {
+      for (const [id, name] of leadNamesQuery.data) namesCacheRef.current.set(id, name);
+    }
+    return new Map(namesCacheRef.current);
+  }, [leadNamesQuery.data]);
+
+  const leadNameOf = useCallback(
+    (leadId: string): string => leadNames.get(leadId) ?? 'Unknown lead',
+    [leadNames],
+  );
+  const usersById = useMemo(
+    () => new Map((usersQuery.data ?? []).map((u) => [u.id, u.name])),
+    [usersQuery.data],
+  );
+  const ownerNameOf = useCallback(
+    (ownerId: string | null): string | null => (ownerId ? (usersById.get(ownerId) ?? null) : null),
+    [usersById],
+  );
 
   const cardRefs = useRef(new Map<string, HTMLLIElement>());
   const refSetters = useRef(new Map<string, (el: HTMLLIElement | null) => void>());

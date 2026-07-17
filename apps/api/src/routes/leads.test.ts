@@ -105,6 +105,27 @@ describe('GET /api/v1/leads', () => {
     expect(ids).not.toContain(L_DELETED);
   });
 
+  // CONTRACTS 1.3.3: batch id filter — label resolution without draining the list.
+  test('filters by a comma-separated ids batch', async () => {
+    const res = await app.inject({ method: 'GET', url: `/api/v1/leads?ids=${P1},${P3}` });
+    expect(res.statusCode).toBe(200);
+    const body = res.json<{ items: { id: string }[] }>();
+    expect(new Set(body.items.map((l) => l.id))).toEqual(new Set([P1, P3]));
+  });
+
+  test('ids batch still excludes soft-deleted leads', async () => {
+    const res = await app.inject({ method: 'GET', url: `/api/v1/leads?ids=${P1},${L_DELETED}` });
+    const ids = res.json<{ items: { id: string }[] }>().items.map((l) => l.id);
+    expect(ids).toEqual([P1]);
+  });
+
+  // failure path: a non-uuid entry in the batch is a validation error, not a 500
+  test('malformed ids entry → 400 VALIDATION_FAILED', async () => {
+    const res = await app.inject({ method: 'GET', url: `/api/v1/leads?ids=${P1},not-a-uuid` });
+    expect(res.statusCode).toBe(400);
+    expect(res.json<{ error: { code: string } }>().error.code).toBe('VALIDATION_FAILED');
+  });
+
   test('the Lead DTO carries ISO timestamps and no search columns', async () => {
     const res = await app.inject({ method: 'GET', url: `/api/v1/leads?ownerId=${PAGER}&limit=1` });
     const first = res.json<{ items: Record<string, unknown>[] }>().items[0];

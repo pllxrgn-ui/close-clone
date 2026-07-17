@@ -103,9 +103,15 @@ export const handlers = [
     const url = new URL(request.url);
     const statusId = url.searchParams.get('statusId');
     const ownerId = url.searchParams.get('ownerId');
+    const idsRaw = url.searchParams.get('ids');
     let items = db.leads;
     if (statusId) items = items.filter((l) => l.statusId === statusId);
     if (ownerId) items = items.filter((l) => l.ownerId === ownerId);
+    // CONTRACTS 1.3.3: comma-separated batch id filter (label resolution).
+    if (idsRaw) {
+      const ids = new Set(idsRaw.split(','));
+      items = items.filter((l) => ids.has(l.id));
+    }
     return HttpResponse.json(keysetPage(items, url.searchParams));
   }),
 

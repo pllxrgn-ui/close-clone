@@ -44,6 +44,13 @@ const listQuerySchema = z.object({
   statusId: z.string().uuid().optional(),
   ownerId: z.string().uuid().optional(),
   q: z.string().optional(),
+  /** Comma-separated uuid batch (≤ MAX_LIMIT) — name resolution without draining. */
+  ids: z
+    .string()
+    .min(1)
+    .transform((raw) => raw.split(','))
+    .pipe(z.array(z.string().uuid()).min(1).max(MAX_LIMIT))
+    .optional(),
   cursor: z.string().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(MAX_LIMIT).optional(),
 });
@@ -102,11 +109,12 @@ export function registerLeadRoutes(app: FastifyInstance, deps: LeadRouteDeps): v
     if (!parsed.success) {
       return sendError(reply, 'VALIDATION_FAILED', 'invalid leads query', parsed.error.flatten());
     }
-    const { statusId, ownerId, q, cursor: cursorRaw, limit } = parsed.data;
+    const { statusId, ownerId, q, ids, cursor: cursorRaw, limit } = parsed.data;
     const params: ListLeadsParams = {};
     if (statusId !== undefined) params.statusId = statusId;
     if (ownerId !== undefined) params.ownerId = ownerId;
     if (q !== undefined) params.q = q;
+    if (ids !== undefined) params.ids = ids;
     if (limit !== undefined) params.limit = limit;
     if (cursorRaw !== undefined) {
       const cursor = decodeLeadCursor(cursorRaw);
