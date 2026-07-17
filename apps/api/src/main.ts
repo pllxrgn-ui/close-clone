@@ -35,6 +35,13 @@ import {
   registerSecurityHeaders,
 } from './observability/index.ts';
 import { requireAdmin, requireSession } from './auth/guards.ts';
+import {
+  TokenService,
+  PostgresRateLimiter,
+  createBearerAuthPreHandler,
+} from './services/tokens/index.ts';
+import { registerAdminTokenRoutes } from './routes/admin-tokens.ts';
+import { registerWebhookSubscriptionRoutes } from './routes/webhook-subscriptions.ts';
 import { SessionCodec } from './auth/session/session.ts';
 import { OidcTxnCodec } from './auth/session/txn.ts';
 import { OidcClient } from './auth/oidc/index.ts';
@@ -226,6 +233,20 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
   const sessionGuard = requireSession({ db, readSession });
   const adminGuard: preHandlerHookHandler = requireAdmin({ db, readSession });
 
+  // Internal API: other internal systems authenticate with a Bearer TOKEN
+  // instead of a session cookie. The token pre-handler does hash lookup + scope
+  // + Postgres fixed-window rate limit (no Redis), and decorates request.apiToken.
+  // Scope is derived from the route so a read token cannot mutate (I-RAIL-API):
+  // reports → read:reports, other GET → read:leads, anything mutating →
+  // write:leads. A write scope is permission to ASK the engine, never to bypass
+  // a compliance rail (those re-check inside the send/dial transaction).
+  const tokenService = new TokenService(db);
+  const rateLimiter = new PostgresRateLimiter(db);
+  const bearerDeps = { db, tokens: tokenService, rateLimiter };
+  const bearerRead = createBearerAuthPreHandler(bearerDeps, { scope: 'read:leads' });
+  const bearerWrite = createBearerAuthPreHandler(bearerDeps, { scope: 'write:leads' });
+  const bearerReports = createBearerAuthPreHandler(bearerDeps, { scope: 'read:reports' });
+
   const EXEMPT = (url: string): boolean =>
     url.startsWith('/wh/') ||
     url.startsWith('/healthz') ||
@@ -235,9 +256,25 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
     url.startsWith('/api/v1/auth/callback') ||
     (config.mockMode && url.startsWith('/api/v1/auth/dev-'));
 
+  const hasBearer = (request: { headers: Record<string, unknown> }): boolean => {
+    const h = request.headers['authorization'];
+    return typeof h === 'string' && h.startsWith('Bearer ');
+  };
+
   app.addHook('preHandler', async (request, reply) => {
     if (!request.url.startsWith('/api/v1/')) return;
     if (EXEMPT(request.url)) return;
+    if (hasBearer(request)) {
+      // The admin/* surface stays session-only (requireAdmin needs a session
+      // user); a token cannot reach it — a deliberately safe limitation.
+      const guard = request.url.startsWith('/api/v1/reports')
+        ? bearerReports
+        : request.method === 'GET' || request.method === 'HEAD'
+          ? bearerRead
+          : bearerWrite;
+      await guard.call(app, request, reply, () => undefined);
+      return;
+    }
     await sessionGuard.call(app, request, reply, () => undefined);
   });
 
@@ -321,6 +358,17 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
       ? { ai: { asr: registry.asr, ai: registry.ai, now: () => new Date() } }
       : {}),
   });
+
+  // Admin CRUD for the internal API's own credentials: issue/revoke API tokens
+  // and manage outbound webhook subscriptions. Admin-guarded (session-only),
+  // so a token cannot mint or escalate tokens. The acting admin is the session
+  // user (created_by / audit actor).
+  registerAdminTokenRoutes(app, {
+    db,
+    adminGuard,
+    resolveActorId: (request) => request.user?.id ?? null,
+  });
+  registerWebhookSubscriptionRoutes(app, { db, adminGuard });
 
   // ── Sequence worker: CONSUME the queue, then keep it fed ──────────────────
   // `processIntent` re-checks every rail (reply/bounce/suppression/window/cap)
