@@ -122,8 +122,13 @@
 .pl-col {
   display: flex;
   flex-direction: column;
-  flex: 0 0 288px;
-  width: 288px;
+  /* Stretch to share the board's width instead of leaving dead air to the
+   * right of a fixed 288px track — but never below 288px, so a workspace with
+   * many stages still scrolls horizontally rather than crushing its cards.
+   * The cap keeps a two-stage board from ballooning into absurd columns. */
+  flex: 1 1 288px;
+  min-width: 288px;
+  max-width: 480px;
   min-height: 0;
   background: var(--panel);
   border: 1px solid var(--line);

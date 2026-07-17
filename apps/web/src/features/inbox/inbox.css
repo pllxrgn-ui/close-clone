@@ -8,7 +8,9 @@
 
 .sb-inbox {
   padding: var(--space-6) var(--space-7) var(--space-10);
-  max-width: 1080px;
+  /* No max-width: the queue is a data surface — it fills the window so the
+   * subject line gets the room, instead of stranding a third of a wide
+   * display. (Prose surfaces still cap their measure; see .sb-help.) */
 }
 
 /* ── Header strip ─────────────────────────────────────────────────────────── */

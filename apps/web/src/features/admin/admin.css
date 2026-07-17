@@ -84,7 +84,11 @@
 
 /* ── Section scaffolding ──────────────────────────────────────────────────── */
 .admin-section {
-  max-width: 900px;
+  /* Sections are mostly TABLES (users, custom fields, templates), so they fill
+   * the window like every other data surface. The prose bits below keep their
+   * own measure; the create/edit forms are grids that simply flow into more
+   * columns as the space grows. */
+  max-width: none;
 }
 .admin-section__head {
   margin-bottom: var(--space-6);

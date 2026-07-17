@@ -236,6 +236,12 @@
 }
 .sb-rail__label {
   flex: 1;
+  min-width: 0;
+  /* One line, always: the chord hint reserves its width even while hidden, so
+   * a long label would otherwise wrap and break the 36px row rhythm. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .sb-rail__kbd {
   opacity: 0;
@@ -305,7 +311,8 @@
 }
 .sb-page {
   padding: var(--space-6) var(--space-7);
-  max-width: 1180px;
+  /* Full-bleed by default — a page that needs a reading measure caps its own
+   * prose (see .sb-help), rather than every surface paying for it. */
 }
 .sb-page__head {
   display: flex;
@@ -472,11 +479,23 @@
 }
 
 /* ── Support & FAQs ──────────────────────────────────────────────────────── */
+/* Prose can't simply stretch — a 1,700px line is unreadable, and the law caps
+ * body measure at ~65ch. So the page fills the window by COLUMNS instead: each
+ * track is one readable measure wide, and wide displays get more tracks rather
+ * than dead air. One column on narrow screens. */
 .sb-help {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-8);
-  max-width: 68ch; /* prose measure — this page is read, not scanned */
+  display: grid;
+  /* NB: html sets font-size:13px, so 1rem = 13px here — 24rem ≈ 312px. That
+   * min lets 1280/1440/1920 land on 3–4 tracks of ~48–59ch: full width, every
+   * line inside the measure. */
+  grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
+  align-items: start;
+  gap: var(--space-7) var(--space-9);
+}
+/* Below ~960px only one track fits, and a lone track would run to ~99ch. The
+ * measure wins there: readability beats filling the last few hundred px. */
+.sb-help__section {
+  max-width: 65ch;
 }
 .sb-help__section-title {
   margin: 0 0 var(--space-3);

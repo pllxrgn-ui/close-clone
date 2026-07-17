@@ -109,7 +109,7 @@
   --control-h-lg: 36px;
   --row-h: 36px; /* law: dense 36px rows */
   --topbar-h: 44px;
-  --rail-w: 208px;
+  --rail-w: 232px; /* fits the longest label ("Support & FAQs") beside its g-chord hint */
   --rail-w-collapsed: 48px; /* icon-only rail (48 = 16px glyph + hit target) */
 
   /* ── Radius — 2px controls / 0 panels + rows ─────────────────────────────── */
