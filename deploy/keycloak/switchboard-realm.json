@@ -1,0 +1,86 @@
+{
+  "realm": "switchboard",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "groups": [{ "name": "sales-crm-users" }, { "name": "sales-crm-admins" }],
+  "clientScopes": [
+    {
+      "name": "switchboard-groups",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "groups",
+            "full.path": "false",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "switchboard",
+      "name": "Switchboard",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "switchboard-dev-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": [
+        "http://localhost:8080/api/v1/auth/callback",
+        "http://localhost:3000/api/v1/auth/callback"
+      ],
+      "webOrigins": ["http://localhost:8080", "http://localhost:3000"],
+      "defaultClientScopes": [
+        "web-origins",
+        "profile",
+        "roles",
+        "email",
+        "switchboard-groups"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "rep",
+      "email": "rep@switchboard.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Reese",
+      "lastName": "Rep",
+      "credentials": [{ "type": "password", "value": "rep", "temporary": false }],
+      "groups": ["/sales-crm-users"]
+    },
+    {
+      "username": "ada",
+      "email": "ada@switchboard.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Ada",
+      "lastName": "Admin",
+      "credentials": [{ "type": "password", "value": "ada", "temporary": false }],
+      "groups": ["/sales-crm-users", "/sales-crm-admins"]
+    },
+    {
+      "username": "nomember",
+      "email": "nomember@switchboard.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "No",
+      "lastName": "Groups",
+      "credentials": [{ "type": "password", "value": "nomember", "temporary": false }],
+      "groups": []
+    }
+  ]
+}

@@ -280,6 +280,52 @@ services:
           cpus: '1.0'
           memory: 512M
 
+  # ---------------------------------------------------------------------------
+  # Keycloak — a REAL OIDC issuer for proving real-mode SSO with ZERO external
+  # accounts (profile `keycloak`, OFF by default). Imports the `switchboard`
+  # realm on boot: an OIDC confidential client, the sales-crm-users/admins
+  # groups, a protocol mapper emitting `groups` as NAMES into the id token
+  # (what auth/rbac.ts requires), and three test users (rep / ada / nomember).
+  #
+  # KC_HOSTNAME pins the issuer so the discovery `issuer` is identical from the
+  # browser and from the api — the api's id-token check is an EXACT match
+  # (auth/oidc/id-token.ts issuer_mismatch). Swap this whole block for your
+  # company IdP by setting OIDC_* in .env; nothing in the app changes.
+  #
+  # SECRET_KEY-style `:?` guards are avoided (see glitchtip note above) so this
+  # profile-off service never blocks `docker compose up` for the default stack.
+  # ---------------------------------------------------------------------------
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    profiles: ['keycloak']
+    command: ['start-dev', '--import-realm', '--http-port=8081']
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_HTTP_ENABLED: 'true'
+      KC_HOSTNAME_STRICT: 'false'
+      # Stable issuer for the local proof (browser + api both use localhost:8081).
+      KC_HOSTNAME: http://localhost:8081
+    ports:
+      - '127.0.0.1:8081:8081'
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import:ro
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          "exec 3<>/dev/tcp/127.0.0.1/8081 && printf 'GET /realms/switchboard/.well-known/openid-configuration HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q switchboard <&3",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 768M
+
 # Named volumes: DB data, a SEPARATE WAL-archive volume (PITR base), and Redis AOF.
 volumes:
   pgdata:
