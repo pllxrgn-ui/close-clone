@@ -20,6 +20,10 @@ import { ImportStorage } from './services/imports/storage.ts';
 import { sweepDueIntents } from './services/sequences/sweeper.ts';
 import { processIntent } from './services/sequences/dispatch.ts';
 import { SEND_JOB_NAME } from './services/sequences/job-names.ts';
+import { handleTelephonyJob, TWILIO_PROCESS_JOB } from './services/telephony/worker.ts';
+import { processPendingTwilioWebhooks } from './services/telephony/process.ts';
+import { SignatureTwilioVerifier } from './services/telephony/ingress.ts';
+import { MOCK_TWILIO_AUTH_TOKEN } from './providers/telephony/twilio-signature.ts';
 import {
   buildLogController,
   buildLoggerOptions,
@@ -291,6 +295,31 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
     adminExport: { adminGuard },
     adminCrud: { adminGuard },
     inbox: { queue },
+    // Telephony (click-to-call, /wh/twilio ingress) + AI (summaries, drafting,
+    // NL→Smart View) mount only when their providers exist — mock now; the real
+    // Twilio/Deepgram/Haiku adapters + accounts are HUMAN_TODO (WIRING.md §5),
+    // and the registry real branch builds only email, so in real mode these
+    // stay unmounted until that lands. Twilio signs the FULL public URL, so
+    // publicBaseUrl must be the external origin, never the proxy host.
+    ...(registry?.telephony !== undefined
+      ? {
+          telephony: {
+            verifier: new SignatureTwilioVerifier(
+              config.mockMode ? MOCK_TWILIO_AUTH_TOKEN : (env['TWILIO_AUTH_TOKEN'] ?? ''),
+            ),
+            dialProvider: registry.telephony,
+            now: () => new Date(),
+            publicBaseUrl: env['PUBLIC_WEBHOOK_URL'] ?? `http://localhost:${config.port}`,
+            queue,
+            ...(env['TWILIO_PHONE_NUMBER'] !== undefined
+              ? { callerId: env['TWILIO_PHONE_NUMBER'] }
+              : {}),
+          },
+        }
+      : {}),
+    ...(registry?.asr !== undefined && registry.ai !== undefined
+      ? { ai: { asr: registry.asr, ai: registry.ai, now: () => new Date() } }
+      : {}),
   });
 
   // ── Sequence worker: CONSUME the queue, then keep it fed ──────────────────
@@ -328,16 +357,28 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
         : {}),
     },
   };
+  // Telephony ingress: an inbound Twilio webhook persists a webhook_inbox row,
+  // then enqueues twilio:process; this worker turns that row into timeline
+  // events (call logged, sms received, STOP opt-out). deps.provider only needs
+  // sendSms (the quiet-hours opt-out confirmation). Present only when a
+  // telephony provider exists (mock now; real Twilio is HUMAN_TODO).
+  const telephonyProcessDeps =
+    registry?.telephony !== undefined ? { db, provider: registry.telephony } : null;
+
   queue.process(async (job) => {
-    if (job.name !== SEND_JOB_NAME) return;
-    const intentId = (job.data as { intentId?: string }).intentId;
-    if (intentId === undefined) return;
-    await processIntent(dispatchDeps, intentId);
+    if (job.name === SEND_JOB_NAME) {
+      const intentId = (job.data as { intentId?: string }).intentId;
+      if (intentId !== undefined) await processIntent(dispatchDeps, intentId);
+      return;
+    }
+    if (job.name === TWILIO_PROCESS_JOB && telephonyProcessDeps !== null) {
+      await handleTelephonyJob(telephonyProcessDeps, job);
+    }
   });
 
   // The sweeper is the safety net — BullMQ delays are an optimisation, Postgres
-  // (send_intents.due_at) is the source of truth (§4.3), so a lost Redis job is
-  // simply re-enqueued on the next sweep.
+  // (send_intents.due_at / webhook_inbox) is the source of truth (§4.3), so a
+  // lost Redis job is simply re-processed on the next sweep.
   const sweeper = setInterval(() => {
     void sweepDueIntents({ db, queue, now: () => new Date(), claimTimeoutMs: CLAIM_TIMEOUT_MS })
       .then((count) => {
@@ -346,6 +387,11 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
       .catch((error: unknown) => {
         errorSink.captureException(error, { where: 'sequence-sweeper' });
       });
+    if (telephonyProcessDeps !== null) {
+      void processPendingTwilioWebhooks(telephonyProcessDeps).catch((error: unknown) => {
+        errorSink.captureException(error, { where: 'telephony-sweeper' });
+      });
+    }
   }, SWEEP_INTERVAL_MS);
   sweeper.unref?.();
 
