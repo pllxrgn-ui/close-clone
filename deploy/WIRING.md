@@ -1,5 +1,24 @@
 # Production composition wiring (Wave A readiness)
 
+> **STATUS — this checklist is now BUILT and PROVEN (D-042/D-043/D-044, 2026-07-18).**
+> The production composition root exists at **`apps/api/src/main.ts`** and the
+> container entry (`index.ts`) runs it. Wired + verified against real
+> Postgres 16 + Redis 7: advisory-locked migrate-on-boot · global session-OR-
+> bearer gate over `/api/v1/*` (F4) with route-derived token scopes (I-RAIL-API:
+> read token reads not mutates) · `requireAdmin` on admin surfaces + imports ·
+> real `/healthz` (pg + queue depth) · pino with redaction · error sink · graceful
+> shutdown · the sequence/telephony/webhook workers + sweepers · real OIDC
+> login/callback (proven end-to-end against the bundled Keycloak, see
+> `deploy/KEYCLOAK.md`) · telephony + AI + token/webhook-CRUD routes. Everything
+> account-gated (Gmail/Twilio/Deepgram/Haiku, real IdP) degrades gracefully —
+> unmounted until its account lands, never blocking boot.
+>
+> **Genuinely remaining** (account-gated or service-layer, NOT `main.ts`): real
+> provider construction in `createProviderRegistry`'s real branch for
+> telephony/asr/ai + Gmail; webhook EMISSION (firing `emitWebhookEvent` on
+> domain events — a service-layer hook); delivery-time resolve-and-pin vs DNS
+> rebinding. The sections below are the original checklist, kept for reference.
+
 The Wave A subsystems (SSO, API tokens, outbound webhooks, observability) are merged, tested (399 tests), and exported as factories. This file is the checklist to wire them into the **production** composition root when the deploy environment exists (Redis, a real OIDC issuer, real Postgres). They are intentionally NOT force-wired into the minimal `apps/api/src/server.ts` (a test/embedded helper) or the PGlite dev server, because each needs infra to run and end-to-end verify. Security headers ARE already wired (infra-free).
 
 Do this in the deploy/production server entry (the one that owns real config, Redis, and TLS-terminated ingress), not in `server.ts` or `dev/boot.ts`.
