@@ -42,6 +42,7 @@ import {
 } from './services/tokens/index.ts';
 import { registerAdminTokenRoutes } from './routes/admin-tokens.ts';
 import { registerWebhookSubscriptionRoutes } from './routes/webhook-subscriptions.ts';
+import { createWebhookDeliveryProcessor, type WebhookSender } from './services/webhooks/index.ts';
 import { SessionCodec } from './auth/session/session.ts';
 import { OidcTxnCodec } from './auth/session/txn.ts';
 import { OidcClient } from './auth/oidc/index.ts';
@@ -413,6 +414,23 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
   const telephonyProcessDeps =
     registry?.telephony !== undefined ? { db, provider: registry.telephony } : null;
 
+  // Outbound webhook delivery (guide §5c): emitWebhookEvent (fired by domain
+  // events) writes durable webhook_deliveries rows + enqueues webhook:deliver;
+  // this processor POSTs each with its stored HMAC-signed envelope and owns
+  // retries/backoff/dead-letter. The sender is the one network seam — the target
+  // URL was validated (https + public host, SSRF guard) at subscription create;
+  // delivery-time resolve-and-pin against DNS rebinding is the documented
+  // remaining hardening (WIRING.md).
+  const webhookSender: WebhookSender = async ({ url, headers, body }) => {
+    const res = await fetch(url, { method: 'POST', headers, body });
+    return { status: res.status };
+  };
+  const webhookDeliveryProcessor = createWebhookDeliveryProcessor({
+    db,
+    sender: webhookSender,
+    queue,
+  });
+
   queue.process(async (job) => {
     if (job.name === SEND_JOB_NAME) {
       const intentId = (job.data as { intentId?: string }).intentId;
@@ -421,7 +439,9 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
     }
     if (job.name === TWILIO_PROCESS_JOB && telephonyProcessDeps !== null) {
       await handleTelephonyJob(telephonyProcessDeps, job);
+      return;
     }
+    await webhookDeliveryProcessor(job);
   });
 
   // The sweeper is the safety net — BullMQ delays are an optimisation, Postgres
