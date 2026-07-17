@@ -630,6 +630,18 @@
 .sb-login__error {
   color: var(--state-dnc-fg);
   font-size: var(--fs-sm);
+  margin-bottom: var(--space-4);
+}
+/* Real mode (SSO): one primary action owns the card width. */
+.sb-login__sso {
+  width: 100%;
+  justify-content: center;
+}
+.sb-login__note {
+  color: var(--ink-2);
+  font-size: var(--fs-micro);
+  line-height: var(--lh-loose);
+  margin-top: var(--space-4);
 }
 
 /* ── Page placeholders / boot / 404 ──────────────────────────────────────── */
