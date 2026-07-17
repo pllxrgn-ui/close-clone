@@ -179,8 +179,14 @@ export function PipelineBoard(): JSX.Element {
     onError: (_err, _vars, ctx) => {
       if (ctx?.prev) qc.setQueryData(OPPS_KEY, ctx.prev);
     },
-    onSettled: () => {
-      void qc.invalidateQueries({ queryKey: OPPS_KEY });
+    // Reconcile the server's confirmed row only — never invalidate OPPS_KEY
+    // here: its queryFn drains EVERY opportunity, and a keyboard-driven move is
+    // the board's hottest path (audit #2). Optimistic write + confirmed row are
+    // the source of truth; onError above rolls back the failures.
+    onSuccess: (server) => {
+      qc.setQueryData<Opportunity[]>(OPPS_KEY, (old) =>
+        old ? old.map((o) => (o.id === server.id ? server : o)) : old,
+      );
     },
   });
 

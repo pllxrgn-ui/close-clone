@@ -182,6 +182,41 @@ describe('PipelineBoard — lead-name resolution (caching)', () => {
   });
 });
 
+describe('PipelineBoard — move network discipline (audit #2)', () => {
+  // A keyboard move must NOT re-drain the board: the optimistic write plus the
+  // server's confirmed row are the source of truth. Re-fetching every deal per
+  // keystroke is the board's hottest path × its heaviest query.
+  test('a move PATCHes once and never refetches the opportunity list', async () => {
+    let oppsGets = 0;
+    let patches = 0;
+    // Pass-through counters: prepended above the runtime handlers, they count
+    // and return undefined so the real store handlers still serve the data.
+    server.use(
+      http.get(api('/opportunities'), () => {
+        oppsGets += 1;
+        return undefined;
+      }),
+      http.patch(api('/opportunities/:id'), () => {
+        patches += 1;
+        return undefined;
+      }),
+    );
+
+    renderBoard();
+    await userEvent.click(await screen.findByRole('listitem', { name: /Acme Robotics/ }));
+    const afterLoad = oppsGets;
+
+    fireEvent.keyDown(card(/Acme Robotics/), { key: ']' });
+    await within(column(/Proposal/)).findByRole('listitem', { name: /Acme Robotics/ });
+    await waitFor(() => expect(patches).toBe(1));
+
+    // Give any (incorrect) onSettled invalidation a chance to fire, then assert
+    // the list was never re-fetched.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(oppsGets).toBe(afterLoad);
+  });
+});
+
 describe('PipelineBoard — currency separation', () => {
   test('a mixed-currency column reports each currency separately, never summed', async () => {
     renderBoard();
