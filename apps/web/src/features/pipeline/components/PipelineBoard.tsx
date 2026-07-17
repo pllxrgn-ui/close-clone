@@ -34,6 +34,16 @@ const FLASH_MS = 600;
 const EMPTY_OPPS: Opportunity[] = [];
 const EMPTY_STAGES: OpportunityStage[] = [];
 
+/*
+ * Real datasets put thousands of deals on the board; rendering them all is what
+ * made real mode sluggish. Money math stays FULL-DATA (buildBoard sees every
+ * deal, so counts/sums are exact) — only the DOM is bounded: each column shows
+ * its top CAP cards (largest-first, the ones that matter) plus a Show-all
+ * expander. The active card is always rendered even past the cap, so a
+ * keyboard move into a crowded column never drops focus.
+ */
+export const COLUMN_RENDER_CAP = 30;
+
 interface MoveVars {
   id: string;
   stageId: string;
@@ -72,6 +82,12 @@ export function PipelineBoard(): JSX.Element {
   const stagesById = useMemo(() => new Map(stages.map((s) => [s.id, s])), [stages]);
   const orderedCards = useMemo(() => board.columns.flatMap((c) => c.cards), [board]);
 
+  // ── Bounded rendering (see COLUMN_RENDER_CAP) ──────────────────────────────
+  const [expandedCols, setExpandedCols] = useState<ReadonlySet<string>>(() => new Set());
+  const expandColumn = useCallback((stageId: string): void => {
+    setExpandedCols((prev) => new Set(prev).add(stageId));
+  }, []);
+
   const leadNameOf = useCallback(
     (leadId: string): string => leadNamesQuery.data?.get(leadId) ?? 'Unknown lead',
     [leadNamesQuery.data],
@@ -89,6 +105,25 @@ export function PipelineBoard(): JSX.Element {
   const [focusWithin, setFocusWithin] = useState(false);
   const effectiveActiveId =
     activeId && oppsById.has(activeId) ? activeId : (orderedCards[0]?.id ?? null);
+
+  // Cards actually rendered per column: top CAP by value, the active card
+  // pinned in even when it sorts past the cap, everything when expanded.
+  const visibleByStage = useMemo(() => {
+    const map = new Map<string, Opportunity[]>();
+    for (const col of board.columns) {
+      if (expandedCols.has(col.stage.id) || col.cards.length <= COLUMN_RENDER_CAP) {
+        map.set(col.stage.id, col.cards);
+        continue;
+      }
+      const top = col.cards.slice(0, COLUMN_RENDER_CAP);
+      if (effectiveActiveId && !top.some((c) => c.id === effectiveActiveId)) {
+        const active = col.cards.find((c) => c.id === effectiveActiveId);
+        if (active) top.push(active);
+      }
+      map.set(col.stage.id, top);
+    }
+    return map;
+  }, [board, expandedCols, effectiveActiveId]);
 
   const cardRefs = useRef(new Map<string, HTMLLIElement>());
   const refSetters = useRef(new Map<string, (el: HTMLLIElement | null) => void>());
@@ -184,9 +219,12 @@ export function PipelineBoard(): JSX.Element {
       const id = effectiveActiveId;
       if (!id) return;
       for (const col of board.columns) {
-        const idx = col.cards.findIndex((c) => c.id === id);
+        // Navigate over the RENDERED cards only — J/K must never land on a
+        // card the bounded column isn't showing.
+        const cards = visibleByStage.get(col.stage.id) ?? col.cards;
+        const idx = cards.findIndex((c) => c.id === id);
         if (idx >= 0) {
-          const next = col.cards[idx + dir];
+          const next = cards[idx + dir];
           if (next) {
             keyboardNavRef.current = true;
             setActiveId(next.id);
@@ -195,7 +233,7 @@ export function PipelineBoard(): JSX.Element {
         }
       }
     },
-    [effectiveActiveId, board],
+    [effectiveActiveId, board, visibleByStage],
   );
   const openActive = useCallback((): void => {
     const id = effectiveActiveId;
@@ -294,34 +332,51 @@ export function PipelineBoard(): JSX.Element {
         onFocus={onBoardFocus}
         onBlur={onBoardBlur}
       >
-        {board.columns.map((col) => (
-          <PipelineColumn
-            key={col.stage.id}
-            column={col}
-            isDropTarget={drag?.dropStageId === col.stage.id && drag?.id !== undefined}
-            cardCount={col.count}
-          >
-            {col.cards.map((opp) => (
-              <OpportunityCard
-                key={opp.id}
-                opp={opp}
-                leadName={leadNameOf(opp.leadId)}
-                ownerName={ownerNameOf(opp.ownerId)}
-                stageLabel={col.stage.label}
-                now={now}
-                active={opp.id === effectiveActiveId}
-                dragging={drag?.id === opp.id}
-                flash={flash?.id === opp.id ? flash.kind : null}
-                registerRef={getRefSetter(opp.id)}
-                onFocus={() => setActiveId(opp.id)}
-                onPointerDown={(event) => onCardPointerDown(event, opp.id)}
-                {...(drag?.id === opp.id
-                  ? { style: { transform: `translate3d(${drag.dx}px, ${drag.dy}px, 0)` } }
-                  : {})}
-              />
-            ))}
-          </PipelineColumn>
-        ))}
+        {board.columns.map((col) => {
+          const visible = visibleByStage.get(col.stage.id) ?? col.cards;
+          const hiddenCount = col.count - visible.length;
+          return (
+            <PipelineColumn
+              key={col.stage.id}
+              column={col}
+              isDropTarget={drag?.dropStageId === col.stage.id && drag?.id !== undefined}
+              cardCount={col.count}
+              footer={
+                hiddenCount > 0 ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="pl-col__more"
+                    aria-label={`Show all ${col.count} deals in ${col.stage.label}`}
+                    onClick={() => expandColumn(col.stage.id)}
+                  >
+                    Show all {col.count}
+                  </Button>
+                ) : null
+              }
+            >
+              {visible.map((opp) => (
+                <OpportunityCard
+                  key={opp.id}
+                  opp={opp}
+                  leadName={leadNameOf(opp.leadId)}
+                  ownerName={ownerNameOf(opp.ownerId)}
+                  stageLabel={col.stage.label}
+                  now={now}
+                  active={opp.id === effectiveActiveId}
+                  dragging={drag?.id === opp.id}
+                  flash={flash?.id === opp.id ? flash.kind : null}
+                  registerRef={getRefSetter(opp.id)}
+                  onFocus={() => setActiveId(opp.id)}
+                  onPointerDown={(event) => onCardPointerDown(event, opp.id)}
+                  {...(drag?.id === opp.id
+                    ? { style: { transform: `translate3d(${drag.dx}px, ${drag.dy}px, 0)` } }
+                    : {})}
+                />
+              ))}
+            </PipelineColumn>
+          );
+        })}
       </div>
     );
   }

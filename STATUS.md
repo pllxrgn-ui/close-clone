@@ -12,7 +12,7 @@ Every phase of the guide is built, merged to `main`, and green. **~4,000 tests**
 
 **Real product API — BUILT + WIRED + PROVEN (2026-07-17, D-036):** the D-034 S2 gap is CLOSED. leads/contacts/opportunities/tasks/notes/smart-views/bulk/admin/inbox now have REAL production routes (not MSW-only); SMS-in-sequences wired into the send transaction. Full api suite **1,699 green**. Verified end-to-end in a real browser with **VITE_API_MODE=real (MSW OFF)**: leads board, Smart View compiling `next_task_due < today` live (≈1,442 real overdue), inbox composed queue (1,442 real tasks), admin/users, smart-views/preview — all served by real routes against real Postgres, zero console errors. The product CORE runs for real end-to-end; external integrations (email/calls/SMS/AI/SSO) still need accounts (HUMAN_TODO).
 
-**Follow-up (tracked, non-blocking):** the pipeline board renders ALL real opportunities (2,052) unvirtualized → sluggish in real mode; MOCK-mode demo (Pages + local mock) is unaffected (~83 seeded). Bound the board load / default-limit GET /opportunities.
+**~~Follow-up~~ RESOLVED (D-038):** pipeline board is render-bounded — top 30 cards per column + "Show all N" expander, active card pinned for keyboard focus; money math stays full-data (totals exact). Real-mode DOM 2,052→120 cards, verified live. GET /opportunities intentionally unchanged (the board must drain for totals; a server default-limit is a separate api-stream call).
 
 **Prior deferrals now resolved:** ~~SMS-in-sequences skips~~ (wired, D-036) · ~~product-CRUD/inbox/bulk MSW-only~~ (real routes, D-036) · comms client reconciled to real routes (R5).
 

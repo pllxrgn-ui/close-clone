@@ -10,7 +10,7 @@ import { KeyboardProvider } from '../../../keyboard/index.ts';
 import { server } from '../../../mocks/server.ts';
 import { resetStore } from '../data/store.ts';
 import { pipelineHandlers } from '../mocks/pipelineHandlers.ts';
-import { PipelineBoard } from './PipelineBoard.tsx';
+import { COLUMN_RENDER_CAP, PipelineBoard } from './PipelineBoard.tsx';
 
 const api = (p: string): string => `*/api/v1${p}`;
 
@@ -233,6 +233,83 @@ describe('PipelineBoard — won / lost', () => {
       name: /Initech Systems/,
     });
     expect(within(lostCard).getByText('Lost')).toBeInTheDocument();
+  });
+});
+
+describe('PipelineBoard — bounded rendering (large real datasets)', () => {
+  /** N deals in Discovery with strictly descending values, plus their leads. */
+  function crowd(n: number): {
+    opps: Opportunity[];
+    leads: Array<{ id: string; name: string }>;
+  } {
+    const opps: Opportunity[] = [];
+    const leads: Array<{ id: string; name: string }> = [];
+    for (let i = 1; i <= n; i += 1) {
+      const tag = String(i).padStart(3, '0');
+      opps.push(
+        mkOpp(`c${tag}`, `cl${tag}`, 's-disc', 'USD', (n - i + 1) * 1_000_00, 50, '2026-09-01'),
+      );
+      leads.push({ id: `cl${tag}`, name: `Crowd ${tag}` });
+    }
+    return { opps, leads };
+  }
+
+  function seedCrowd(
+    extraOpps: Opportunity[] = [],
+    extraLeads: Array<{ id: string; name: string }> = [],
+  ) {
+    const { opps, leads } = crowd(COLUMN_RENDER_CAP + 5);
+    resetStore({ opportunities: [...opps, ...extraOpps], stages: STAGES });
+    server.use(
+      ...pipelineHandlers,
+      http.get(api('/leads'), () => HttpResponse.json({ items: [...leads, ...extraLeads] })),
+      http.get(api('/users'), () => HttpResponse.json(USERS)),
+    );
+  }
+
+  test('a column past the cap renders only the top cards plus a Show-all control; count and sums stay true', async () => {
+    seedCrowd();
+    renderBoard();
+    await screen.findByRole('listitem', { name: /Crowd 001/ });
+    const disc = column(/Discovery/);
+    // DOM bounded to the cap…
+    expect(within(disc).getAllByRole('listitem')).toHaveLength(COLUMN_RENDER_CAP);
+    // …but the column still reports the TRUE deal count (money math is full-data).
+    expect(disc).toHaveAccessibleName(new RegExp(`${COLUMN_RENDER_CAP + 5} deals`));
+    // Show-all reveals the rest of the column.
+    await userEvent.click(
+      within(disc).getByRole('button', {
+        name: `Show all ${COLUMN_RENDER_CAP + 5} deals in Discovery`,
+      }),
+    );
+    expect(within(disc).getAllByRole('listitem')).toHaveLength(COLUMN_RENDER_CAP + 5);
+    expect(within(disc).queryByRole('button', { name: /Show all/ })).toBeNull();
+  });
+
+  // failure path: a column at or under the cap must not grow an expander
+  test('a column within the cap renders fully with no Show-all control', async () => {
+    renderBoard(); // default 4-deal fixture from beforeEach
+    await screen.findByRole('listitem', { name: /Acme Robotics/ });
+    expect(within(column(/Discovery/)).getAllByRole('listitem')).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: /Show all/ })).toBeNull();
+  });
+
+  test('a keyboard move into a crowded column keeps the moved card rendered and focused', async () => {
+    // Tiny deal in Proposal sorts dead-last in Discovery after the move.
+    const tinyOpp = mkOpp('tiny', 'l-tiny', 's-prop', 'USD', 1, 10, '2026-09-01');
+    seedCrowd([tinyOpp], [{ id: 'l-tiny', name: 'Tiny Deal Co' }]);
+    renderBoard();
+    await userEvent.click(await screen.findByRole('listitem', { name: /Tiny Deal Co/ }));
+    fireEvent.keyDown(card(/Tiny Deal Co/), { key: '[' });
+
+    const moved = await within(column(/Discovery/)).findByRole('listitem', {
+      name: /Tiny Deal Co/,
+    });
+    // Pinned past the cap: cap-worth of top cards + the active card.
+    expect(within(column(/Discovery/)).getAllByRole('listitem')).toHaveLength(
+      COLUMN_RENDER_CAP + 1,
+    );
+    await waitFor(() => expect(moved).toHaveFocus());
   });
 });
 

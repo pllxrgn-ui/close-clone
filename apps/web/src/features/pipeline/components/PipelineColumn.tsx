@@ -17,6 +17,8 @@ interface PipelineColumnProps {
   isDropTarget: boolean;
   children: ReactNode;
   cardCount: number;
+  /** Rendered after the card list (e.g. the bounded-render Show-all control). */
+  footer?: ReactNode;
 }
 
 function accessibleName(column: ColumnVM): string {
@@ -33,6 +35,7 @@ export function PipelineColumn({
   isDropTarget,
   children,
   cardCount,
+  footer,
 }: PipelineColumnProps): JSX.Element {
   const terminalIcon =
     column.terminal === 'won' ? (
@@ -65,6 +68,8 @@ export function PipelineColumn({
       <ul className="pl-col__cards" role="list">
         {children}
       </ul>
+
+      {footer}
 
       {cardCount === 0 ? (
         <div className="pl-col__empty" aria-hidden="true">

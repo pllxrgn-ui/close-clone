@@ -189,6 +189,11 @@
   list-style: none;
   overflow-y: auto;
 }
+/* Bounded-render expander — sits under the card list, full column width. */
+.pl-col__more {
+  margin: 0 var(--space-3) var(--space-3);
+  color: var(--ink-2);
+}
 
 /* Drop target while dragging */
 .pl-col.is-drop-target {
