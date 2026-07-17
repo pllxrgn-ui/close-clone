@@ -1,0 +1,17 @@
+# Local-development override — NEVER used on a real host.
+#
+#   docker compose --env-file .env -f docker-compose.yml -f docker-compose.dev.yml up -d postgres redis
+#
+# The production compose deliberately publishes NO host ports for postgres/redis
+# (they are reachable only on the compose network — ARCHITECTURE §8). That is
+# correct for a deployed host and inconvenient on a laptop, where you want to
+# point migrations, the latency gate, or a locally-run api at the real services.
+# This override adds host publishing on NON-default ports (5442/6389) so it can
+# never collide with a system Postgres/Redis or the perf fixture container.
+services:
+  postgres:
+    ports:
+      - '127.0.0.1:5442:5432'
+  redis:
+    ports:
+      - '127.0.0.1:6389:6379'

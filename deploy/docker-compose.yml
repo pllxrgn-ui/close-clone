@@ -216,6 +216,12 @@ services:
   # GlitchTip — optional self-hosted error tracking (ARCHITECTURE §8). OFF by
   # default. Needs its own database + GLITCHTIP_SECRET_KEY; see README. Both the
   # web and worker roles run from the same pinned image.
+  #
+  # SECRET_KEY uses `:-` (not `:?`): compose interpolates EVERY service before
+  # it applies profiles, so a `:?` guard here failed `docker compose up` for the
+  # whole stack even with this profile off — breaking guide §4.1's "one command
+  # brings up the stack". Enabling the profile without the key fails loudly in
+  # GlitchTip's own boot, which is the right place for it.
   # ---------------------------------------------------------------------------
   glitchtip:
     image: glitchtip/glitchtip:v4.0
@@ -223,7 +229,7 @@ services:
     profiles: ['glitchtip']
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${GLITCHTIP_DB:-glitchtip}
-      SECRET_KEY: ${GLITCHTIP_SECRET_KEY:?set GLITCHTIP_SECRET_KEY in .env to enable glitchtip}
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY:-}
       REDIS_URL: redis://redis:6379/1
       PORT: '8080'
       GLITCHTIP_DOMAIN: ${GLITCHTIP_DOMAIN:-http://localhost:8000}
@@ -253,7 +259,7 @@ services:
     command: ['./bin/run-celery-with-beat.sh']
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${GLITCHTIP_DB:-glitchtip}
-      SECRET_KEY: ${GLITCHTIP_SECRET_KEY:?set GLITCHTIP_SECRET_KEY in .env to enable glitchtip}
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY:-}
       REDIS_URL: redis://redis:6379/1
     depends_on:
       postgres:
