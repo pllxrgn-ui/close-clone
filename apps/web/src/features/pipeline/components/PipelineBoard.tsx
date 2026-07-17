@@ -4,15 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Opportunity, OpportunityStage } from '@switchboard/shared';
 import { ApiError } from '../../../api/index.ts';
-import { listUsers } from '../../../api/reference.ts';
+import {
+  opportunityStagesQuery,
+  usersQuery as usersQueryOptions,
+} from '../../../api/refQueries.ts';
 import { Button, EmptyState, Skeleton } from '../../../ui/index.ts';
 import { cx } from '../../../lib/cx.ts';
-import {
-  fetchAllOpportunities,
-  fetchLeadNames,
-  listOpportunityStages,
-  moveOpportunity,
-} from '../api/opportunities.ts';
+import { fetchAllOpportunities, fetchLeadNames, moveOpportunity } from '../api/opportunities.ts';
 import { buildBoard } from '../model/board.ts';
 import { adjacentStage, statusForStage, terminalKind, terminalStage } from '../lib/stages.ts';
 import type { TerminalKind } from '../lib/stages.ts';
@@ -26,9 +24,7 @@ import { useCardDrag } from './useCardDrag.ts';
 import { usePipelineKeyboard } from './usePipelineKeyboard.ts';
 
 const OPPS_KEY = ['pipeline', 'opportunities'] as const;
-const STAGES_KEY = ['pipeline', 'stages'] as const;
 const LEAD_NAMES_KEY = ['pipeline', 'lead-names'] as const;
-const USERS_KEY = ['pipeline', 'users'] as const;
 
 const FLASH_MS = 600;
 const EMPTY_OPPS: Opportunity[] = [];
@@ -64,10 +60,7 @@ export function PipelineBoard(): JSX.Element {
     queryKey: OPPS_KEY,
     queryFn: ({ signal }) => fetchAllOpportunities(signal),
   });
-  const stagesQuery = useQuery({
-    queryKey: STAGES_KEY,
-    queryFn: ({ signal }) => listOpportunityStages(signal),
-  });
+  const stagesQuery = useQuery(opportunityStagesQuery());
   // Lead names label the cards. Resolving them drains every page of GET /leads
   // (~25 serial round-trips at 5k leads — the board's biggest network cost). It
   // is the same id→name map for the whole session, so cache it hard: fetch once,
@@ -80,7 +73,7 @@ export function PipelineBoard(): JSX.Element {
     staleTime: Infinity,
     gcTime: Infinity,
   });
-  const usersQuery = useQuery({ queryKey: USERS_KEY, queryFn: () => listUsers() });
+  const usersQuery = useQuery(usersQueryOptions());
 
   const opps = oppsQuery.data ?? EMPTY_OPPS;
   const stages = stagesQuery.data ?? EMPTY_STAGES;

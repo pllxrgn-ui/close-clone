@@ -11,7 +11,7 @@ import { useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { EmptyState } from '../../../ui/index.ts';
 import { ApiError } from '../../../api/errors.ts';
-import { listUsers } from '../../../api/reference.ts';
+import { usersQuery } from '../../../api/refQueries.ts';
 import { fetchActivityReport } from '../api/reports.ts';
 import { DEFAULT_PRESET_KEY, RANGE_PRESETS, presetByKey, rangeForKey } from '../lib/range.ts';
 import { formatDateRangeLabel, formatInt, formatTalkTime } from '../lib/format.ts';
@@ -24,11 +24,7 @@ export function ActivityReport(): JSX.Element {
   const presetKey = presetByKey(params.get('range') ?? DEFAULT_PRESET_KEY).key;
   const range = rangeForKey(presetKey);
 
-  const usersQ = useQuery({
-    queryKey: ['reference', 'users'],
-    queryFn: () => listUsers(),
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  const usersQ = useQuery({ ...usersQuery(), staleTime: Number.POSITIVE_INFINITY });
   const q = useQuery({
     queryKey: ['reports', 'activity', range.from, range.to],
     queryFn: ({ signal }) =>

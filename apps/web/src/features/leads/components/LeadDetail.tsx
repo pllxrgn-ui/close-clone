@@ -4,13 +4,13 @@ import { Link } from 'react-router-dom';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { ApiError } from '../../../api/index.ts';
 import { getLead, getLeadTimeline } from '../../../api/leads.ts';
-import { listLeadStatuses, listUsers } from '../../../api/reference.ts';
-import { EmptyState, ErrorState, Spinner } from '../../../ui/index.ts';
 import {
-  listLeadContacts,
-  listLeadOpportunities,
-  listOpportunityStages,
-} from '../api/leadDetail.ts';
+  leadStatusesQuery,
+  opportunityStagesQuery,
+  usersQuery as usersQueryOptions,
+} from '../../../api/refQueries.ts';
+import { EmptyState, ErrorState, Spinner } from '../../../ui/index.ts';
+import { listLeadContacts, listLeadOpportunities } from '../api/leadDetail.ts';
 import { LeadHeader } from './LeadHeader.tsx';
 import { Timeline } from './Timeline.tsx';
 import { LeadContactsCard } from './LeadContactsCard.tsx';
@@ -36,15 +36,9 @@ interface LeadDetailProps {
 export function LeadDetail({ leadId }: LeadDetailProps): JSX.Element {
   const now = useMemo(() => new Date(), []);
 
-  const usersQuery = useQuery({ queryKey: ['ref', 'users'], queryFn: () => listUsers() });
-  const statusesQuery = useQuery({
-    queryKey: ['ref', 'lead-statuses'],
-    queryFn: () => listLeadStatuses(),
-  });
-  const stagesQuery = useQuery({
-    queryKey: ['ref', 'opportunity-stages'],
-    queryFn: () => listOpportunityStages(),
-  });
+  const usersQuery = useQuery(usersQueryOptions());
+  const statusesQuery = useQuery(leadStatusesQuery());
+  const stagesQuery = useQuery(opportunityStagesQuery());
 
   const leadQuery = useQuery({ queryKey: ['lead', leadId], queryFn: () => getLead(leadId) });
   const timelineQuery = useInfiniteQuery({

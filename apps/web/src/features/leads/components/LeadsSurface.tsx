@@ -6,7 +6,7 @@ import type { Lead, SmartView } from '@switchboard/shared';
 import { ApiError } from '../../../api/index.ts';
 import { listLeads } from '../../../api/leads.ts';
 import { listSmartViews, getSmartView, previewSmartView } from '../../../api/smartViews.ts';
-import { listLeadStatuses, listUsers } from '../../../api/reference.ts';
+import { leadStatusesQuery, usersQuery as usersQueryOptions } from '../../../api/refQueries.ts';
 import { EmptyState, ErrorState, Spinner, Skeleton, Button, Input } from '../../../ui/index.ts';
 import { SearchIcon, XIcon } from '../icons.tsx';
 import { usePrefersReducedMotion } from '../lib/useReducedMotion.ts';
@@ -52,11 +52,8 @@ export function LeadsSurface({ viewId }: LeadsSurfaceProps): JSX.Element {
   const [sort, setSort] = useState<SortState | null>(null);
 
   // ── Reference data (D-023 endpoints) → owner/status label maps ────────────
-  const usersQuery = useQuery({ queryKey: ['ref', 'users'], queryFn: () => listUsers() });
-  const statusesQuery = useQuery({
-    queryKey: ['ref', 'lead-statuses'],
-    queryFn: () => listLeadStatuses(),
-  });
+  const usersQuery = useQuery(usersQueryOptions());
+  const statusesQuery = useQuery(leadStatusesQuery());
 
   const ctx = useMemo<ColumnCtx>(() => {
     const userById = new Map((usersQuery.data ?? []).map((u) => [u.id, u.name]));

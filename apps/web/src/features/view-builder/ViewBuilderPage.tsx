@@ -11,7 +11,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Ast } from '@switchboard/shared';
 import { astToDsl, parse } from '@switchboard/shared';
-import { listLeadStatuses, listUsers } from '../../api/reference.ts';
+import { leadStatusesQuery, usersQuery as usersQueryOptions } from '../../api/refQueries.ts';
 import { ApiError } from '../../api/errors.ts';
 import { createSmartView, getSmartView, updateSmartView } from '../../api/smartViews.ts';
 import { Button, Spinner } from '../../ui/index.ts';
@@ -48,11 +48,8 @@ export function ViewBuilderPage(): JSX.Element {
     queryFn: () => fetchCustomFields(),
     retry: false,
   });
-  const usersQuery = useQuery({ queryKey: ['users'], queryFn: () => listUsers() });
-  const statusesQuery = useQuery({
-    queryKey: ['lead-statuses'],
-    queryFn: () => listLeadStatuses(),
-  });
+  const usersQuery = useQuery(usersQueryOptions());
+  const statusesQuery = useQuery(leadStatusesQuery());
   const viewQuery = useQuery({
     queryKey: ['smart-view', viewId],
     queryFn: () => getSmartView(viewId as string),

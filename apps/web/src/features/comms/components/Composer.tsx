@@ -15,7 +15,7 @@ import {
 } from '../../../ui/index.ts';
 import { ApiError } from '../../../api/index.ts';
 import { getLead } from '../../../api/leads.ts';
-import { listUsers } from '../../../api/reference.ts';
+import { usersQuery as usersQueryOptions } from '../../../api/refQueries.ts';
 import { search } from '../../../api/search.ts';
 import { useToast } from '../../../feedback/index.ts';
 import { useDebouncedValue } from '../../../command/index.ts';
@@ -205,7 +205,7 @@ function ComposeForm({
     queryKey: ['lead-contacts', leadId],
     queryFn: () => listLeadContacts(leadId),
   });
-  const usersQuery = useQuery({ queryKey: ['ref', 'users'], queryFn: () => listUsers() });
+  const usersQuery = useQuery(usersQueryOptions());
   const templatesQuery = useQuery({
     queryKey: ['comms', 'templates'],
     queryFn: () => listTemplates(),

@@ -1,4 +1,4 @@
-import type { Lead, Opportunity, OpportunityStage } from '@switchboard/shared';
+import type { Lead, Opportunity } from '@switchboard/shared';
 import { apiRequest } from '../../../api/client.ts';
 import type { Page } from '../../../api/client.ts';
 
@@ -26,10 +26,6 @@ export async function fetchAllOpportunities(signal?: AbortSignal): Promise<Oppor
     cursor = page.nextCursor;
   } while (cursor !== undefined);
   return out;
-}
-
-export function listOpportunityStages(signal?: AbortSignal): Promise<OpportunityStage[]> {
-  return apiRequest<OpportunityStage[]>('/opportunity-stages', { ...(signal ? { signal } : {}) });
 }
 
 /**

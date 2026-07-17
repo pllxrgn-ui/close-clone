@@ -1,4 +1,4 @@
-import type { Contact, Opportunity, OpportunityStage } from '@switchboard/shared';
+import type { Contact, Opportunity } from '@switchboard/shared';
 import { apiRequest } from '../../../api/client.ts';
 
 /*
@@ -28,8 +28,4 @@ export function listLeadOpportunities(
     '/opportunities',
     signal ? { query: { leadId }, signal } : { query: { leadId } },
   );
-}
-
-export function listOpportunityStages(signal?: AbortSignal): Promise<OpportunityStage[]> {
-  return apiRequest<OpportunityStage[]>('/opportunity-stages', signal ? { signal } : {});
 }
