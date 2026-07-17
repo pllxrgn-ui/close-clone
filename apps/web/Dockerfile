@@ -16,11 +16,17 @@ FROM ${NODE_IMAGE} AS base
 ENV PNPM_HOME=/pnpm
 ENV PNPM_STORE_DIR=/pnpm/store
 ENV PATH=/pnpm:$PATH
+# Pin corepack to the requested pnpm; without this it ignores the pin whenever
+# it can't see a `packageManager` field and fetches its own latest (a pnpm 12
+# alpha), which breaks `pnpm fetch`. (Same fix as apps/api/Dockerfile.)
+ENV COREPACK_DEFAULT_TO_LATEST=0
 RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 WORKDIR /app
 
 FROM base AS deps
-COPY pnpm-lock.yaml ./
+# package.json carries the `packageManager` pin corepack reads (the lockfile
+# alone leaves it guessing — see COREPACK_DEFAULT_TO_LATEST above).
+COPY package.json pnpm-lock.yaml ./
 RUN pnpm fetch
 
 FROM deps AS build
