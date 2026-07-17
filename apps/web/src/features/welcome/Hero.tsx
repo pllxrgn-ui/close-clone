@@ -1,16 +1,19 @@
 import type { JSX } from 'react';
 import { Link } from 'react-router-dom';
 import { StateLamp } from './StateLamp.tsx';
+import { HeroFrame } from './HeroFrame.tsx';
 import { HERO_LAMPS } from './fixtures.ts';
 import { HERO, HERO_STATS, LOGIN_PATH } from './copy.ts';
 import type { IgnitionState } from './useIgnition.ts';
 
 /*
- * The hero board. When `ignition === 'igniting'` the CSS entrance plays once:
- * the etched grid fades in, the six lamps ignite in a 30–80ms stagger, then the
- * headline sets — 500–800ms total. When `'lit'` (reduced motion, or already
- * ignited this session) everything renders in its final state instantly. The
- * data-ignite attribute is the only switch; there is no JS timeline.
+ * The hero board, centered: lamps → headline → sub → CTA → stats, then the
+ * perspective-tilted product frame. When `ignition === 'igniting'` the CSS
+ * entrance plays once: the etched grid fades in, the six lamps ignite in a
+ * 30–80ms stagger, the headline sets, and the frame surfaces last — ≤800ms
+ * total. When `'lit'` (reduced motion, or already ignited this session)
+ * everything renders in its final state instantly. The data-ignite attribute
+ * is the only switch; there is no JS timeline.
  */
 export function Hero({ ignition }: { ignition: IgnitionState }): JSX.Element {
   return (
@@ -52,6 +55,8 @@ export function Hero({ ignition }: { ignition: IgnitionState }): JSX.Element {
             </li>
           ))}
         </ul>
+
+        <HeroFrame />
       </div>
     </header>
   );

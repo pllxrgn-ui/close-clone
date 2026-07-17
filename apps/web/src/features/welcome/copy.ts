@@ -9,6 +9,38 @@ export const WORDMARK = 'Switchboard';
 
 export const NAV_SIGN_IN = 'Sign in · SSO';
 
+export interface NavMenuItem {
+  name: string;
+  /** In-page anchor — every target is a real section below. */
+  href: `#${string}`;
+}
+
+/** Landing nav menu — anchors into the page, no dead links. */
+export const NAV_MENU: readonly NavMenuItem[] = [
+  { name: 'Features', href: '#welcome-acts' },
+  { name: 'Shortcuts', href: '#welcome-keys' },
+  { name: 'Compliance', href: '#welcome-trust' },
+];
+
+/**
+ * The accounts band under the hero frame. These are the demo dataset's own
+ * companies — accounts being worked in the product, not invented "partners".
+ */
+export const ACCOUNTS_BAND = {
+  title: 'On the board this week',
+  names: [
+    'Northwind Labs',
+    'Harbor Analytics',
+    'Vertex Robotics',
+    'Iron Cedar Freight',
+    'Copper Systems',
+    'Nova Capital',
+    'Bright Networks',
+    'Granite Foods',
+    'Quantum Robotics',
+  ],
+} as const;
+
 export const HERO = {
   headline: ['Pick up the line.', 'The rest is already dialed.'],
   sub: 'Switchboard lines up every reply, task, and call in one keyboard-driven queue — so the next move is always one keystroke away.',

@@ -12,6 +12,7 @@ import './welcome.css';
 import type { JSX } from 'react';
 import { WelcomeNav } from './WelcomeNav.tsx';
 import { Hero } from './Hero.tsx';
+import { AccountsBand } from './AccountsBand.tsx';
 import { FeatureActs } from './FeatureActs.tsx';
 import { KeyboardStrip } from './KeyboardStrip.tsx';
 import { TrustLine } from './TrustLine.tsx';
@@ -34,6 +35,7 @@ export function WelcomePage(): JSX.Element {
       <WelcomeNav />
       <main id="welcome-main" className="sb-welcome__main">
         <Hero ignition={ignition} />
+        <AccountsBand />
         <FeatureActs />
         <KeyboardStrip />
       </main>

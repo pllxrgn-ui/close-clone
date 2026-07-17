@@ -183,7 +183,7 @@ function FeatureAct({ act, flip }: { act: FeatureActCopy; flip: boolean }): JSX.
 
 export function FeatureActs(): JSX.Element {
   return (
-    <section className="sb-welcome__acts" aria-label="What Switchboard does">
+    <section id="welcome-acts" className="sb-welcome__acts" aria-label="What Switchboard does">
       {FEATURE_ACTS.map((act, i) => (
         <FeatureAct key={act.id} act={act} flip={i % 2 === 1} />
       ))}

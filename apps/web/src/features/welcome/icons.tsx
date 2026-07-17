@@ -91,3 +91,24 @@ export function CheckIcon(props: WelcomeIconProps): JSX.Element {
     </Glyph>
   );
 }
+
+/** Hamburger (lucide "menu") — mobile nav toggle. */
+export function MenuIcon(props: WelcomeIconProps): JSX.Element {
+  return (
+    <Glyph {...props}>
+      <path d="M4 6h16" />
+      <path d="M4 12h16" />
+      <path d="M4 18h16" />
+    </Glyph>
+  );
+}
+
+/** Close (lucide "x") — mobile nav toggle, open state. */
+export function XIcon(props: WelcomeIconProps): JSX.Element {
+  return (
+    <Glyph {...props}>
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </Glyph>
+  );
+}

@@ -67,6 +67,52 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
+describe('WelcomePage — hero frame + nav menu + accounts band', () => {
+  test('nav anchors point at real sections on the page', () => {
+    const { container } = renderWelcome();
+    for (const [name, target] of [
+      ['Features', 'welcome-acts'],
+      ['Shortcuts', 'welcome-keys'],
+      ['Compliance', 'welcome-trust'],
+    ] as const) {
+      const link = screen.getByRole('link', { name });
+      expect(link).toHaveAttribute('href', `#${target}`);
+      expect(container.querySelector(`#${target}`)).not.toBeNull();
+    }
+  });
+
+  test('the mobile menu toggle drives aria-expanded and the open state', async () => {
+    const { default: userEvent } = await import('@testing-library/user-event');
+    renderWelcome();
+    const toggle = screen.getByRole('button', { name: 'Open menu' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: 'Close menu' })).toBe(toggle);
+    // Choosing an anchor closes the panel.
+    await userEvent.click(screen.getByRole('link', { name: 'Features' }));
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  test('the hero product frame is live DOM, decorative, and shows the triage rows', () => {
+    const { container } = renderWelcome();
+    const frame = container.querySelector('.sb-welcome__frame-wrap');
+    expect(frame).not.toBeNull();
+    expect(frame).toHaveAttribute('aria-hidden', 'true');
+    expect(frame?.querySelectorAll('.sb-welcome__frame-row')).toHaveLength(5);
+    expect(frame?.textContent).toContain('Northwind Labs');
+    expect(frame?.querySelector('img')).toBeNull();
+  });
+
+  test('the accounts band lists demo accounts as text wordmarks (no logos)', () => {
+    const { container } = renderWelcome();
+    const band = screen.getByRole('region', { name: 'On the board this week' });
+    expect(band.querySelectorAll('li')).toHaveLength(9);
+    expect(band.textContent).toContain('Harbor Analytics');
+    expect(container.querySelectorAll('.sb-welcome__accounts img')).toHaveLength(0);
+  });
+});
+
 describe('WelcomePage — route + content', () => {
   test('renders at /welcome with the headline, sub, and stat readout', () => {
     renderWelcome();

@@ -10,7 +10,7 @@ import { TRUST_LINE } from './copy.ts';
 export function TrustLine(): JSX.Element {
   const clauses = TRUST_LINE.split(' · ');
   return (
-    <aside className="sb-welcome__trust" aria-label="Compliance guarantees">
+    <aside id="welcome-trust" className="sb-welcome__trust" aria-label="Compliance guarantees">
       <ul className="sb-welcome__trust-list">
         {clauses.map((clause) => (
           <li key={clause} className="sb-welcome__trust-item">

@@ -14,7 +14,7 @@ import { KEYBOARD } from './copy.ts';
  */
 export function KeyboardStrip(): JSX.Element {
   return (
-    <section className="sb-welcome__keys" aria-label="Keyboard shortcuts">
+    <section id="welcome-keys" className="sb-welcome__keys" aria-label="Keyboard shortcuts">
       <div className="sb-welcome__keys-intro">
         <p className="sb-welcome__eyebrow">{KEYBOARD.label}</p>
         <h2 className="sb-welcome__keys-title">{KEYBOARD.title}</h2>
