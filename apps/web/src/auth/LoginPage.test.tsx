@@ -45,7 +45,7 @@ describe('LoginPage — mock mode (VITE_API_MODE unset)', () => {
     renderRoutes('/login');
     await screen.findByRole('heading', { name: 'Sign in' });
     expect(await screen.findByRole('button', { name: new RegExp(USER.name) })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /sign in with sso/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /single sign-on/i })).not.toBeInTheDocument();
   });
 
   test('picking a user signs in and lands on the requested route', async () => {
@@ -61,7 +61,7 @@ describe('LoginPage — real mode (VITE_API_MODE=real)', () => {
   test('renders the SSO screen and no fixture identities or password field', async () => {
     renderRoutes('/login');
     await screen.findByRole('heading', { name: 'Sign in' });
-    expect(screen.getByRole('button', { name: /sign in with sso/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /single sign-on/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: new RegExp(USER.name) })).not.toBeInTheDocument();
     expect(screen.queryByText(USER.email)).not.toBeInTheDocument();
     expect(document.querySelector('input[type="password"]')).toBeNull();
@@ -71,7 +71,7 @@ describe('LoginPage — real mode (VITE_API_MODE=real)', () => {
   test('clicking SSO navigates the browser to the API OIDC login route', async () => {
     const assign = vi.spyOn(browserNav, 'assign').mockImplementation(() => undefined);
     renderRoutes('/login');
-    await userEvent.click(await screen.findByRole('button', { name: /sign in with sso/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /single sign-on/i }));
     expect(assign).toHaveBeenCalledTimes(1);
     expect(assign).toHaveBeenCalledWith('/api/v1/auth/login');
     expect(SSO_LOGIN_PATH).toBe('/api/v1/auth/login');
@@ -81,7 +81,7 @@ describe('LoginPage — real mode (VITE_API_MODE=real)', () => {
   test('surfaces a callback denial reason from the query string', async () => {
     renderRoutes('/login?error=no_access');
     expect(await screen.findByRole('alert')).toHaveTextContent(/grant you access to Switchboard/i);
-    expect(screen.getByRole('button', { name: /sign in with sso/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /single sign-on/i })).toBeInTheDocument();
   });
 
   // failure path: an unknown/garbage reason still reports, never renders raw junk as copy
@@ -95,7 +95,7 @@ describe('LoginPage — real mode (VITE_API_MODE=real)', () => {
   test('an existing session skips the SSO screen', async () => {
     renderRoutes('/login', { user: USER });
     expect(await screen.findByRole('heading', { name: 'Inbox', level: 1 })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /sign in with sso/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /single sign-on/i })).not.toBeInTheDocument();
   });
 
   test('the SSO screen has no serious/critical axe violations', async () => {

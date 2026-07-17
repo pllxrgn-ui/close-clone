@@ -6,6 +6,7 @@ import {
   Command,
   CornerDownLeft,
   Inbox,
+  KeyRound,
   LifeBuoy,
   ListFilter,
   Minus,
@@ -62,6 +63,7 @@ export const BoltIcon = toIcon(Zap);
 export const CloseIcon = toIcon(X);
 export const CommandIcon = toIcon(Command);
 export const CornerDownLeftIcon = toIcon(CornerDownLeft);
+export const KeyIcon = toIcon(KeyRound);
 export const CheckIcon = toIcon(Check);
 export const MinusIcon = toIcon(Minus);
 export const AlertTriangleIcon = toIcon(TriangleAlert);

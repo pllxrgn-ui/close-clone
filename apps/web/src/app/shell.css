@@ -535,19 +535,59 @@
 }
 
 /* ── Login screen ────────────────────────────────────────────────────────── */
+/* The front door: the landing's Operator Grid texture (etched 44px grid + a
+ * quiet 'live' cyan lamp-glow behind the card) instead of a flat fill, so the
+ * sign-in feels like part of the board lighting up. The card stays square
+ * (panel law) but premium — generous, raised, sharply framed. */
 .sb-login {
+  position: relative;
   min-height: 100vh;
   display: grid;
   place-items: center;
   padding: var(--space-6);
-  background: var(--surface-1);
+  background: var(--bg);
+  overflow: hidden;
+}
+/* Etched grid, faded to nothing at the edges (mask, not a hard crop). */
+.sb-login::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      color-mix(in srgb, var(--line) 55%, transparent) 0 1px,
+      transparent 1px var(--etch-size)
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--line) 55%, transparent) 0 1px,
+      transparent 1px var(--etch-size)
+    );
+  -webkit-mask-image: radial-gradient(125% 90% at 50% 42%, #000 26%, transparent 72%);
+  mask-image: radial-gradient(125% 90% at 50% 42%, #000 26%, transparent 72%);
+}
+/* Lamp-glow — the focus/live cyan, low and centred behind the card. */
+.sb-login::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    38rem 26rem at 50% 44%,
+    color-mix(in srgb, var(--focus) 13%, transparent),
+    transparent 68%
+  );
 }
 .sb-login__card {
+  position: relative; /* above the texture */
+  z-index: 1;
   width: 100%;
-  max-width: 380px;
-  padding: var(--space-7);
-  background: var(--surface-0);
-  border: 1px solid var(--border-0);
+  max-width: 420px;
+  padding: var(--space-8) var(--space-7);
+  background: var(--panel-raised);
+  border: 1px solid var(--border-1);
   border-radius: var(--radius-3);
   box-shadow: var(--shadow-2);
 }
@@ -559,20 +599,32 @@
   font-family: var(--font-display);
   font-weight: var(--fw-display-strong);
   font-size: var(--fs-lg);
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-6);
 }
 .sb-login__brand span {
   color: var(--ink-0);
 }
 .sb-login__title {
   font-family: var(--font-display);
-  font-size: var(--fs-lg);
+  font-size: var(--fs-xl);
   font-weight: var(--fw-display-strong);
+  letter-spacing: 0.01em;
 }
 .sb-login__hint {
   color: var(--ink-2);
   font-size: var(--fs-sm);
-  margin: var(--space-2) 0 var(--space-5);
+  line-height: var(--lh-loose);
+  margin: var(--space-2) 0 var(--space-6);
+}
+/* 'Sign in with' section label — the reference's provider-row header, kept for
+ * the single real provider (company SSO). */
+.sb-login__section-label {
+  color: var(--ink-3);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  margin-bottom: var(--space-3);
 }
 .sb-login__users {
   display: flex;

@@ -2,6 +2,7 @@ import type { JSX } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '../ui/index.ts';
 import { BoardMark } from '../ui/BoardMark.tsx';
+import { KeyIcon } from '../ui/icons.tsx';
 import { browserNav, SSO_LOGIN_PATH } from './browserNav.ts';
 
 /**
@@ -52,13 +53,15 @@ export function SsoLoginPage(): JSX.Element {
           </p>
         )}
 
+        <p className="sb-login__section-label">Sign in with</p>
         <Button
           variant="primary"
           size="lg"
           className="sb-login__sso"
           onClick={() => browserNav.assign(SSO_LOGIN_PATH)}
         >
-          Sign in with SSO
+          <KeyIcon size={16} />
+          Company single sign-on
         </Button>
 
         <p className="sb-login__note">
