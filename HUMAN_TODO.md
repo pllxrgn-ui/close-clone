@@ -14,7 +14,7 @@ The build does **not** wait on any of these (mock mode covers all of them). Each
 
 ## Infrastructure
 
-- [ ] **Install Docker Desktop** on this machine (docker.com) — required for `docker compose up` (Postgres + Redis + app) and for running the latency gate against real Postgres locally. *Currently absent on this Windows host.*
+- [x] ~~**Install Docker Desktop**~~ — DONE (Docker 29.2.1 + Compose v5). The full stack now boots for real: `cd deploy && cp .env.example .env` (set `POSTGRES_PASSWORD` + a 32+ char `SESSION_SECRET`) then `docker compose --env-file .env -f docker-compose.yml up -d`. Verified 2026-07-17: postgres 16.14 + redis 7 healthy, 31 tables migrated, api container healthy, API authenticated (unauth → 401). Supersedes D-001.
 - [ ] **GitHub repo + Actions**: create a private repo, `git remote add origin <url>`, push. CI workflow is committed and will run on push. (`gh` CLI not installed; install it or create the repo via the web UI.)
 - [ ] **Deploy target**: pick internal Docker host/VM or Fly.io private app + Postgres (Phase 5). Provide `.env` values per `deploy/README` once Phase 5 lands.
 - [ ] **Internal DNS name + TLS cert** for the app URL (placeholder `switchboard.internal.yourco.com`).
