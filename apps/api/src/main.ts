@@ -18,6 +18,8 @@ import { TokenCipher } from './services/sync/token-cipher.ts';
 import { MockGmailPushVerifier } from './services/sync/index.ts';
 import { ImportStorage } from './services/imports/storage.ts';
 import { sweepDueIntents } from './services/sequences/sweeper.ts';
+import { processIntent } from './services/sequences/dispatch.ts';
+import { SEND_JOB_NAME } from './services/sequences/job-names.ts';
 import {
   buildLogController,
   buildLoggerOptions,
@@ -240,7 +242,48 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
     inbox: { queue },
   });
 
-  // ── Sequence worker: enqueue due intents, drain them through real Redis ────
+  // ── Sequence worker: CONSUME the queue, then keep it fed ──────────────────
+  // `processIntent` re-checks every rail (reply/bounce/suppression/window/cap)
+  // INSIDE the send transaction (§4.3 never-events) — this binding is what
+  // turns enqueued intents into actual sends. Without it the sweeper would
+  // enqueue into Redis forever and no sequence step would ever go out.
+  const unsubscribeConfig = {
+    baseUrl: env['PUBLIC_WEBHOOK_URL'] ?? `http://localhost:${config.port}`,
+    mailbox: env['UNSUBSCRIBE_MAILBOX'] ?? 'unsubscribe@switchboard.internal',
+    secret: env['LIST_UNSUBSCRIBE_SECRET'] ?? config.sessionSecret,
+  };
+  const dispatchDeps = {
+    db,
+    providerFor: senderRegistry.providerFor,
+    cipher,
+    queue,
+    // Distinguishes this replica in send_intents.worker_id (§4.3 claim audit).
+    workerId: `${env['HOSTNAME'] ?? 'api'}:${process.pid}`,
+    now: () => new Date(),
+    unsubscribe: unsubscribeConfig,
+    sms: {
+      // No telephony account (HUMAN_TODO: TWILIO_*) → no fromNumber either, so
+      // dispatch SKIPs sms steps with `no_sms_from_number` before ever touching
+      // this. It exists for the misconfigured case (a number set, credentials
+      // missing): refuse loudly → the intent lands FAILED/provider_error with
+      // this message, rather than a step silently disappearing.
+      provider: registry.telephony ?? {
+        sendSms: (): Promise<never> => {
+          throw new Error('telephony provider not configured (TWILIO_* unset): cannot send SMS');
+        },
+      },
+      ...(env['TWILIO_PHONE_NUMBER'] !== undefined
+        ? { fromNumber: env['TWILIO_PHONE_NUMBER'] }
+        : {}),
+    },
+  };
+  queue.process(async (job) => {
+    if (job.name !== SEND_JOB_NAME) return;
+    const intentId = (job.data as { intentId?: string }).intentId;
+    if (intentId === undefined) return;
+    await processIntent(dispatchDeps, intentId);
+  });
+
   // The sweeper is the safety net — BullMQ delays are an optimisation, Postgres
   // (send_intents.due_at) is the source of truth (§4.3), so a lost Redis job is
   // simply re-enqueued on the next sweep.
