@@ -94,17 +94,74 @@ function deriveSummary(
   return { summary, actionItems };
 }
 
+/** Intent line for a fresh draft, chosen from keywords in the instruction. */
+function intentLine(directive: string): string {
+  const d = directive.toLowerCase();
+  if (/\b(intro|introduc|first touch|reach ?out|cold)\b/.test(d)) {
+    return "I'm reaching out because I think we can help your team keep calls, email, and follow-up in one place instead of scattered across tabs.";
+  }
+  if (/\b(follow[- ]?up|following up|checking in|nudge|circle back)\b/.test(d)) {
+    return "I'm following up on my last note — I didn't want this to slip through the cracks.";
+  }
+  if (/\b(pricing|price|quote|cost|budget)\b/.test(d)) {
+    return "Happy to walk you through pricing and map the right plan to your team's size.";
+  }
+  if (/\b(demo|walkthrough|show)\b/.test(d)) {
+    return 'I would love to show you a short demo tailored to how your team actually works.';
+  }
+  if (/\b(renew|renewal|expand|upsell)\b/.test(d)) {
+    return 'Your renewal is coming up, and I want to make sure the plan still fits how your team is using us.';
+  }
+  return 'I wanted to reach out and see whether there might be a fit for your team this quarter.';
+}
+
+/** Closing line for a rewrite, flavored by the requested tone. */
+function rewriteClose(directive: string): string {
+  const d = directive.toLowerCase();
+  if (/\b(short|shorter|concise|brief|tighten|trim)\b/.test(d)) {
+    return "Keeping this short — happy to send more detail if it's useful.";
+  }
+  if (/\b(warm|warmer|friendly|casual|personable)\b/.test(d)) {
+    return 'No pressure at all — I just wanted to reconnect.';
+  }
+  if (/\b(formal|professional)\b/.test(d)) {
+    return 'Please let me know if this aligns with your priorities.';
+  }
+  return 'Let me know what you think.';
+}
+
+/** First 1–2 sentences of the current draft, for a believable rewrite base. */
+function condense(text: string): string {
+  const sentences = text.replace(/\s+/g, ' ').match(/[^.!?]+[.!?]/g) ?? [text.trim()];
+  return sentences.slice(0, 2).join(' ').trim();
+}
+
+/**
+ * Believable canned draft (§C2 `{subject?, body}`). This MSW layer is deliberately
+ * richer than the API's minimal mock provider — the shape is identical, so real mode
+ * is unaffected; only the demo prose improves. `priorBody` (the composer's current
+ * text, passed via threadCtx) switches DRAFT → REWRITE.
+ */
 function deriveDraft(
   instruction: string,
   subject: string | undefined,
+  priorBody: string | undefined,
 ): { subject?: string; body: string } {
+  const directive = instruction.trim();
   const replySubject =
     subject !== undefined && subject.length > 0
       ? subject.startsWith('Re:')
         ? subject
         : `Re: ${subject}`
       : undefined;
-  const body = `Hi,\n\n${instruction.trim()}\n\nBest regards,\n`;
+
+  let body: string;
+  if (priorBody !== undefined && priorBody.trim().length > 0) {
+    // Rewrite: polish the existing draft and apply the requested tone.
+    body = `Hi there,\n\n${condense(priorBody)}\n\n${rewriteClose(directive)}\n\nBest,\n`;
+  } else {
+    body = `Hi there,\n\n${intentLine(directive)}\n\nWould you be open to a quick 15 minutes this week?\n\nBest,\n`;
+  }
   return replySubject === undefined ? { body } : { subject: replySubject, body };
 }
 
@@ -176,7 +233,12 @@ export const aiHandlers = [
     const threadCtx = isRecord(body?.threadCtx) ? body.threadCtx : undefined;
     const subject =
       threadCtx && typeof threadCtx.subject === 'string' ? threadCtx.subject : undefined;
-    return HttpResponse.json(deriveDraft(instruction, subject));
+    // The composer passes its current text as the last thread message → rewrite mode.
+    const messages =
+      threadCtx && Array.isArray(threadCtx.recentMessages) ? threadCtx.recentMessages : [];
+    const last = messages.at(-1);
+    const priorBody = isRecord(last) && typeof last.body === 'string' ? last.body : undefined;
+    return HttpResponse.json(deriveDraft(instruction, subject, priorBody));
   }),
 
   // ── AI call summary: generate a DRAFT note only, NO timeline event (§I-AI) ─────
