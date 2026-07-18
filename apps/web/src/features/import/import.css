@@ -1,0 +1,530 @@
+/*
+ * CSV import wizard (Task U4) — Operator Grid idiom. Chrome is achromatic; color
+ * is spent only on STATE (--state-*): the dry-run stat board and the disposition
+ * ledger read like a routing log. Panels/rows are square (0 radius), controls
+ * 2px; data (headers, emails, counts) is mono + tabular; section labels are
+ * wide-tracked uppercase. Every color is a token so both themes + the AA
+ * guarantees hold with no per-theme rule here.
+ *
+ * Motion law (DESIGN §4): only transform + opacity, ease-out, < 300ms. The step
+ * panel fades in on advance; reduced motion drops the movement. Nothing else
+ * animates — the stepper is a constantly-seen, keyboard-reachable control.
+ */
+
+.imp-page {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-6) var(--space-9);
+}
+
+.imp-head {
+  margin-bottom: var(--space-5);
+}
+.imp-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-display-sm);
+  font-weight: var(--fw-display-strong);
+  color: var(--ink-0);
+}
+.imp-subtitle {
+  margin-top: var(--space-2);
+  max-width: 62ch;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  line-height: var(--lh-base);
+}
+
+/* ── Stepper ──────────────────────────────────────────────────────────────── */
+.imp-stepper {
+  margin-bottom: var(--space-5);
+}
+.imp-stepper__list {
+  display: flex;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.imp-step {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.imp-step__body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-0);
+  background: var(--surface-1);
+  border-radius: 0;
+  color: var(--ink-2);
+  text-align: left;
+}
+button.imp-step__body--btn {
+  cursor: pointer;
+  font: inherit;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.imp-step[data-state='current'] .imp-step__body {
+  border-color: var(--focus);
+  color: var(--ink-0);
+}
+.imp-step[data-state='done'] .imp-step__body {
+  color: var(--ink-1);
+}
+.imp-step__marker {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+.imp-step[data-state='current'] .imp-step__marker {
+  border-color: var(--focus);
+  color: var(--focus);
+}
+.imp-step[data-state='done'] .imp-step__marker {
+  border-color: var(--state-reply);
+  color: var(--state-reply);
+}
+.imp-step__label {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Stage / panels ──────────────────────────────────────────────────────── */
+.imp-stage {
+  animation: imp-panel-in 180ms var(--ease-out);
+}
+@keyframes imp-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.imp-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--border-0);
+  background: var(--surface-1);
+}
+.imp-panel__aside {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.imp-hint {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.imp-muted {
+  color: var(--ink-3);
+}
+.imp-inline-error {
+  font-size: var(--fs-sm);
+  color: var(--state-dnc);
+  border-left: 2px solid var(--state-dnc-solid);
+  padding: var(--space-2) var(--space-3);
+  background: var(--state-dnc-bg);
+}
+
+/* ── Upload / drop zone ──────────────────────────────────────────────────── */
+.imp-drop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-9) var(--space-5);
+  border: 1px dashed var(--border-1);
+  background: var(--surface-inset);
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+.imp-drop[data-dragover] {
+  border-color: var(--focus);
+  border-style: solid;
+  background: var(--accent-weak-bg);
+}
+.imp-drop:focus-within {
+  outline: var(--focus-ring-width) solid var(--focus);
+  outline-offset: var(--focus-ring-offset);
+}
+.imp-drop__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.imp-drop__icon {
+  color: var(--ink-2);
+}
+.imp-drop__lead {
+  font-size: var(--fs-md);
+  color: var(--ink-0);
+}
+.imp-drop__browse {
+  color: var(--accent-strong);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.imp-drop__hint {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+
+.imp-filecard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-0);
+  background: var(--surface-2);
+}
+.imp-filecard__icon {
+  color: var(--state-reply);
+  flex: none;
+}
+.imp-filecard__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+.imp-filecard__name {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--ink-0);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.imp-filecard__stat {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Tables (preview · mapping · ledger) ─────────────────────────────────── */
+.imp-preview-scroll,
+.imp-map-scroll,
+.imp-ledger-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border-0);
+}
+.imp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+.imp-table th,
+.imp-table td {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  border-bottom: 1px solid var(--border-0);
+  vertical-align: top;
+}
+.imp-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-2);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.imp-table tbody tr:last-child th,
+.imp-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.imp-table--preview td,
+.imp-table--preview thead th {
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Mapping table */
+.imp-map__source {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--ink-0);
+  font-weight: var(--fw-normal);
+  white-space: nowrap;
+}
+.imp-map__sample {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--ink-2);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.imp-map__target {
+  min-width: 220px;
+}
+.imp-map tr[data-ignored] .imp-map__source,
+.imp-map tr[data-ignored] .imp-map__sample {
+  color: var(--ink-3);
+}
+
+/* ── Dedupe controls ─────────────────────────────────────────────────────── */
+.imp-dedupe {
+  border: 1px solid var(--border-0);
+  background: var(--surface-inset);
+  padding: var(--space-4);
+  margin: 0;
+}
+.imp-section-label {
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--ink-2);
+  padding: 0;
+}
+.imp-dedupe__matches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin: var(--space-3) 0 var(--space-4);
+}
+.imp-dedupe__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: end;
+}
+@media (max-width: 640px) {
+  .imp-dedupe__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.imp-issues {
+  margin: 0;
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-6);
+  border-left: 2px solid var(--state-overdue-solid);
+  background: var(--state-overdue-bg);
+  color: var(--ink-1);
+  font-size: var(--fs-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* ── Preview: stat board ─────────────────────────────────────────────────── */
+.imp-stats {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--border-0);
+  border: 1px solid var(--border-0);
+}
+@media (max-width: 720px) {
+  .imp-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.imp-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  background: var(--surface-1);
+}
+.imp-stat__value {
+  font-family: var(--font-display);
+  font-size: var(--fs-display-sm);
+  font-weight: var(--fw-display-strong);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-0);
+  line-height: var(--lh-tight);
+}
+.imp-stat__label {
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--ink-2);
+}
+.imp-stat[data-tone='create'] .imp-stat__value {
+  color: var(--state-reply);
+}
+.imp-stat[data-tone='dedupe'] .imp-stat__value {
+  color: var(--state-seq);
+}
+.imp-stat[data-tone='error'] .imp-stat__value {
+  color: var(--state-dnc);
+}
+
+.imp-note {
+  font-size: var(--fs-sm);
+  color: var(--ink-1);
+  padding: var(--space-2) var(--space-3);
+  border-left: 2px solid var(--border-1);
+  background: var(--surface-inset);
+}
+.imp-note--dnc {
+  border-left-color: var(--state-dnc-solid);
+  color: var(--state-dnc);
+}
+.imp-warnings {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.imp-warnings li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-micro);
+  font-family: var(--font-mono);
+  color: var(--state-overdue);
+}
+
+/* ── Ledger ──────────────────────────────────────────────────────────────── */
+.imp-ledger__idx {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+  width: 3rem;
+  white-space: nowrap;
+}
+.imp-ledger tr[data-outcome='error'] {
+  background: var(--state-dnc-bg);
+}
+.imp-rowerrors {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  color: var(--state-dnc);
+}
+.imp-rowwho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.imp-rowwho__name {
+  color: var(--ink-0);
+}
+.imp-rowwho__email {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--ink-2);
+}
+
+/* ── Action rows ─────────────────────────────────────────────────────────── */
+.imp-actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+}
+.imp-actions--split {
+  justify-content: space-between;
+}
+.imp-actions--center {
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ── Done ────────────────────────────────────────────────────────────────── */
+.imp-done {
+  align-items: center;
+  text-align: center;
+  padding: var(--space-9) var(--space-5);
+}
+.imp-done__icon {
+  color: var(--state-reply);
+}
+.imp-done__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-display-strong);
+  color: var(--ink-0);
+}
+.imp-done__sub {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.imp-done__file {
+  font-family: var(--font-mono);
+  color: var(--ink-1);
+}
+.imp-done__counts {
+  display: flex;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: var(--space-4) 0;
+}
+.imp-done__count {
+  font-size: var(--fs-sm);
+  color: var(--ink-1);
+  font-variant-numeric: tabular-nums;
+}
+.imp-done__count b {
+  font-family: var(--font-display);
+  font-size: var(--fs-display-sm);
+  font-weight: var(--fw-display-strong);
+  color: var(--state-reply);
+  margin-right: var(--space-2);
+}
+.imp-done__count--muted b {
+  color: var(--ink-2);
+}
+.imp-done__hint {
+  max-width: 48ch;
+}
+
+/* ── Hover states — gated to hover-capable, fine pointers ────────────────── */
+@media (hover: hover) and (pointer: fine) {
+  button.imp-step__body--btn:hover {
+    border-color: var(--ink-3);
+  }
+  .imp-drop:hover {
+    border-color: var(--ink-3);
+  }
+}
+
+/* ── Reduced motion — drop the panel movement, keep the fade ─────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .imp-stage {
+    animation: none;
+  }
+}
