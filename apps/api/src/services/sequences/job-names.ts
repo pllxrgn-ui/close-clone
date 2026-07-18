@@ -10,5 +10,5 @@ export const SEND_JOB_NAME = 'sequence:send';
 
 /** Stable per-intent wake-up job id (BullMQ/in-process dedupe key). */
 export function wakeupJobId(intentId: string): string {
-  return `intent:${intentId}`;
+  return `intent-${intentId}`;
 }

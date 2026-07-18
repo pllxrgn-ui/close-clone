@@ -11,5 +11,5 @@
 export const WEBHOOK_DELIVERY_JOB = 'webhook:deliver';
 
 export function webhookDeliveryJobId(deliveryId: string): string {
-  return `webhook-delivery:${deliveryId}`;
+  return `webhook-delivery-${deliveryId}`;
 }

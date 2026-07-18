@@ -37,7 +37,7 @@ export interface EnqueueOptions {
   delayMs?: number;
   /**
    * Idempotency handle. Re-enqueuing a live job with the same id is a no-op, so a
-   * per-intent wake-up (`jobId = intent:<id>`) is scheduled at most once even if
+   * per-intent wake-up (`jobId = intent-<id>`) is scheduled at most once even if
    * both the enroller and the sweeper try (ARCHITECTURE §4 self-heal).
    */
   jobId?: string;
