@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { and, eq, lte } from 'drizzle-orm';
 
 import { webhookDeliveries, webhookSubscriptions, type Db } from '../../db/index.ts';
 import type { QueueDriver } from '../../queue/index.ts';
@@ -140,6 +140,41 @@ export function createActivityWebhookEmitter(queue: QueueDriver): {
       });
       return result.deliveryIds;
     },
-    flush: (deliveryIds) => enqueueWebhookDeliveries(queue, deliveryIds),
+    // Best-effort: the delivery ROWS are already durable (staged in the source
+    // transaction). A failed or raced enqueue here must never fail the domain
+    // write — the delivery sweeper (sweepPendingWebhookDeliveries) re-enqueues
+    // any committed-but-pending row, so nothing is lost.
+    flush: async (deliveryIds) => {
+      try {
+        await enqueueWebhookDeliveries(queue, deliveryIds);
+      } catch {
+        // swallow — the sweeper is the safety net
+      }
+    },
   };
+}
+
+/**
+ * Relay for the transactional outbox: enqueue every committed-but-not-delivered
+ * delivery. Run on an interval from the composition root (like the sequence and
+ * telephony sweepers). Idempotent — the per-delivery jobId dedupes against any
+ * wake-up the low-latency flush already enqueued, and against a prior sweep.
+ * This is what makes emission race-free: the flush is an optimisation; the
+ * sweeper guarantees delivery of any row whose flush lost the commit race.
+ */
+export async function sweepPendingWebhookDeliveries(
+  db: Db,
+  queue: QueueDriver,
+  now: () => Date = () => new Date(),
+): Promise<number> {
+  const nowIso = now().toISOString();
+  const pending = await db
+    .select({ id: webhookDeliveries.id })
+    .from(webhookDeliveries)
+    .where(and(eq(webhookDeliveries.state, 'pending'), lte(webhookDeliveries.nextRetryAt, nowIso)));
+  await enqueueWebhookDeliveries(
+    queue,
+    pending.map((r) => r.id),
+  );
+  return pending.length;
 }

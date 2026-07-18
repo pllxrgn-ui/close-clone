@@ -45,6 +45,7 @@ import { registerWebhookSubscriptionRoutes } from './routes/webhook-subscription
 import {
   createWebhookDeliveryProcessor,
   createActivityWebhookEmitter,
+  sweepPendingWebhookDeliveries,
   type WebhookSender,
 } from './services/webhooks/index.ts';
 import { SessionCodec } from './auth/session/session.ts';
@@ -470,6 +471,16 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
         errorSink.captureException(error, { where: 'telephony-sweeper' });
       });
     }
+    // Outbound-webhook relay: re-enqueue any committed-but-pending delivery
+    // (the outbox safety net — makes activity.recorded emission race-free even
+    // if a low-latency flush lost the commit race or Redis blipped).
+    void sweepPendingWebhookDeliveries(db, queue)
+      .then((count) => {
+        if (count > 0) app.log.info({ count }, 'swept pending webhook-deliveries');
+      })
+      .catch((error: unknown) => {
+        errorSink.captureException(error, { where: 'webhook-delivery-sweeper' });
+      });
   }, SWEEP_INTERVAL_MS);
   sweeper.unref?.();
 

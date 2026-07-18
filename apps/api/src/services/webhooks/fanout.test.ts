@@ -4,7 +4,7 @@ import { eq, sql } from 'drizzle-orm';
 import { webhookDeliveries } from '../../db/index.ts';
 import { createTestDb, type TestDb } from '../../db/test-helpers.ts';
 import { InProcessQueueDriver } from '../../queue/index.ts';
-import { emitWebhookEvent } from './fanout.ts';
+import { emitWebhookEvent, sweepPendingWebhookDeliveries } from './fanout.ts';
 import { WEBHOOK_DELIVERY_JOB } from './job-names.ts';
 import { WebhookSubscriptionService } from './service.ts';
 
@@ -115,5 +115,57 @@ describe('emitWebhookEvent', () => {
     await emitWebhookEvent({ db: ctx.db, queue, now }, { type: 'lead.created', data: {} });
     await queue.tick(now().getTime());
     expect(seen).toEqual([WEBHOOK_DELIVERY_JOB]);
+  });
+});
+
+describe('sweepPendingWebhookDeliveries (transactional-outbox relay)', () => {
+  async function seedDelivery(
+    subId: string,
+    state: 'pending' | 'delivered' | 'failed',
+    nextRetryAt: string,
+  ): Promise<string> {
+    const [row] = await ctx.db
+      .insert(webhookDeliveries)
+      .values({
+        subscriptionId: subId,
+        event: { id: 'e', type: 'activity.recorded', occurredAt: nextRetryAt, data: {} },
+        state,
+        attempts: 0,
+        nextRetryAt,
+      })
+      .returning({ id: webhookDeliveries.id });
+    if (!row) throw new Error('seed failed');
+    return row.id;
+  }
+
+  test('enqueues committed pending rows that are due, skipping delivered ones', async () => {
+    const sub = await svc.create({ url: 'https://h.test/a', events: ['activity.recorded'] });
+    await seedDelivery(sub.subscription.id, 'pending', '2026-07-15T11:59:00.000Z'); // due
+    await seedDelivery(sub.subscription.id, 'delivered', '2026-07-15T11:59:00.000Z'); // done
+
+    const count = await sweepPendingWebhookDeliveries(ctx.db, queue, now);
+
+    expect(count).toBe(1);
+    expect(queue.pendingCount).toBe(1);
+  });
+
+  test('does not enqueue a pending row whose retry is still in the future', async () => {
+    const sub = await svc.create({ url: 'https://h.test/a', events: ['activity.recorded'] });
+    await seedDelivery(sub.subscription.id, 'pending', '2026-07-15T13:00:00.000Z'); // future
+
+    const count = await sweepPendingWebhookDeliveries(ctx.db, queue, now);
+
+    expect(count).toBe(0);
+    expect(queue.pendingCount).toBe(0);
+  });
+
+  test('is idempotent — a second sweep does not double-enqueue the same delivery', async () => {
+    const sub = await svc.create({ url: 'https://h.test/a', events: ['activity.recorded'] });
+    await seedDelivery(sub.subscription.id, 'pending', '2026-07-15T11:59:00.000Z');
+
+    await sweepPendingWebhookDeliveries(ctx.db, queue, now);
+    await sweepPendingWebhookDeliveries(ctx.db, queue, now);
+
+    expect(queue.pendingCount).toBe(1); // jobId dedupe
   });
 });
