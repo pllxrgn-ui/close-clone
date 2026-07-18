@@ -1,0 +1,379 @@
+/*
+ * Two-way SMS surface (U2) — the conversation drawer (thread + compliance-gated
+ * composer), in the Operator Grid idiom. Chrome is achromatic; color is spent only
+ * on STATE (--state-*): the DNC/opt-out rail and a failed delivery are the only red,
+ * the closed-window note is amber. Controls are 2px, panels/rows square. Data
+ * (timestamps, counts) is mono + tabular. Every value is a token so both themes and
+ * the AA guarantees hold with no per-theme rules here.
+ *
+ * Motion law: the drawer slide + reduced-motion handling come from the Drawer
+ * primitive; nothing in the thread animates (bubbles are data that appears often),
+ * and the auto-scroll to newest is an instant jump.
+ */
+
+/* ── Drawer shell (widen the primitive for a conversation) ─────────────────── */
+.sb-drawer.sms-drawer {
+  width: min(520px, 96vw);
+}
+.sms-drawer__inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.sms-drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-0);
+  flex: none;
+}
+.sms-drawer__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-display-strong);
+  color: var(--ink-0);
+}
+
+/* ── Recipient bar ─────────────────────────────────────────────────────────── */
+.sms-recipient-bar {
+  flex: none;
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--border-0);
+  background: var(--surface-1);
+}
+.sms-recipient-bar__who {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.sms-recipient-bar__name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--fw-semibold);
+  color: var(--ink-0);
+}
+.sms-recipient-bar__num {
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+}
+.sms-recipient-bar__digits {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.sms-recipient-bar__select {
+  max-width: 260px;
+}
+
+/* ── Thread ────────────────────────────────────────────────────────────────── */
+.sms-thread {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-5);
+  background: var(--surface-0);
+}
+.sms-thread--status {
+  display: grid;
+  place-items: center;
+}
+.sms-thread__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.sms-thread__divider {
+  list-style: none;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: var(--space-2) 0;
+}
+.sms-thread__divider-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  background: var(--surface-0);
+  padding: 0 var(--space-3);
+}
+
+/* ── Bubbles ───────────────────────────────────────────────────────────────── */
+.sms-bubble {
+  max-width: 78%;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-0);
+  border-radius: var(--radius-1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.sms-bubble--in {
+  align-self: flex-start;
+  background: var(--surface-2);
+  color: var(--ink-0);
+}
+.sms-bubble--out {
+  align-self: flex-end;
+  background: var(--accent-weak-bg);
+  border-color: var(--border-1);
+  color: var(--ink-0);
+}
+.sms-bubble__body {
+  font-size: var(--fs-base);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.sms-bubble__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  justify-content: flex-end;
+}
+.sms-bubble--in .sms-bubble__meta {
+  justify-content: flex-start;
+}
+.sms-bubble__time {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+.sms-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--fs-micro);
+  color: var(--ink-2);
+}
+.sms-status--failed {
+  color: var(--state-dnc);
+}
+
+/* ── Opt-out system divider (the sms_opt_out moment) ───────────────────────── */
+.sms-sys {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin: var(--space-3) auto;
+  padding: var(--space-2) var(--space-4);
+  max-width: 92%;
+  border: 1px solid var(--state-dnc);
+  border-radius: var(--radius-1);
+  background: var(--state-dnc-bg);
+  color: var(--state-dnc);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+.sms-sys__text b {
+  font-family: var(--font-mono);
+  font-weight: var(--fw-semibold);
+}
+.sms-sys__time {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--state-dnc);
+  opacity: 0.8;
+}
+
+/* ── Composer ──────────────────────────────────────────────────────────────── */
+.sms-composer {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border-0);
+  background: var(--surface-1);
+}
+.sms-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sms-field__label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--ink-2);
+}
+.sms-composer__input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sms-composer__textarea {
+  resize: vertical;
+  min-height: 64px;
+}
+.sms-composer__optout {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.sms-composer__optout-tag {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--state-seq);
+  border: 1px solid var(--state-seq);
+  border-radius: var(--radius-1);
+  padding: 0 var(--space-2);
+}
+.sms-composer__optout-text {
+  color: var(--ink-1);
+}
+.sms-composer__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.sms-composer__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.sms-count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+.sms-count--multi {
+  color: var(--state-overdue);
+}
+.sms-window {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--fs-micro);
+  color: var(--ink-3);
+}
+.sms-window--closed {
+  color: var(--state-overdue);
+}
+.sms-composer__actions {
+  flex: none;
+}
+.sms-composer__hint {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* ── Compliance rail (the blocked state, before Send) ──────────────────────── */
+.sms-rail {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-1);
+  border: 1px solid;
+}
+.sms-rail--dnc {
+  border-color: var(--state-dnc);
+  background: var(--state-dnc-bg);
+  color: var(--state-dnc);
+}
+.sms-rail--quiet {
+  border-color: var(--state-overdue);
+  background: var(--state-overdue-bg);
+  color: var(--state-overdue);
+}
+.sms-rail__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.sms-rail__label {
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.sms-rail__reason {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--ink-1);
+}
+
+/* ── Lead picker (palette entry) ───────────────────────────────────────────── */
+.sms-drawer__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.sms-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.sms-search__icon {
+  position: absolute;
+  left: var(--space-3);
+  color: var(--ink-3);
+  pointer-events: none;
+}
+.sms-search .sb-input {
+  padding-left: var(--space-8);
+}
+.sms-hint {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.sms-picklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.sms-picklist__row {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  text-align: left;
+}
+.sms-picklist__name {
+  color: var(--ink-0);
+  font-weight: var(--fw-medium);
+}
+.sms-picklist__sub {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
