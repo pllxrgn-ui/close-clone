@@ -44,18 +44,16 @@ export interface EmitResult {
 }
 
 /**
- * Fan a domain event out to matching active subscriptions. Returns the created
- * delivery ids (empty when nothing matched — a no-op, not an error).
+ * Write the durable `webhook_deliveries` rows for a domain event — the DB half
+ * of fan-out, with NO enqueue. `db` may be a transaction handle, so a caller can
+ * stage deliveries atomically with the source mutation (the activity spine does
+ * exactly this — see recordActivity). Returns the delivery ids to enqueue after
+ * the enclosing transaction commits.
  */
-export async function emitWebhookEvent(
-  deps: FanoutDeps,
-  input: EmitEventInput,
-): Promise<EmitResult> {
-  const now = (deps.now ?? (() => new Date()))();
-  const nowIso = now.toISOString();
+export async function writeWebhookDeliveries(db: Db, input: EmitEventInput): Promise<EmitResult> {
+  const nowIso = input.occurredAt ?? new Date().toISOString();
   const eventId = input.id ?? randomUUID();
 
-  // The stored/POSTed envelope (typed as a JSON record for the jsonb column).
   const envelope: Record<string, unknown> = {
     id: eventId,
     type: input.type,
@@ -63,7 +61,7 @@ export async function emitWebhookEvent(
     data: input.data,
   };
 
-  const subs = await deps.db
+  const subs = await db
     .select({ id: webhookSubscriptions.id, events: webhookSubscriptions.events })
     .from(webhookSubscriptions)
     .where(eq(webhookSubscriptions.isActive, true));
@@ -73,7 +71,7 @@ export async function emitWebhookEvent(
 
   const deliveryIds: string[] = [];
   for (const sub of matching) {
-    const inserted = await deps.db
+    const inserted = await db
       .insert(webhookDeliveries)
       .values({
         subscriptionId: sub.id,
@@ -87,15 +85,61 @@ export async function emitWebhookEvent(
     const id = inserted[0]?.id;
     if (id !== undefined) deliveryIds.push(id);
   }
+  return { eventId, deliveryIds };
+}
 
-  // Enqueue wake-ups only after the rows exist (durable-first).
+/** Enqueue the delivery wake-ups — the queue half, run AFTER the rows commit. */
+export async function enqueueWebhookDeliveries(
+  queue: QueueDriver,
+  deliveryIds: string[],
+): Promise<void> {
   for (const id of deliveryIds) {
-    await deps.queue.enqueue(
+    await queue.enqueue(
       WEBHOOK_DELIVERY_JOB,
       { deliveryId: id },
       { jobId: webhookDeliveryJobId(id) },
     );
   }
+}
 
-  return { eventId, deliveryIds };
+/**
+ * Fan a domain event out to matching active subscriptions (write rows, then
+ * enqueue). Returns the created delivery ids (empty when nothing matched — a
+ * no-op, not an error). Use this for post-commit emission where the caller has a
+ * plain db handle; for in-transaction staging use writeWebhookDeliveries +
+ * enqueueWebhookDeliveries directly (see {@link createActivityWebhookEmitter}).
+ */
+export async function emitWebhookEvent(
+  deps: FanoutDeps,
+  input: EmitEventInput,
+): Promise<EmitResult> {
+  const withNow: EmitEventInput =
+    input.occurredAt === undefined
+      ? { ...input, occurredAt: (deps.now ?? (() => new Date()))().toISOString() }
+      : input;
+  const result = await writeWebhookDeliveries(deps.db, withNow);
+  await enqueueWebhookDeliveries(deps.queue, result.deliveryIds);
+  return result;
+}
+
+/**
+ * The activity spine's webhook emitter (see recordActivity's
+ * ActivityWebhookEmitter): `stage` writes delivery rows inside the record
+ * transaction; `flush` enqueues the wake-ups after it commits. Structurally
+ * typed — no import from the activity service, so no cross-service coupling.
+ */
+export function createActivityWebhookEmitter(queue: QueueDriver): {
+  stage(tx: Db, event: { type: string; data: Record<string, unknown> }): Promise<string[]>;
+  flush(deliveryIds: string[]): Promise<void>;
+} {
+  return {
+    stage: async (tx, event) => {
+      const result = await writeWebhookDeliveries(tx, {
+        type: event.type as WebhookEventType,
+        data: event.data,
+      });
+      return result.deliveryIds;
+    },
+    flush: (deliveryIds) => enqueueWebhookDeliveries(queue, deliveryIds),
+  };
 }

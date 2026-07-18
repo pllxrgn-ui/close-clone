@@ -57,6 +57,9 @@ export {
 
 export {
   emitWebhookEvent,
+  writeWebhookDeliveries,
+  enqueueWebhookDeliveries,
+  createActivityWebhookEmitter,
   type EmitEventInput,
   type EmitResult,
   type FanoutDeps,

@@ -65,6 +65,84 @@ describe('ActivityWriter payload validation', () => {
   });
 });
 
+describe('ActivityWriter webhook emission (activity.recorded fan-out)', () => {
+  interface StagedEvent {
+    type: string;
+    data: Record<string, unknown>;
+  }
+
+  test('stages an activity.recorded event in-tx and flushes the delivery ids post-commit', async () => {
+    const leadId = await seedLead();
+    const staged: StagedEvent[] = [];
+    const flushed: string[][] = [];
+    const emitter = {
+      stage: async (_tx: unknown, event: StagedEvent): Promise<string[]> => {
+        staged.push(event);
+        return ['delivery-1'];
+      },
+      flush: async (ids: string[]): Promise<void> => {
+        flushed.push(ids);
+      },
+    };
+
+    await recordActivity(
+      ctx.db,
+      {
+        leadId,
+        type: 'field_changed',
+        occurredAt: '2026-05-01T00:00:00.000Z',
+        payload: { field: 'status', before: 'a', after: 'b' },
+      },
+      emitter,
+    );
+
+    // ONE coarse wire event carrying the fine-grained C4 type in its data.
+    expect(staged).toHaveLength(1);
+    expect(staged[0]?.type).toBe('activity.recorded');
+    expect(staged[0]?.data['activityType']).toBe('field_changed');
+    expect(staged[0]?.data['leadId']).toBe(leadId);
+    // Enqueue happens exactly once, after commit, with the staged ids.
+    expect(flushed).toEqual([['delivery-1']]);
+  });
+
+  test('does not flush when the activity record fails (rolled back, no orphan delivery)', async () => {
+    const flushed: string[][] = [];
+    const emitter = {
+      stage: async (): Promise<string[]> => ['delivery-1'],
+      flush: async (ids: string[]): Promise<void> => {
+        flushed.push(ids);
+      },
+    };
+
+    await expect(
+      recordActivity(
+        ctx.db,
+        {
+          // no such lead → the whole transaction rolls back
+          leadId: '00000000-0000-0000-0000-000000000000',
+          type: 'field_changed',
+          occurredAt: '2026-05-01T00:00:00.000Z',
+          payload: { field: 'status', before: 'a', after: 'b' },
+        },
+        emitter,
+      ),
+    ).rejects.toThrow();
+
+    expect(flushed).toEqual([]);
+  });
+
+  test('no emitter (existing callers) records normally with no fan-out', async () => {
+    const leadId = await seedLead();
+    const row = await recordActivity(ctx.db, {
+      leadId,
+      type: 'note_added',
+      occurredAt: '2026-05-01T00:00:00.000Z',
+      payload: { body: 'hello' },
+    });
+    expect(row.type).toBe('note_added');
+  });
+});
+
 describe('ActivityWriter denormalization mapping (CONTRACTS §C4)', () => {
   // Each case: event type → the lead columns that must advance to occurred_at.
   const T = '2026-05-01T12:00:00.000Z';

@@ -109,17 +109,37 @@ function buildDenormSet(
 }
 
 /**
+ * The webhook fan-out seam for the activity spine. `stage` runs INSIDE the
+ * record transaction — it writes the durable `webhook_deliveries` rows for
+ * matching subscriptions and returns their ids, so a rolled-back activity
+ * leaves no orphan delivery. `flush` runs AFTER commit — it enqueues the
+ * best-effort delivery wake-ups (a lost wake-up doesn't lose the event; the row
+ * is already durable). Injected, never a global; absent for callers that don't
+ * fan out (and every existing test).
+ */
+export interface ActivityWebhookEmitter {
+  stage(tx: Db, event: { type: string; data: Record<string, unknown> }): Promise<string[]>;
+  flush(deliveryIds: string[]): Promise<void>;
+}
+
+/**
  * Record one activity. Append + denorm update are atomic: any failure (bad
  * payload, missing/deleted lead) leaves both the spine and the denorm columns
- * untouched.
+ * untouched. When an `emitter` is supplied, one coarse `activity.recorded`
+ * webhook event (carrying the fine-grained C4 type in its data) is staged in the
+ * SAME transaction and flushed only after it commits.
  */
-export async function recordActivity(db: Db, input: RecordActivityInput): Promise<ActivityRow> {
+export async function recordActivity(
+  db: Db,
+  input: RecordActivityInput,
+  emitter?: ActivityWebhookEmitter,
+): Promise<ActivityRow> {
   // Validate BEFORE opening the transaction — bad payloads never touch the DB.
   const payload = parseActivityPayload(input.type, input.payload ?? {}) as Record<string, unknown>;
   const occurredIso = toIso(input.occurredAt);
 
-  return db.transaction(async (tx) => {
-    const [row] = await tx
+  const { row, deliveryIds } = await db.transaction(async (tx) => {
+    const [inserted] = await tx
       .insert(activities)
       .values({
         leadId: input.leadId,
@@ -130,7 +150,7 @@ export async function recordActivity(db: Db, input: RecordActivityInput): Promis
         payload,
       })
       .returning();
-    if (!row) throw new ActivityWriterError('activity insert returned no row');
+    if (!inserted) throw new ActivityWriterError('activity insert returned no row');
 
     const set = buildDenormSet(input.type, occurredIso, input.leadId);
     const updated = await tx
@@ -141,19 +161,44 @@ export async function recordActivity(db: Db, input: RecordActivityInput): Promis
     // 0 rows → lead absent or soft-deleted: refuse and roll the append back.
     if (updated.length === 0) throw new LeadNotFoundError(input.leadId);
 
-    return row;
+    // Stage the outbound webhook IN THIS TRANSACTION (durable-first): the
+    // delivery rows commit atomically with the activity, or not at all.
+    let deliveryIds: string[] = [];
+    if (emitter !== undefined) {
+      deliveryIds = await emitter.stage(tx as unknown as Db, {
+        type: 'activity.recorded',
+        data: {
+          activityId: inserted.id,
+          activityType: input.type,
+          leadId: input.leadId,
+          contactId: input.contactId ?? null,
+          occurredAt: occurredIso,
+        },
+      });
+    }
+    return { row: inserted, deliveryIds };
   });
+
+  // Post-commit, best-effort: enqueue the delivery wake-ups. A failure here
+  // never fails the activity — the durable rows exist and can still be delivered.
+  if (emitter !== undefined && deliveryIds.length > 0) {
+    await emitter.flush(deliveryIds);
+  }
+
+  return row;
 }
 
 /** Ergonomic wrapper binding {@link recordActivity} to a db handle. */
 export class ActivityWriter {
   private readonly db: Db;
+  private readonly emitter: ActivityWebhookEmitter | undefined;
 
-  constructor(db: Db) {
+  constructor(db: Db, emitter?: ActivityWebhookEmitter) {
     this.db = db;
+    this.emitter = emitter;
   }
 
   record(input: RecordActivityInput): Promise<ActivityRow> {
-    return recordActivity(this.db, input);
+    return recordActivity(this.db, input, this.emitter);
   }
 }
