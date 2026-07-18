@@ -1,7 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm';
 import type { TelephonyProvider } from '@switchboard/shared/providers';
 import { calls, contacts, leads, notes, type Db } from '../../db/index.ts';
-import { recordActivity } from '../activity/index.ts';
+import { recordActivity, type ActivityWebhookEmitter } from '../activity/index.ts';
 import { isRecordingEnabled } from './recording.ts';
 import { isPhoneSuppressed } from './suppression.ts';
 import { phoneMatchKey } from './phone.ts';
@@ -180,6 +180,8 @@ export class CallNotFoundError extends Error {
 export interface PatchCallDeps {
   db: Db;
   now: () => Date;
+  /** Fans the call note onto activity.recorded webhooks. */
+  emitter?: ActivityWebhookEmitter;
 }
 
 export interface PatchCallInput {
@@ -237,14 +239,18 @@ export async function patchCall(
         })
         .returning({ id: notes.id });
       noteId = noteRows[0]!.id;
-      await recordActivity(tx, {
-        leadId: call.leadId,
-        contactId: call.contactId,
-        ...(input.actorId !== undefined ? { userId: input.actorId } : {}),
-        type: 'note_added',
-        occurredAt: nowIso,
-        payload: { noteId, aiGenerated: false, channel: 'voice' },
-      });
+      await recordActivity(
+        tx,
+        {
+          leadId: call.leadId,
+          contactId: call.contactId,
+          ...(input.actorId !== undefined ? { userId: input.actorId } : {}),
+          type: 'note_added',
+          occurredAt: nowIso,
+          payload: { noteId, aiGenerated: false, channel: 'voice' },
+        },
+        deps.emitter,
+      );
     }
 
     return {

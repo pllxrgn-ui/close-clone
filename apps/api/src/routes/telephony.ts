@@ -11,6 +11,7 @@ import {
 } from '@switchboard/shared';
 
 import { smartViews, type Db } from '../db/index.ts';
+import type { ActivityWebhookEmitter } from '../services/activity/index.ts';
 import { eq } from 'drizzle-orm';
 import type { QueueDriver } from '../queue/index.ts';
 import {
@@ -78,6 +79,8 @@ export interface TelephonyRouteDeps {
   publicBaseUrl: string;
   /** Default outbound caller-id (org Twilio number) when a dial omits `from`. */
   callerId?: string;
+  /** Fans call/note activities onto activity.recorded webhooks. */
+  activityEmitter?: ActivityWebhookEmitter;
   /** Inbound routing overrides (ring-group resolver); defaults to active-users. */
   routing?: InboundRoutingDeps;
   /** Voicemail `<Record>` status callback; defaults to `<base>/wh/twilio/status`. */
@@ -308,11 +311,19 @@ export function registerTelephonyRoutes(app: FastifyInstance, deps: TelephonyRou
       return sendError(reply, 'VALIDATION_FAILED', 'invalid patch request', parsed.error.flatten());
     }
     try {
-      const result = await patchCall({ db: deps.db, now: deps.now }, idResult.data, {
-        ...(parsed.data.outcome !== undefined ? { outcome: parsed.data.outcome } : {}),
-        ...(parsed.data.notes !== undefined ? { notes: parsed.data.notes } : {}),
-        ...(parsed.data.actorId !== undefined ? { actorId: parsed.data.actorId } : {}),
-      });
+      const result = await patchCall(
+        {
+          db: deps.db,
+          now: deps.now,
+          ...(deps.activityEmitter !== undefined ? { emitter: deps.activityEmitter } : {}),
+        },
+        idResult.data,
+        {
+          ...(parsed.data.outcome !== undefined ? { outcome: parsed.data.outcome } : {}),
+          ...(parsed.data.notes !== undefined ? { notes: parsed.data.notes } : {}),
+          ...(parsed.data.actorId !== undefined ? { actorId: parsed.data.actorId } : {}),
+        },
+      );
       return reply.send(result);
     } catch (err) {
       if (err instanceof CallNotFoundError) return sendError(reply, 'NOT_FOUND', err.message);
@@ -432,7 +443,12 @@ export function registerTelephonyRoutes(app: FastifyInstance, deps: TelephonyRou
       }
       try {
         const result = await dropVoicemailOnCall(
-          { db: deps.db, provider: voicemailProvider, now: deps.now },
+          {
+            db: deps.db,
+            provider: voicemailProvider,
+            now: deps.now,
+            ...(deps.activityEmitter !== undefined ? { emitter: deps.activityEmitter } : {}),
+          },
           {
             callId: idResult.data,
             recordingRef: parsed.data.recordingRef,

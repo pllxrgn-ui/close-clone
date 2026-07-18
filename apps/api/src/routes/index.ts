@@ -139,7 +139,11 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     registerAdminCrudRoutes(app, { db: deps.db, ...deps.adminCrud });
   }
   if (deps.telephony !== undefined) {
-    registerTelephonyRoutes(app, { db: deps.db, ...deps.telephony });
+    registerTelephonyRoutes(app, {
+      db: deps.db,
+      ...deps.telephony,
+      ...(deps.activityEmitter !== undefined ? { activityEmitter: deps.activityEmitter } : {}),
+    });
   }
   if (deps.sms !== undefined) {
     registerSmsRoutes(app, {

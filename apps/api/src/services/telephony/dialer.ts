@@ -9,7 +9,7 @@ import {
 } from '@switchboard/shared';
 import type { TelephonyProvider } from '@switchboard/shared/providers';
 import { calls, contacts, leads, type Db } from '../../db/index.ts';
-import { recordActivity } from '../activity/index.ts';
+import { recordActivity, type ActivityWebhookEmitter } from '../activity/index.ts';
 import { DialProviderError, dialCall, type DialInput, type DialOutcome } from './dial.ts';
 import { isPhoneSuppressed } from './suppression.ts';
 import { phoneMatchKey } from './phone.ts';
@@ -295,6 +295,8 @@ export interface DropVoicemailDeps {
   db: Db;
   provider: Pick<TelephonyProvider, 'dropVoicemail'>;
   now: () => Date;
+  /** Fans call_logged onto activity.recorded webhooks. */
+  emitter?: ActivityWebhookEmitter;
 }
 
 export interface DropVoicemailInput {
@@ -379,25 +381,29 @@ export async function dropVoicemailOnCall(
       })
       .where(eq(calls.id, call.id));
 
-    await recordActivity(tx, {
-      leadId: call.leadId,
-      contactId: call.contactId,
-      ...(input.actorId !== undefined
-        ? { userId: input.actorId }
-        : call.userId !== null
-          ? { userId: call.userId }
-          : {}),
-      type: 'call_logged',
-      occurredAt: nowIso,
-      payload: {
-        callId: call.id,
-        direction: 'outbound',
-        outcome: 'voicemail_drop',
-        recordingRef: input.recordingRef,
-        voicemailDropped: true,
-        channel: 'voice',
+    await recordActivity(
+      tx,
+      {
+        leadId: call.leadId,
+        contactId: call.contactId,
+        ...(input.actorId !== undefined
+          ? { userId: input.actorId }
+          : call.userId !== null
+            ? { userId: call.userId }
+            : {}),
+        type: 'call_logged',
+        occurredAt: nowIso,
+        payload: {
+          callId: call.id,
+          direction: 'outbound',
+          outcome: 'voicemail_drop',
+          recordingRef: input.recordingRef,
+          voicemailDropped: true,
+          channel: 'voice',
+        },
       },
-    });
+      deps.emitter,
+    );
   });
 
   return { callId: call.id, recordingRef: input.recordingRef, activity: 'call_logged' };
