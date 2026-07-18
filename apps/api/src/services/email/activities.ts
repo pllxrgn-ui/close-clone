@@ -1,6 +1,6 @@
 import { asc, eq, sql } from 'drizzle-orm';
 import { emailMessages, type Db } from '../../db/index.ts';
-import { recordActivity } from '../activity/index.ts';
+import { recordActivity, type ActivityWebhookEmitter } from '../activity/index.ts';
 
 /**
  * Email → activity materialization (task 2c, CONTRACTS §C4).
@@ -46,6 +46,7 @@ export async function materializeThreadActivities(
   exec: Db,
   threadId: string,
   leadId: string,
+  emitter?: ActivityWebhookEmitter,
 ): Promise<number> {
   const msgs = await exec
     .select({
@@ -64,12 +65,16 @@ export async function materializeThreadActivities(
     const type = m.direction === 'in' ? 'email_received' : 'email_sent';
     const payload: Record<string, unknown> = { emailMessageId: m.id, threadId };
     if (m.subject !== null) payload['subject'] = m.subject;
-    await recordActivity(exec, {
-      leadId,
-      type,
-      occurredAt: m.sentAt ?? new Date().toISOString(),
-      payload,
-    });
+    await recordActivity(
+      exec,
+      {
+        leadId,
+        type,
+        occurredAt: m.sentAt ?? new Date().toISOString(),
+        payload,
+      },
+      emitter,
+    );
     written += 1;
   }
   return written;

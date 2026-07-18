@@ -88,6 +88,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       db: deps.db,
       providerFor: deps.emailSend.providerFor,
       cipher: deps.emailSend.cipher,
+      ...(deps.activityEmitter !== undefined ? { emitter: deps.activityEmitter } : {}),
     });
   }
   if (deps.sequences !== undefined) {

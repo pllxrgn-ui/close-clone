@@ -19,6 +19,7 @@ import type { TokenCipher } from '../sync/token-cipher.ts';
 import { assertActiveUser } from '../templates/access.ts';
 import { getTemplate } from '../templates/index.ts';
 import { materializeThreadActivities } from './activities.ts';
+import type { ActivityWebhookEmitter } from '../activity/index.ts';
 import { renderTemplate, type MergeContext } from './merge.ts';
 import { resolveThreadForMessage } from './threading.ts';
 
@@ -149,6 +150,8 @@ export interface SendServiceDeps {
   providerFor: ProviderForAccount;
   /** Decrypts `email_accounts.oauth_tokens`. */
   cipher: TokenCipher;
+  /** Fans email_sent onto activity.recorded webhooks. */
+  emitter?: ActivityWebhookEmitter;
 }
 
 export interface SendOneOffInput {
@@ -432,7 +435,11 @@ interface PersistInput {
   references: string[];
 }
 
-async function persistSent(db: Db, p: PersistInput): Promise<SendOneOffResult> {
+async function persistSent(
+  db: Db,
+  p: PersistInput,
+  emitter?: ActivityWebhookEmitter,
+): Promise<SendOneOffResult> {
   return db.transaction(async (txRaw) => {
     const tx = txRaw as Db;
     const nowIso = new Date().toISOString();
@@ -497,7 +504,7 @@ async function persistSent(db: Db, p: PersistInput): Promise<SendOneOffResult> {
 
     const threadId = await resolveThreadForMessage(tx, p.accountId, messageId, raw);
     await attachThreadToLead(tx, threadId, p.leadId);
-    await materializeThreadActivities(tx, threadId, p.leadId);
+    await materializeThreadActivities(tx, threadId, p.leadId, emitter);
 
     return {
       messageId,
@@ -611,17 +618,21 @@ export async function sendOneOff(
     throw new SendProviderError(err instanceof Error ? err.message : String(err));
   }
 
-  return persistSent(db, {
-    accountId: input.accountId,
-    leadId: input.leadId,
-    address: account.address,
-    to,
-    cc,
-    subject: rendered.subject ?? '',
-    body: rendered.body,
-    providerMessageId: result.providerMessageId,
-    rfcMessageId: result.rfcMessageId,
-    references,
-    ...(inReplyTo !== undefined ? { inReplyTo } : {}),
-  });
+  return persistSent(
+    db,
+    {
+      accountId: input.accountId,
+      leadId: input.leadId,
+      address: account.address,
+      to,
+      cc,
+      subject: rendered.subject ?? '',
+      body: rendered.body,
+      providerMessageId: result.providerMessageId,
+      rfcMessageId: result.rfcMessageId,
+      references,
+      ...(inReplyTo !== undefined ? { inReplyTo } : {}),
+    },
+    deps.emitter,
+  );
 }

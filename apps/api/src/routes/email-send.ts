@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 
 import type { Db } from '../db/index.ts';
+import type { ActivityWebhookEmitter } from '../services/activity/index.ts';
 import { InvalidActorError } from '../services/templates/index.ts';
 import {
   MergeRenderError,
@@ -38,6 +39,8 @@ export interface EmailSendRouteDeps {
   db: Db;
   providerFor: ProviderForAccount;
   cipher: TokenCipher;
+  /** Fans email_sent onto activity.recorded webhooks (passed through to sendOneOff). */
+  emitter?: ActivityWebhookEmitter;
 }
 
 const addressList = z.array(z.string().min(3).max(320)).max(100);
