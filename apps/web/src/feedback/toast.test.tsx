@@ -19,12 +19,12 @@ describe('ToastProvider', () => {
   test('shows a message in a polite live region', async () => {
     render(
       <ToastProvider>
-        <Trigger message="wired in Phase 4" />
+        <Trigger message="saved to the timeline" />
       </ToastProvider>,
     );
     await userEvent.click(screen.getByRole('button', { name: 'fire' }));
     const status = screen.getByRole('status');
-    expect(status).toHaveTextContent('wired in Phase 4');
+    expect(status).toHaveTextContent('saved to the timeline');
   });
 
   test('can be dismissed manually', async () => {

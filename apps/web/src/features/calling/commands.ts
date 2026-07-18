@@ -25,7 +25,9 @@ export function useCallingCommands(onRun: () => void): Command[] {
         id: 'calling:call-lead',
         title: 'Call lead…',
         group: 'Actions',
-        keywords: ['call', 'phone', 'dial', 'ring'],
+        // 'log call' resolves here too — logging happens at hang-up (the
+        // disposition modal), so the call flow IS the log-call flow.
+        keywords: ['call', 'phone', 'dial', 'ring', 'log', 'log call'],
         ...(focusTarget ? { subtitle: focusTarget.leadName } : {}),
         run: () => {
           if (focusTarget) {

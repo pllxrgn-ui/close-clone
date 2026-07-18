@@ -26,8 +26,8 @@ const DEFAULT_TTL_MS = 4000;
 
 /**
  * Minimal toast surface. Messages land in a polite live region (announced to
- * screen readers) and auto-dismiss after `ttl`. Deliberately tiny — the palette
- * uses it only for "wired in Phase 4" action placeholders for now.
+ * screen readers) and auto-dismiss after `ttl`. Deliberately tiny — used for
+ * async feedback (sends, call logging, compliance blocks) across features.
  */
 export function ToastProvider({
   children,

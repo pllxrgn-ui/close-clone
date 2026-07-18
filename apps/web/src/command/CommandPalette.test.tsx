@@ -97,13 +97,22 @@ describe('CommandPalette', () => {
     expect(document.getElementById(second ?? '')).toHaveAttribute('aria-selected', 'true');
   });
 
-  test('action commands toast the Phase-4 placeholder', async () => {
+  test('stale intents resolve to REAL feature commands, never placeholders', async () => {
     render(<Harness />);
     const combobox = await screen.findByRole('combobox');
+
+    // "log call" → the real call flow (logging happens at hang-up).
     await userEvent.type(combobox, 'log call');
-    await screen.findByRole('option', { name: 'Log call' });
+    await screen.findByRole('option', { name: 'Call lead…' });
+    expect(screen.queryByRole('option', { name: 'Log call' })).not.toBeInTheDocument();
+
+    // "new lead" → the import wizard (the lead-creation surface).
+    await userEvent.clear(combobox);
+    await userEvent.type(combobox, 'new lead');
+    await screen.findByRole('option', { name: 'Import leads from CSV' });
+    expect(screen.queryByRole('option', { name: 'New lead' })).not.toBeInTheDocument();
     await userEvent.keyboard('{Enter}');
-    expect(await screen.findByText('Log call — wired in Phase 4')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('loc')).toHaveTextContent('/import'));
   });
 
   test('the theme command toggles the theme and closes', async () => {

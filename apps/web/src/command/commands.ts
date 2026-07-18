@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import { search } from '../api/search.ts';
 import { NAV_ITEMS } from '../app/nav.tsx';
 import { useTheme } from '../theme/ThemeProvider.tsx';
-import { useToast } from '../feedback/ToastProvider.tsx';
 
 export const COMMAND_GROUPS = ['Navigate', 'Leads', 'Actions', 'Theme'] as const;
 export type CommandGroupName = (typeof COMMAND_GROUPS)[number];
@@ -22,13 +21,13 @@ export interface Command {
 }
 
 /**
- * The always-present commands: navigate to every route, the Phase-4 action
- * placeholders, and the theme toggle. `onRun` is invoked after each command
- * (the palette uses it to close).
+ * The always-present commands: navigate to every route and the theme toggle.
+ * Every Action command comes from its owning feature (calling, sms, ai, comms,
+ * import, …) so the palette never advertises an action that isn't real.
+ * `onRun` is invoked after each command (the palette uses it to close).
  */
 export function useStaticCommands(onRun: () => void): Command[] {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { cycle, choice, resolved } = useTheme();
 
   return useMemo(() => {
@@ -40,23 +39,6 @@ export function useStaticCommands(onRun: () => void): Command[] {
       shortcut: `g ${item.key}`,
       run: () => {
         navigate(item.to);
-        onRun();
-      },
-    }));
-
-    const actions: Command[] = [
-      { id: 'action:log-call', title: 'Log call', keywords: ['call', 'phone', 'dial', 'activity'] },
-      { id: 'action:new-lead', title: 'New lead', keywords: ['create', 'add', 'lead', 'company'] },
-      {
-        id: 'action:enroll-sequence',
-        title: 'Enroll in sequence',
-        keywords: ['sequence', 'cadence', 'enroll', 'outreach'],
-      },
-    ].map((base) => ({
-      ...base,
-      group: 'Actions' as const,
-      run: () => {
-        toast(`${base.title} — wired in Phase 4`);
         onRun();
       },
     }));
@@ -78,8 +60,8 @@ export function useStaticCommands(onRun: () => void): Command[] {
       },
     ];
 
-    return [...navigation, ...actions, ...theme];
-  }, [navigate, toast, cycle, choice, resolved, onRun]);
+    return [...navigation, ...theme];
+  }, [navigate, cycle, choice, resolved, onRun]);
 }
 
 /**

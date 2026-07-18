@@ -23,9 +23,10 @@ import { ArrowLeftIcon, BranchIcon, CircleDashedIcon, ExternalLinkIcon } from '.
 /*
  * Lead-page header: identity + status + owner + a prominent DNC indicator, then a
  * next-action bar. Call / SMS / Email are live (each opens its compliance-gated
- * surface); Task / Enroll remain disabled stubs that land later. Nothing here can
- * send, dial, or bypass a compliance rail — the launchers enforce
- * DNC/suppression/quiet-hours at send/dial inside the engine layer.
+ * surface); Task / Enroll remain disabled stubs until their lead-scoped launchers
+ * land (enrollment lives on /sequences today). Nothing here can send, dial, or
+ * bypass a compliance rail — the launchers enforce DNC/suppression/quiet-hours
+ * at send/dial inside the engine layer.
  */
 
 interface LeadHeaderProps {
@@ -107,8 +108,8 @@ export function LeadHeader({ lead, statusLabel, ownerName }: LeadHeaderProps): J
               key={action.id}
               size="sm"
               disabled
-              title={`${action.label} — available in Phase 4`}
-              aria-label={`${action.label} (available in Phase 4)`}
+              title={`${action.label} — not yet available`}
+              aria-label={`${action.label} (not yet available)`}
             >
               <Icon size={14} />
               {action.label}

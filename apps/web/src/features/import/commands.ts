@@ -19,7 +19,20 @@ export function useImportCommands(onRun: () => void): Command[] {
         id: 'import:leads-csv',
         title: 'Import leads from CSV',
         group: 'Actions',
-        keywords: ['import', 'csv', 'upload', 'leads', 'bulk', 'spreadsheet', 'contacts'],
+        // 'new lead' intents land here — the wizard is the lead-creation
+        // surface (single-row CSVs work fine); there is no separate form.
+        keywords: [
+          'import',
+          'csv',
+          'upload',
+          'leads',
+          'bulk',
+          'spreadsheet',
+          'contacts',
+          'new lead',
+          'add lead',
+          'create',
+        ],
         run: () => {
           navigate('/import');
           onRun();
