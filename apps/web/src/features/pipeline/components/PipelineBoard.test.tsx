@@ -102,6 +102,16 @@ async function expectNoSeriousViolations(container: HTMLElement): Promise<void> 
 }
 
 const card = (name: RegExp): HTMLElement => screen.getByRole('listitem', { name });
+/**
+ * Make a card the active keyboard target by focusing it — exactly what Tabbing
+ * to it does. A *click* now opens the detail pop-up (whose focus-trap would
+ * steal the board's keyboard focus), so keyboard-move tests focus, not click.
+ */
+const focusCard = async (name: RegExp): Promise<HTMLElement> => {
+  const el = await screen.findByRole('listitem', { name });
+  el.focus();
+  return el;
+};
 const column = (name: RegExp): HTMLElement => screen.getByRole('region', { name });
 /** The per-currency subtotal figures in a column header (not the card values). */
 const colSums = (name: RegExp): HTMLElement => {
@@ -113,6 +123,13 @@ const colSums = (name: RegExp): HTMLElement => {
 beforeAll(() => {
   document.documentElement.lang = 'en';
   document.title = 'Switchboard';
+  // jsdom doesn't implement elementFromPoint, which the drag hit-test calls.
+  // null is the correct answer in this harness (no stage element under the
+  // synthetic pointer) — a drag becomes a no-op move, exactly what the
+  // pointer-drag test asserts. Real drop targets are covered in the browser.
+  if (typeof document.elementFromPoint !== 'function') {
+    document.elementFromPoint = (): Element | null => null;
+  }
 });
 beforeEach(() => {
   resetStore({ opportunities: OPPS, stages: STAGES });
@@ -148,6 +165,53 @@ describe('PipelineBoard — render', () => {
     renderBoard();
     const overdue = await screen.findByRole('listitem', { name: /Umbrella Freight/ });
     expect(overdue.querySelector('.pl-card__date.is-overdue')).not.toBeNull();
+  });
+});
+
+describe('PipelineBoard — detail pop-up (click a card)', () => {
+  // A card is a drag handle: the click that opens the detail is a pointerdown +
+  // pointerup with no move between (the drag threshold, in useCardDrag). Native
+  // pointer events, not userEvent.click, exercise that path.
+  const clickCard = (el: HTMLElement): void => {
+    fireEvent.pointerDown(el, { button: 0, clientX: 10, clientY: 10 });
+    fireEvent.pointerUp(el, { clientX: 10, clientY: 10 });
+  };
+
+  test('clicking a card opens its detail with the full value + fields', async () => {
+    renderBoard();
+    clickCard(await screen.findByRole('listitem', { name: /Acme Robotics/ }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Acme Robotics' })).toBeInTheDocument();
+    // Full, uncompacted value (the card shows a compact $100K; the detail is exact).
+    expect(within(dialog).getByText('$100,000')).toBeInTheDocument();
+    expect(within(dialog).getByText('40% confidence')).toBeInTheDocument();
+    expect(within(dialog).getByText('Discovery')).toBeInTheDocument();
+    expect(within(dialog).getByText('Dana Owner')).toBeInTheDocument();
+  });
+
+  test('Escape closes the detail pop-up', async () => {
+    renderBoard();
+    clickCard(await screen.findByRole('listitem', { name: /Acme Robotics/ }));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  test('a drag (pointer moves past the threshold) does NOT open the detail', async () => {
+    renderBoard();
+    const c = await screen.findByRole('listitem', { name: /Acme Robotics/ });
+    fireEvent.pointerDown(c, { button: 0, clientX: 10, clientY: 10 });
+    fireEvent.pointerMove(c, { clientX: 40, clientY: 40 }); // > 4px threshold
+    fireEvent.pointerUp(c, { clientX: 40, clientY: 40 });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  test('View lead navigates to the lead page', async () => {
+    renderBoard();
+    clickCard(await screen.findByRole('listitem', { name: /Acme Robotics/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /View lead/ }));
+    expect(await screen.findByTestId('lead-detail')).toBeInTheDocument();
   });
 });
 
@@ -203,7 +267,7 @@ describe('PipelineBoard — move network discipline (audit #2)', () => {
     );
 
     renderBoard();
-    await userEvent.click(await screen.findByRole('listitem', { name: /Acme Robotics/ }));
+    await focusCard(/Acme Robotics/);
     const afterLoad = oppsGets;
 
     fireEvent.keyDown(card(/Acme Robotics/), { key: ']' });
@@ -234,7 +298,7 @@ describe('PipelineBoard — currency separation', () => {
 describe('PipelineBoard — keyboard move (drag alternative)', () => {
   test('] moves the focused deal to the next stage and recomputes both column sums', async () => {
     renderBoard();
-    await userEvent.click(await screen.findByRole('listitem', { name: /Acme Robotics/ }));
+    await focusCard(/Acme Robotics/);
     fireEvent.keyDown(card(/Acme Robotics/), { key: ']' });
 
     // The card now lives in Proposal.
@@ -248,14 +312,14 @@ describe('PipelineBoard — keyboard move (drag alternative)', () => {
 
   test('[ moves the focused deal back a stage', async () => {
     renderBoard();
-    await userEvent.click(await screen.findByRole('listitem', { name: /Initech Systems/ }));
+    await focusCard(/Initech Systems/);
     fireEvent.keyDown(card(/Initech Systems/), { key: '[' });
     await within(column(/Discovery/)).findByRole('listitem', { name: /Initech Systems/ });
   });
 
   test('the move persists across a remount (writes survive route changes)', async () => {
     const { unmount } = renderBoard();
-    await userEvent.click(await screen.findByRole('listitem', { name: /Acme Robotics/ }));
+    await focusCard(/Acme Robotics/);
     fireEvent.keyDown(card(/Acme Robotics/), { key: ']' });
     await within(column(/Proposal/)).findByRole('listitem', { name: /Acme Robotics/ });
 
@@ -276,7 +340,7 @@ describe('PipelineBoard — won / lost', () => {
     const openBefore = screen.getByText('Open pipeline').closest('.pl-metric') as HTMLElement;
     expect(within(openBefore).getByText('A$80K')).toBeInTheDocument();
 
-    await userEvent.click(card(/Umbrella Freight/));
+    await focusCard(/Umbrella Freight/);
     fireEvent.keyDown(card(/Umbrella Freight/), { key: 'w' });
 
     const wonCard = await within(column(/Closed Won/)).findByRole('listitem', {
@@ -294,7 +358,7 @@ describe('PipelineBoard — won / lost', () => {
 
   test('L marks the focused deal lost', async () => {
     renderBoard();
-    await userEvent.click(await screen.findByRole('listitem', { name: /Initech Systems/ }));
+    await focusCard(/Initech Systems/);
     fireEvent.keyDown(card(/Initech Systems/), { key: 'l' });
     const lostCard = await within(column(/Closed Lost/)).findByRole('listitem', {
       name: /Initech Systems/,
@@ -403,7 +467,7 @@ describe('PipelineBoard — bounded rendering (large real datasets)', () => {
     const tinyOpp = mkOpp('tiny', 'l-tiny', 's-prop', 'USD', 1, 10, '2026-09-01');
     seedCrowd([tinyOpp], [{ id: 'l-tiny', name: 'Tiny Deal Co' }]);
     renderBoard();
-    await userEvent.click(await screen.findByRole('listitem', { name: /Tiny Deal Co/ }));
+    await focusCard(/Tiny Deal Co/);
     fireEvent.keyDown(card(/Tiny Deal Co/), { key: '[' });
 
     const moved = await within(column(/Discovery/)).findByRole('listitem', {

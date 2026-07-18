@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type { FocusEvent, JSX } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -8,7 +16,7 @@ import {
   opportunityStagesQuery,
   usersQuery as usersQueryOptions,
 } from '../../../api/refQueries.ts';
-import { Button, EmptyState, Skeleton } from '../../../ui/index.ts';
+import { Button, EmptyState, Modal, Skeleton } from '../../../ui/index.ts';
 import { cx } from '../../../lib/cx.ts';
 import { fetchAllOpportunities, fetchLeadNames, moveOpportunity } from '../api/opportunities.ts';
 import { buildBoard } from '../model/board.ts';
@@ -20,6 +28,7 @@ import { KanbanIcon } from '../icons.tsx';
 import { BoardHeader } from './BoardHeader.tsx';
 import { PipelineColumn } from './PipelineColumn.tsx';
 import { OpportunityCard } from './OpportunityCard.tsx';
+import { OpportunityDetailCard } from './OpportunityDetailCard.tsx';
 import { useCardDrag } from './useCardDrag.ts';
 import { usePipelineKeyboard } from './usePipelineKeyboard.ts';
 
@@ -270,11 +279,20 @@ export function PipelineBoard(): JSX.Element {
     if (opp) navigate(`/leads/${opp.leadId}`);
   }, [effectiveActiveId, oppsById, navigate]);
 
+  // ── Detail pop-up (opens on a clean click, not a drag) ─────────────────────
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const detailTitleId = useId();
+  const detailOpp = detailId ? oppsById.get(detailId) : undefined;
+
   // ── Pointer drag ───────────────────────────────────────────────────────────
   const stageOf = useCallback((id: string) => oppsById.get(id)?.stageId ?? null, [oppsById]);
   const { drag, onCardPointerDown } = useCardDrag({
     stageOf,
     onDrop: (id, stageId) => doMove(id, stageId, false),
+    onClick: (id) => {
+      setActiveId(id);
+      setDetailId(id);
+    },
   });
 
   // ── Keyboard bindings (bracket/arrow/W/L, cheat-sheet visible) ─────────────
@@ -420,6 +438,25 @@ export function PipelineBoard(): JSX.Element {
       <div className="pl-sr-status" role="status" aria-live="polite">
         {announce}
       </div>
+      {detailOpp !== undefined ? (
+        <Modal
+          open
+          onClose={() => setDetailId(null)}
+          labelledBy={detailTitleId}
+          className="pl-detail-modal"
+        >
+          <OpportunityDetailCard
+            opp={detailOpp}
+            leadName={leadNameOf(detailOpp.leadId)}
+            ownerName={ownerNameOf(detailOpp.ownerId)}
+            stageLabel={stagesById.get(detailOpp.stageId ?? '')?.label ?? '—'}
+            now={now}
+            titleId={detailTitleId}
+            onClose={() => setDetailId(null)}
+            onViewLead={() => navigate(`/leads/${detailOpp.leadId}`)}
+          />
+        </Modal>
+      ) : null}
     </div>
   );
 }

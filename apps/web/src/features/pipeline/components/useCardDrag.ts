@@ -25,6 +25,8 @@ interface UseCardDragParams {
   stageOf: (oppId: string) => string | null;
   /** Commit a move once a card is dropped on a different stage. */
   onDrop: (oppId: string, stageId: string) => void;
+  /** A clean click (pointer released without crossing the drag threshold). */
+  onClick?: (oppId: string) => void;
 }
 
 export interface UseCardDragResult {
@@ -39,7 +41,7 @@ function stageIdAtPoint(x: number, y: number): string | null {
   return id && id.length > 0 ? id : null;
 }
 
-export function useCardDrag({ stageOf, onDrop }: UseCardDragParams): UseCardDragResult {
+export function useCardDrag({ stageOf, onDrop, onClick }: UseCardDragParams): UseCardDragResult {
   const [drag, setDrag] = useState<DragState | null>(null);
 
   const onCardPointerDown = useCallback(
@@ -83,6 +85,9 @@ export function useCardDrag({ stageOf, onDrop }: UseCardDragParams): UseCardDrag
         if (started) {
           const target = stageIdAtPoint(ev.clientX, ev.clientY);
           if (target && target !== stageOf(oppId)) onDrop(oppId, target);
+        } else {
+          // Released without crossing the threshold → a click, not a drag.
+          onClick?.(oppId);
         }
         cleanup();
         setDrag(null);
@@ -97,7 +102,7 @@ export function useCardDrag({ stageOf, onDrop }: UseCardDragParams): UseCardDrag
       el.addEventListener('pointerup', up);
       el.addEventListener('pointercancel', cancel);
     },
-    [stageOf, onDrop],
+    [stageOf, onDrop, onClick],
   );
 
   return { drag, onCardPointerDown };

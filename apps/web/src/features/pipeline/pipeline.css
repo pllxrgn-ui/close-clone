@@ -106,6 +106,20 @@
   color: var(--ink-faint);
 }
 
+/* In the large header metrics several currency figures ran together into one
+ * ambiguous numeral (A$1.3M €901K $6M). A faint middot with real breathing room
+ * separates them into distinct amounts. Scoped to the header — the small column
+ * sums read fine on the base gap. */
+.pl-metric__value .pl-money-set {
+  gap: 0;
+}
+.pl-metric__value .pl-money + .pl-money::before {
+  content: '·';
+  margin: 0 var(--space-3);
+  color: var(--ink-faint);
+  font-weight: var(--fw-normal);
+}
+
 /* ── Board / horizontal column track ───────────────────────────────────────── */
 .pl-board {
   display: flex;
@@ -442,4 +456,173 @@
   .pl-card--flash-lost {
     animation-duration: 1ms;
   }
+}
+
+/* ── Opportunity detail pop-up (click a card) ──────────────────────────────── */
+.pl-detail-modal {
+  width: min(460px, 94vw);
+}
+.pl-detail {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-5) var(--space-6) var(--space-6);
+}
+.pl-detail__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.pl-detail__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.pl-detail__name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-display-strong);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pl-detail__value {
+  margin-top: var(--space-4);
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--fs-display);
+  font-weight: var(--fw-display-strong);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--ink);
+}
+.pl-detail__ccy {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--ink-faint);
+}
+
+/* Confidence — the same bar language as the card, one size up. */
+.pl-detail__conf {
+  margin-top: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.pl-detail__conf-bar {
+  flex: 1;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--panel-hover);
+  overflow: hidden;
+}
+.pl-detail__conf-fill {
+  display: block;
+  height: 100%;
+  background: var(--ink-dim);
+}
+.pl-detail__conf-num {
+  font-size: var(--fs-sm);
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Field grid — dt label / dd value rows. */
+.pl-detail__grid {
+  margin: var(--space-5) 0 0;
+  display: flex;
+  flex-direction: column;
+}
+.pl-detail__row {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 32px;
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--line);
+}
+.pl-detail__row dt {
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--ink-faint);
+}
+.pl-detail__row dd {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--ink);
+}
+.pl-detail__date {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-variant-numeric: tabular-nums;
+}
+.pl-detail__date.is-overdue {
+  color: var(--overdue);
+}
+.pl-detail__overdue {
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+}
+.pl-detail__owner {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.pl-detail__mono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-pill);
+  background: var(--panel-hover);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: var(--fw-semibold);
+  color: var(--ink-dim);
+  flex: none;
+}
+
+/* Note — the one free-text field, set apart. */
+.pl-detail__note {
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  background: var(--panel-inset);
+  border: 1px solid var(--line);
+}
+.pl-detail__note-label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--ink-faint);
+}
+.pl-detail__note-body {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-base);
+  color: var(--ink-mid);
+  white-space: pre-wrap;
+}
+
+.pl-detail__foot {
+  margin-top: var(--space-6);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
 }
