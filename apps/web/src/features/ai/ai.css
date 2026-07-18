@@ -195,17 +195,23 @@
   background: var(--surface-1);
 }
 
+/* The rail is narrow: everything wraps as WHOLE units — the direction label
+ * never breaks mid-word, timestamps reflow to their own line instead of
+ * clipping under the button, and the button drops below (right-aligned) when
+ * there is no room beside the meta. */
 .ai-call__row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-4);
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
 }
 
 .ai-call__meta {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
   min-width: 0;
   color: var(--ink-0);
   font-size: var(--fs-md);
@@ -222,6 +228,7 @@
   align-items: center;
   gap: var(--space-2);
   color: var(--ink-2);
+  white-space: nowrap;
 }
 
 .ai-call__hint {
@@ -232,6 +239,7 @@
 
 .ai-call__summarize {
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 /* Draft review card inside a call row. */

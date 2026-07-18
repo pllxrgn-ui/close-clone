@@ -27,3 +27,23 @@ Every push to `main` redeploys automatically once the project is connected.
 
 - Do not set `VITE_API_MODE=real` on Vercel — there is no API there; the app would show connection errors.
 - Do not add secrets to the Vercel project; the demo build needs none.
+
+## Vercel demo (stable public URL, no laptop required)
+
+The mock demo is deployed to Vercel as project `switchboard-demo` (account
+`pdvillorente12-1736`): **https://switchboard-demo-three.vercel.app**
+
+Static hosting of `apps/web/dist` (mock mode, MSW in-browser) with one SPA
+rewrite so deep links (`/inbox`, `/leads/:id`) serve `index.html`. To redeploy
+after changes:
+
+```bash
+pnpm --filter @switchboard/web build
+STAGE=$(mktemp -d)/switchboard-demo && mkdir -p "$STAGE"
+cp -r apps/web/dist/. "$STAGE/"
+printf '{ "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }' > "$STAGE/vercel.json"
+(cd "$STAGE" && npx vercel deploy --prod --yes)
+```
+
+GitHub Pages remains the auto-deploying mirror (every push to main):
+https://pllxrgn-ui.github.io/close-clone/
