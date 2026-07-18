@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { and, eq, sql } from 'drizzle-orm';
 import type { TelephonyProvider } from '@switchboard/shared/providers';
 import { contacts, leads, orgSettings, smsMessages, type Db } from '../../db/index.ts';
-import { recordActivity } from '../activity/index.ts';
+import { recordActivity, type ActivityWebhookEmitter } from '../activity/index.ts';
 import { isPhoneSuppressed } from '../telephony/suppression.ts';
 import { phoneMatchKey } from '../telephony/phone.ts';
 import { inferTimezoneFromNumber } from './area-code-timezone.ts';
@@ -110,6 +110,8 @@ export interface SmsSendDeps {
   fromNumber?: string;
   /** Override the appended first-contact opt-out sentence (§4.5). */
   optOutLanguage?: string;
+  /** Fans sms_sent onto activity.recorded webhooks. */
+  emitter?: ActivityWebhookEmitter;
 }
 
 export interface SmsSendInput {
@@ -310,14 +312,18 @@ export async function sendSms(deps: SmsSendDeps, input: SmsSendInput): Promise<S
       };
     }
 
-    await recordActivity(tx, {
-      leadId: input.leadId,
-      ...(contact !== null ? { contactId: contact.id } : {}),
-      userId: input.userId,
-      type: 'sms_sent',
-      occurredAt: nowIso,
-      payload: { smsMessageId: row.id, body, channel: 'sms' },
-    });
+    await recordActivity(
+      tx,
+      {
+        leadId: input.leadId,
+        ...(contact !== null ? { contactId: contact.id } : {}),
+        userId: input.userId,
+        type: 'sms_sent',
+        occurredAt: nowIso,
+        payload: { smsMessageId: row.id, body, channel: 'sms' },
+      },
+      deps.emitter,
+    );
 
     return {
       smsMessageId: row.id,

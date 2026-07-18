@@ -40,6 +40,8 @@ export interface SmsRouteDeps {
   fromNumber?: string;
   /** Override the appended first-contact opt-out sentence (§4.5). */
   optOutLanguage?: string;
+  /** Fans sms_sent onto activity.recorded webhooks. */
+  activityEmitter?: SmsSendDeps['emitter'];
 }
 
 const sendBodySchema = z.object({
@@ -102,6 +104,7 @@ export function registerSmsRoutes(app: FastifyInstance, deps: SmsRouteDeps): voi
           now: deps.now,
           ...(deps.fromNumber !== undefined ? { fromNumber: deps.fromNumber } : {}),
           ...(deps.optOutLanguage !== undefined ? { optOutLanguage: deps.optOutLanguage } : {}),
+          ...(deps.activityEmitter !== undefined ? { emitter: deps.activityEmitter } : {}),
         },
         input,
       );
