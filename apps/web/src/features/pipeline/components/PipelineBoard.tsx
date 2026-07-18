@@ -1,12 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { FocusEvent, JSX } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -444,6 +436,7 @@ export function PipelineBoard(): JSX.Element {
           onClose={() => setDetailId(null)}
           labelledBy={detailTitleId}
           className="pl-detail-modal"
+          backdropClassName="sb-overlay--center"
         >
           <OpportunityDetailCard
             opp={detailOpp}

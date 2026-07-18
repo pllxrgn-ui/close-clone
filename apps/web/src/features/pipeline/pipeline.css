@@ -461,6 +461,11 @@
 /* ── Opportunity detail pop-up (click a card) ──────────────────────────────── */
 .pl-detail-modal {
   width: min(460px, 94vw);
+  /* Height hugs content (backdrop is sb-overlay--center — without it the
+   * overlay's default flex stretch pulled the card to full viewport height);
+   * a long note on a short viewport scrolls inside instead of overflowing. */
+  max-height: 100%;
+  overflow-y: auto;
 }
 .pl-detail {
   display: flex;
