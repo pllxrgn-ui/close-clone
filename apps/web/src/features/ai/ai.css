@@ -207,6 +207,10 @@
   font-size: var(--fs-sm);
 }
 
+.ai-call__summarize {
+  flex-shrink: 0;
+}
+
 /* Draft review card inside a call row. */
 .ai-summary {
   display: flex;
