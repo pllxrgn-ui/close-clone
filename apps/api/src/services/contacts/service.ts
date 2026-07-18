@@ -1,7 +1,7 @@
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 
 import { contacts, leads, type Db } from '../../db/index.ts';
-import { recordActivity } from '../activity/index.ts';
+import { recordActivity, type ActivityWebhookEmitter } from '../activity/index.ts';
 import type { Contact, EmailEntry, PhoneEntry } from '@switchboard/shared';
 
 /**
@@ -196,6 +196,7 @@ export async function updateContact(
   id: string,
   input: UpdateContactInput,
   actor: WriteActor = {},
+  emitter?: ActivityWebhookEmitter,
 ): Promise<Contact | null> {
   if (!isUuid(id)) return null;
   return db.transaction(async (tx) => {
@@ -229,17 +230,21 @@ export async function updateContact(
 
     // DNC is the only contact change with a C4 event (compliance touch).
     if (dncChange !== undefined) {
-      await recordActivity(tx, {
-        leadId: current.leadId,
-        contactId: id,
-        userId: actor.userId ?? null,
-        type: dncChange ? 'dnc_set' : 'dnc_cleared',
-        occurredAt: new Date(),
-        payload:
-          input.reason !== undefined
-            ? { scope: 'contact', contactId: id, reason: input.reason }
-            : { scope: 'contact', contactId: id },
-      });
+      await recordActivity(
+        tx,
+        {
+          leadId: current.leadId,
+          contactId: id,
+          userId: actor.userId ?? null,
+          type: dncChange ? 'dnc_set' : 'dnc_cleared',
+          occurredAt: new Date(),
+          payload:
+            input.reason !== undefined
+              ? { scope: 'contact', contactId: id, reason: input.reason }
+              : { scope: 'contact', contactId: id },
+        },
+        emitter,
+      );
     }
 
     const finalRows = (await tx

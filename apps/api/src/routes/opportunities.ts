@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { opportunityStatusSchema } from '@switchboard/shared';
 
 import type { Db } from '../db/index.ts';
-import { LeadNotFoundError } from '../services/activity/index.ts';
+import { LeadNotFoundError, type ActivityWebhookEmitter } from '../services/activity/index.ts';
 import {
   InvalidOpportunityCursorError,
   InvalidReferenceError,
@@ -43,6 +43,7 @@ import { sendError } from './http.ts';
 
 export interface OpportunitiesRouteDeps {
   db: Db;
+  activityEmitter?: ActivityWebhookEmitter;
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -116,7 +117,7 @@ export function registerOpportunitiesRoutes(
   app: FastifyInstance,
   deps: OpportunitiesRouteDeps,
 ): void {
-  const { db } = deps;
+  const { db, activityEmitter } = deps;
 
   // GET /api/v1/opportunities — board keyset (no leadId) OR per-lead array.
   app.get('/api/v1/opportunities', async (request, reply) => {
@@ -180,7 +181,7 @@ export function registerOpportunitiesRoutes(
       ...(d.actorId !== undefined ? { actorId: d.actorId } : {}),
     };
     try {
-      const created = await createOpportunity(db, input);
+      const created = await createOpportunity(db, input, activityEmitter);
       return reply.status(201).send(created);
     } catch (err) {
       const mapped = mapOpportunityError(reply, err);
@@ -211,7 +212,7 @@ export function registerOpportunitiesRoutes(
       ...(d.actorId !== undefined ? { actorId: d.actorId } : {}),
     };
     try {
-      const updated = await patchOpportunity(db, params.data.id, input);
+      const updated = await patchOpportunity(db, params.data.id, input, activityEmitter);
       return reply.send(updated);
     } catch (err) {
       const mapped = mapOpportunityError(reply, err);

@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 
 import type { Db } from '../db/index.ts';
-import { LeadNotFoundError } from '../services/activity/index.ts';
+import { LeadNotFoundError, type ActivityWebhookEmitter } from '../services/activity/index.ts';
 import {
   InvalidTaskReferenceError,
   TaskLeadNotFoundError,
@@ -34,6 +34,7 @@ import { sendError } from './http.ts';
 
 export interface TasksRouteDeps {
   db: Db;
+  activityEmitter?: ActivityWebhookEmitter;
 }
 
 const listQuerySchema = z
@@ -85,7 +86,7 @@ function mapTaskError(reply: FastifyReply, err: unknown): FastifyReply | null {
 }
 
 export function registerTasksRoutes(app: FastifyInstance, deps: TasksRouteDeps): void {
-  const { db } = deps;
+  const { db, activityEmitter } = deps;
 
   // GET /api/v1/tasks?leadId=|assigneeId=
   app.get('/api/v1/tasks', async (request, reply) => {
@@ -129,7 +130,7 @@ export function registerTasksRoutes(app: FastifyInstance, deps: TasksRouteDeps):
       ...(d.actorId !== undefined ? { actorId: d.actorId } : {}),
     };
     try {
-      const created = await createTask(db, input);
+      const created = await createTask(db, input, activityEmitter);
       return reply.status(201).send(created);
     } catch (err) {
       const mapped = mapTaskError(reply, err);
@@ -155,7 +156,7 @@ export function registerTasksRoutes(app: FastifyInstance, deps: TasksRouteDeps):
       ...(d.actorId !== undefined ? { actorId: d.actorId } : {}),
     };
     try {
-      const updated = await patchTask(db, params.data.id, input);
+      const updated = await patchTask(db, params.data.id, input, activityEmitter);
       return reply.send(updated);
     } catch (err) {
       const mapped = mapTaskError(reply, err);

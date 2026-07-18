@@ -8,7 +8,7 @@ import {
   users,
   type Db,
 } from '../../db/index.ts';
-import { recordActivity } from '../activity/index.ts';
+import { recordActivity, type ActivityWebhookEmitter } from '../activity/index.ts';
 
 /**
  * Opportunities CRUD service (CONTRACTS §C7 `opportunities`, §C1 schema, §C4
@@ -240,6 +240,7 @@ export interface CreateOpportunityInput {
 export async function createOpportunity(
   db: Db,
   input: CreateOpportunityInput,
+  emitter?: ActivityWebhookEmitter,
 ): Promise<Opportunity> {
   if (!(await leadExists(db, input.leadId))) throw new OpportunityLeadNotFoundError(input.leadId);
   if (input.stageId != null && !(await stageExists(db, input.stageId))) {
@@ -275,13 +276,17 @@ export async function createOpportunity(
     const row = inserted[0];
     if (row === undefined) throw new OpportunityError('opportunity insert returned no row');
 
-    await recordActivity(tx, {
-      leadId: row.leadId,
-      userId: input.actorId ?? input.ownerId ?? null,
-      type: 'opportunity_created',
-      occurredAt: nowIso,
-      payload: { opportunityId: row.id, valueCents: Number(row.valueCents) },
-    });
+    await recordActivity(
+      tx,
+      {
+        leadId: row.leadId,
+        userId: input.actorId ?? input.ownerId ?? null,
+        type: 'opportunity_created',
+        occurredAt: nowIso,
+        payload: { opportunityId: row.id, valueCents: Number(row.valueCents) },
+      },
+      emitter,
+    );
 
     return serializeOpportunity(row);
   });
@@ -309,6 +314,7 @@ export async function patchOpportunity(
   db: Db,
   id: string,
   input: PatchOpportunityInput,
+  emitter?: ActivityWebhookEmitter,
 ): Promise<Opportunity> {
   if (input.stageId != null && !(await stageExists(db, input.stageId))) {
     throw new InvalidReferenceError('stageId', input.stageId);
@@ -355,13 +361,17 @@ export async function patchOpportunity(
 
     // Stage move → opportunity_stage_changed (from/to are STAGE IDs, D-017).
     if (input.stageId !== undefined && updated.stageId !== current.stageId) {
-      await recordActivity(tx, {
-        leadId: updated.leadId,
-        userId: input.actorId ?? null,
-        type: 'opportunity_stage_changed',
-        occurredAt: nowIso,
-        payload: { opportunityId: id, from: current.stageId, to: updated.stageId },
-      });
+      await recordActivity(
+        tx,
+        {
+          leadId: updated.leadId,
+          userId: input.actorId ?? null,
+          type: 'opportunity_stage_changed',
+          occurredAt: nowIso,
+          payload: { opportunityId: id, from: current.stageId, to: updated.stageId },
+        },
+        emitter,
+      );
     }
     // Transition into won/lost → opportunity_closed.
     if (
@@ -369,17 +379,21 @@ export async function patchOpportunity(
       CLOSED_STATUSES.has(updated.status) &&
       updated.status !== current.status
     ) {
-      await recordActivity(tx, {
-        leadId: updated.leadId,
-        userId: input.actorId ?? null,
-        type: 'opportunity_closed',
-        occurredAt: nowIso,
-        payload: {
-          opportunityId: id,
-          status: updated.status,
-          valueCents: Number(updated.valueCents),
+      await recordActivity(
+        tx,
+        {
+          leadId: updated.leadId,
+          userId: input.actorId ?? null,
+          type: 'opportunity_closed',
+          occurredAt: nowIso,
+          payload: {
+            opportunityId: id,
+            status: updated.status,
+            valueCents: Number(updated.valueCents),
+          },
         },
-      });
+        emitter,
+      );
     }
 
     return serializeOpportunity(updated);

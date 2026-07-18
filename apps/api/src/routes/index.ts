@@ -103,9 +103,18 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   registerReportsRoutes(app, { db: deps.db });
   // Product-CRUD resources (db-only) — the real API the web binds to in real mode.
   registerLeadRoutes(app, { db: deps.db });
-  registerContactRoutes(app, { db: deps.db });
-  registerOpportunitiesRoutes(app, { db: deps.db });
-  registerTasksRoutes(app, { db: deps.db });
+  registerContactRoutes(app, {
+    db: deps.db,
+    ...(deps.activityEmitter !== undefined ? { activityEmitter: deps.activityEmitter } : {}),
+  });
+  registerOpportunitiesRoutes(app, {
+    db: deps.db,
+    ...(deps.activityEmitter !== undefined ? { activityEmitter: deps.activityEmitter } : {}),
+  });
+  registerTasksRoutes(app, {
+    db: deps.db,
+    ...(deps.activityEmitter !== undefined ? { activityEmitter: deps.activityEmitter } : {}),
+  });
   registerNotesRoutes(app, {
     db: deps.db,
     ...(deps.activityEmitter !== undefined ? { activityEmitter: deps.activityEmitter } : {}),

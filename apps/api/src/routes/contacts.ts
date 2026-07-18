@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { emailEntrySchema, phoneEntrySchema } from '@switchboard/shared';
 
 import type { Db } from '../db/index.ts';
+import type { ActivityWebhookEmitter } from '../services/activity/index.ts';
 import {
   InvalidContactLeadError,
   createContact,
@@ -30,6 +31,7 @@ import { sendError } from './http.ts';
 
 export interface ContactRouteDeps {
   db: Db;
+  activityEmitter?: ActivityWebhookEmitter;
 }
 
 const listQuerySchema = z.object({ leadId: z.string().uuid() });
@@ -58,7 +60,7 @@ const patchBodySchema = z
   });
 
 export function registerContactRoutes(app: FastifyInstance, deps: ContactRouteDeps): void {
-  const { db } = deps;
+  const { db, activityEmitter } = deps;
 
   // GET /api/v1/contacts?leadId= — a lead's contacts (plain array, live only).
   app.get('/api/v1/contacts', async (request, reply) => {
@@ -99,7 +101,7 @@ export function registerContactRoutes(app: FastifyInstance, deps: ContactRouteDe
     if (!parsed.success) {
       return sendError(reply, 'VALIDATION_FAILED', 'invalid contact patch', parsed.error.flatten());
     }
-    const contact = await updateContact(db, request.params.id, parsed.data);
+    const contact = await updateContact(db, request.params.id, parsed.data, {}, activityEmitter);
     if (contact === null) return sendError(reply, 'NOT_FOUND', 'Contact not found');
     return reply.send(contact);
   });

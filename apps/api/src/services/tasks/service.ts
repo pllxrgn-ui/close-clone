@@ -1,7 +1,7 @@
 import { and, asc, eq, isNull, sql, type SQL } from 'drizzle-orm';
 import type { Task } from '@switchboard/shared';
 import { leads, tasks, users, type Db } from '../../db/index.ts';
-import { recordActivity } from '../activity/index.ts';
+import { recordActivity, type ActivityWebhookEmitter } from '../activity/index.ts';
 
 /**
  * Tasks CRUD service (CONTRACTS §C7 `tasks`, §C1 schema, §C4 events). The real-API
@@ -164,7 +164,11 @@ export interface CreateTaskInput {
   actorId?: string | null;
 }
 
-export async function createTask(db: Db, input: CreateTaskInput): Promise<Task> {
+export async function createTask(
+  db: Db,
+  input: CreateTaskInput,
+  emitter?: ActivityWebhookEmitter,
+): Promise<Task> {
   if (!(await leadExists(db, input.leadId))) throw new TaskLeadNotFoundError(input.leadId);
   if (input.assigneeId != null && !(await userExists(db, input.assigneeId))) {
     throw new InvalidTaskReferenceError('assigneeId', input.assigneeId);
@@ -192,17 +196,21 @@ export async function createTask(db: Db, input: CreateTaskInput): Promise<Task> 
     const row = inserted[0];
     if (row === undefined) throw new TaskError('task insert returned no row');
 
-    await recordActivity(tx, {
-      leadId: row.leadId,
-      userId: input.actorId ?? input.createdBy ?? null,
-      type: 'task_created',
-      occurredAt: nowIso,
-      payload: {
-        taskId: row.id,
-        title: row.title,
-        ...(row.dueAt !== null ? { dueAt: toIsoRequired(row.dueAt) } : {}),
+    await recordActivity(
+      tx,
+      {
+        leadId: row.leadId,
+        userId: input.actorId ?? input.createdBy ?? null,
+        type: 'task_created',
+        occurredAt: nowIso,
+        payload: {
+          taskId: row.id,
+          title: row.title,
+          ...(row.dueAt !== null ? { dueAt: toIsoRequired(row.dueAt) } : {}),
+        },
       },
-    });
+      emitter,
+    );
 
     return serializeTask(row);
   });
@@ -219,7 +227,12 @@ export interface PatchTaskInput {
   actorId?: string | null;
 }
 
-export async function patchTask(db: Db, id: string, input: PatchTaskInput): Promise<Task> {
+export async function patchTask(
+  db: Db,
+  id: string,
+  input: PatchTaskInput,
+  emitter?: ActivityWebhookEmitter,
+): Promise<Task> {
   if (input.assigneeId != null && !(await userExists(db, input.assigneeId))) {
     throw new InvalidTaskReferenceError('assigneeId', input.assigneeId);
   }
@@ -250,13 +263,17 @@ export async function patchTask(db: Db, id: string, input: PatchTaskInput): Prom
     if (input.completedAt != null && current.completedAt === null) {
       // Open → completed: emit task_completed (the writer recomputes next_task_due_at).
       const completedAtIso: string = input.completedAt;
-      await recordActivity(tx, {
-        leadId: updated.leadId,
-        userId: input.actorId ?? null,
-        type: 'task_completed',
-        occurredAt: completedAtIso,
-        payload: { taskId: id, completedAt: completedAtIso },
-      });
+      await recordActivity(
+        tx,
+        {
+          leadId: updated.leadId,
+          userId: input.actorId ?? null,
+          type: 'task_completed',
+          occurredAt: completedAtIso,
+          payload: { taskId: id, completedAt: completedAtIso },
+        },
+        emitter,
+      );
     } else if (input.dueAt !== undefined || input.completedAt !== undefined) {
       // Due change or reopen (no C4 event): keep the denorm consistent ourselves.
       await recomputeNextTaskDue(tx, updated.leadId);
