@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 
 import type { Db } from '../db/index.ts';
+import type { ActivityWebhookEmitter } from '../services/activity/index.ts';
 import { registerSearchRoutes } from './search.ts';
 import { registerEmailSyncRoutes, type EmailRouteDeps } from './email-sync.ts';
 import { registerEmailTriageRoutes } from './email-triage.ts';
@@ -70,6 +71,9 @@ export interface RouteDeps {
   bulk?: Omit<BulkRouteDeps, 'db'>;
   /** Admin CRUD (users/custom-fields/org-settings/suppressions) — needs the admin RBAC guard. */
   adminCrud?: Omit<AdminCrudRouteDeps, 'db'>;
+  /** Fans domain events onto outbound webhooks (activity.recorded, …). Injected
+   *  by the composition root; absent in tests/mock = no fan-out. */
+  activityEmitter?: ActivityWebhookEmitter;
 }
 
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
@@ -102,7 +106,10 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   registerContactRoutes(app, { db: deps.db });
   registerOpportunitiesRoutes(app, { db: deps.db });
   registerTasksRoutes(app, { db: deps.db });
-  registerNotesRoutes(app, { db: deps.db });
+  registerNotesRoutes(app, {
+    db: deps.db,
+    ...(deps.activityEmitter !== undefined ? { activityEmitter: deps.activityEmitter } : {}),
+  });
   registerInboxRoutes(app, { db: deps.db, ...(deps.inbox ?? {}) });
   if (deps.smartViews !== undefined) {
     registerSmartViewRoutes(app, { db: deps.db, ...deps.smartViews });

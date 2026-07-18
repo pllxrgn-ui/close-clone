@@ -42,7 +42,11 @@ import {
 } from './services/tokens/index.ts';
 import { registerAdminTokenRoutes } from './routes/admin-tokens.ts';
 import { registerWebhookSubscriptionRoutes } from './routes/webhook-subscriptions.ts';
-import { createWebhookDeliveryProcessor, type WebhookSender } from './services/webhooks/index.ts';
+import {
+  createWebhookDeliveryProcessor,
+  createActivityWebhookEmitter,
+  type WebhookSender,
+} from './services/webhooks/index.ts';
 import { SessionCodec } from './auth/session/session.ts';
 import { OidcTxnCodec } from './auth/session/txn.ts';
 import { OidcClient } from './auth/oidc/index.ts';
@@ -333,6 +337,12 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
     adminExport: { adminGuard },
     adminCrud: { adminGuard },
     inbox: { queue },
+    // Fan domain events onto outbound webhooks: activity.recorded stages its
+    // delivery rows inside the record transaction, then enqueues post-commit
+    // through this queue-backed emitter (createWebhookDeliveryProcessor above
+    // delivers them). Wired for the notes surface; other activity producers
+    // adopt the same one-param pattern.
+    activityEmitter: createActivityWebhookEmitter(queue),
     // Telephony (click-to-call, /wh/twilio ingress) + AI (summaries, drafting,
     // NL→Smart View) mount only when their providers exist — mock now; the real
     // Twilio/Deepgram/Haiku adapters + accounts are HUMAN_TODO (WIRING.md §5),

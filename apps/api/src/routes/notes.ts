@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { noteStatusSchema } from '@switchboard/shared';
 
 import type { Db } from '../db/index.ts';
-import { LeadNotFoundError } from '../services/activity/index.ts';
+import { LeadNotFoundError, type ActivityWebhookEmitter } from '../services/activity/index.ts';
 import {
   AiNoteFinalizeError,
   InvalidNoteReferenceError,
@@ -34,6 +34,8 @@ import { sendError } from './http.ts';
 
 export interface NotesRouteDeps {
   db: Db;
+  /** Fans note_added onto the activity.recorded webhook (composition root injects). */
+  activityEmitter?: ActivityWebhookEmitter;
 }
 
 const leadQuerySchema = z.object({ leadId: z.string().uuid() });
@@ -71,7 +73,7 @@ function mapNoteError(reply: FastifyReply, err: unknown): FastifyReply | null {
 }
 
 export function registerNotesRoutes(app: FastifyInstance, deps: NotesRouteDeps): void {
-  const { db } = deps;
+  const { db, activityEmitter } = deps;
 
   // GET /api/v1/notes?leadId=
   app.get('/api/v1/notes', async (request, reply) => {
@@ -119,7 +121,7 @@ export function registerNotesRoutes(app: FastifyInstance, deps: NotesRouteDeps):
       ...(d.actorId !== undefined ? { actorId: d.actorId } : {}),
     };
     try {
-      const created = await createNote(db, input);
+      const created = await createNote(db, input, activityEmitter);
       return reply.status(201).send(created);
     } catch (err) {
       const mapped = mapNoteError(reply, err);
@@ -143,7 +145,7 @@ export function registerNotesRoutes(app: FastifyInstance, deps: NotesRouteDeps):
       ...(d.actorId !== undefined ? { actorId: d.actorId } : {}),
     };
     try {
-      const updated = await patchNote(db, params.data.id, input);
+      const updated = await patchNote(db, params.data.id, input, activityEmitter);
       return reply.send(updated);
     } catch (err) {
       const mapped = mapNoteError(reply, err);

@@ -8,5 +8,6 @@ export {
   ActivityWriterError,
   LeadNotFoundError,
   recordActivity,
+  type ActivityWebhookEmitter,
   type RecordActivityInput,
 } from './writer.ts';

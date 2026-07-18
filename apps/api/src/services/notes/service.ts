@@ -1,7 +1,7 @@
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import type { Note } from '@switchboard/shared';
 import { leads, notes, users, type Db } from '../../db/index.ts';
-import { recordActivity } from '../activity/index.ts';
+import { recordActivity, type ActivityWebhookEmitter } from '../activity/index.ts';
 
 /**
  * Notes CRUD service (CONTRACTS §C7 `notes`, §C1 schema, §C4 `note_added`). The
@@ -150,7 +150,11 @@ export interface CreateNoteInput {
   actorId?: string | null;
 }
 
-export async function createNote(db: Db, input: CreateNoteInput): Promise<Note> {
+export async function createNote(
+  db: Db,
+  input: CreateNoteInput,
+  emitter?: ActivityWebhookEmitter,
+): Promise<Note> {
   if (!(await leadExists(db, input.leadId))) throw new NoteLeadNotFoundError(input.leadId);
   if (input.authorId != null && !(await userExists(db, input.authorId))) {
     throw new InvalidNoteReferenceError('authorId', input.authorId);
@@ -178,13 +182,17 @@ export async function createNote(db: Db, input: CreateNoteInput): Promise<Note> 
     if (row === undefined) throw new NoteError('note insert returned no row');
 
     if (status === 'final') {
-      await recordActivity(tx, {
-        leadId: row.leadId,
-        userId: input.actorId ?? input.authorId ?? null,
-        type: 'note_added',
-        occurredAt: nowIso,
-        payload: { noteId: row.id, aiGenerated: false },
-      });
+      await recordActivity(
+        tx,
+        {
+          leadId: row.leadId,
+          userId: input.actorId ?? input.authorId ?? null,
+          type: 'note_added',
+          occurredAt: nowIso,
+          payload: { noteId: row.id, aiGenerated: false },
+        },
+        emitter,
+      );
     }
 
     return serializeNote(row);
@@ -200,7 +208,12 @@ export interface PatchNoteInput {
   actorId?: string | null;
 }
 
-export async function patchNote(db: Db, id: string, input: PatchNoteInput): Promise<Note> {
+export async function patchNote(
+  db: Db,
+  id: string,
+  input: PatchNoteInput,
+  emitter?: ActivityWebhookEmitter,
+): Promise<Note> {
   const nowIso = new Date().toISOString();
   return db.transaction(async (txRaw) => {
     const tx = txRaw as Db;
@@ -229,13 +242,17 @@ export async function patchNote(db: Db, id: string, input: PatchNoteInput): Prom
 
     if (finalizing) {
       // Human draft → final: the finalize IS the recorded user action (§I-AI).
-      await recordActivity(tx, {
-        leadId: updated.leadId,
-        userId: input.actorId ?? updated.authorId ?? null,
-        type: 'note_added',
-        occurredAt: nowIso,
-        payload: { noteId: id, aiGenerated: false },
-      });
+      await recordActivity(
+        tx,
+        {
+          leadId: updated.leadId,
+          userId: input.actorId ?? updated.authorId ?? null,
+          type: 'note_added',
+          occurredAt: nowIso,
+          payload: { noteId: id, aiGenerated: false },
+        },
+        emitter,
+      );
     }
 
     return serializeNote(updated);
