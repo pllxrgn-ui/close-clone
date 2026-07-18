@@ -1,0 +1,423 @@
+/*
+ * Calling feature styles — the global call strip + the list dialer.
+ * Tokens only (color/space/type/motion resolve through tokens.css), so both
+ * themes and the AA contrast guarantees hold without touching a .tsx. Motion is
+ * transform/opacity, < 300ms, --ease-out, and drops movement under reduced
+ * motion; the lamp pulse is the only ambient motion (live-call state, §4).
+ */
+
+/* ── Global call strip ─────────────────────────────────────────────────────── */
+
+.call-strip {
+  position: fixed;
+  left: 50%;
+  bottom: var(--space-5);
+  transform: translateX(-50%);
+  z-index: calc(var(--z-topbar) + 5);
+  width: min(720px, calc(100vw - var(--space-8)));
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  box-shadow: var(--shadow-2);
+  color: var(--ink-0);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .call-strip {
+    animation: call-strip-in var(--dur) var(--ease-out);
+  }
+}
+
+@keyframes call-strip-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.call-strip__live {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+}
+
+.call-strip__lamp {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: var(--state-live);
+  box-shadow: 0 0 8px currentColor;
+  color: var(--state-live);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .call-strip__lamp {
+    animation: call-lamp-pulse 2.2s var(--ease-in-out) infinite;
+  }
+}
+
+@keyframes call-lamp-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.call-strip__who {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  margin-right: auto;
+}
+
+.call-strip__name {
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-md);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.call-strip__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+}
+
+.call-strip__num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.call-strip__phase {
+  color: var(--ink-1);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  padding-left: var(--space-2);
+  border-left: 1px solid var(--line);
+}
+
+.call-strip__rec {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--state-overdue);
+  white-space: nowrap;
+}
+
+.call-strip__rec-dot {
+  flex: none;
+}
+
+.call-strip__rec-consent {
+  color: var(--ink-2);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.call-strip__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Pressed toggle (mute/hold on) — achromatic ink, never a state hue. */
+.call-strip__controls .sb-iconbtn.is-on {
+  background: var(--ink-0);
+  color: var(--surface-1);
+  border-color: var(--ink-0);
+}
+
+.call-strip__hangup {
+  margin-left: var(--space-1);
+}
+
+.call-strip__vm-dur {
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Wrap-up / outcome panel ──────────────────────────────────────────────── */
+
+.call-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+
+.call-wrap__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.call-wrap__title {
+  font-family: var(--font-display);
+  font-weight: var(--fw-display);
+  font-size: var(--fs-lg);
+  letter-spacing: 0.02em;
+}
+
+.call-wrap__who {
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.call-wrap__num,
+.call-wrap__dur {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.call-wrap__field-label {
+  display: block;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  margin-bottom: var(--space-2);
+}
+
+.call-wrap__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.call-chip {
+  appearance: none;
+  font: inherit;
+  font-size: var(--fs-sm);
+  color: var(--ink-1);
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-1);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .call-chip:hover {
+    border-color: var(--ink-2);
+    color: var(--ink-0);
+  }
+}
+
+.call-chip:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.call-chip[aria-pressed='true'] {
+  background: var(--ink-0);
+  color: var(--surface-1);
+  border-color: var(--ink-0);
+  font-weight: var(--fw-medium);
+}
+
+.call-wrap__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+/* ── List dialer ──────────────────────────────────────────────────────────── */
+
+.dialer {
+  padding: var(--space-6) var(--space-7);
+  max-width: 860px;
+}
+
+.dialer__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-5);
+  margin-bottom: var(--space-5);
+}
+
+.dialer__title {
+  font-family: var(--font-display);
+  font-weight: var(--fw-display-strong);
+  font-size: var(--fs-display-sm);
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+
+.dialer__sub {
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+  margin: var(--space-1) 0 0;
+  max-width: 52ch;
+}
+
+.dialer__view {
+  min-width: 200px;
+}
+
+.dialer__loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.dialer__progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  margin-bottom: var(--space-3);
+}
+
+.dialer__progress strong {
+  color: var(--ink-0);
+  font-variant-numeric: tabular-nums;
+}
+
+.dialer__blocked-count {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--state-dnc);
+}
+
+.dialer__ondeck {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  padding: var(--space-5);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--state-live);
+  border-radius: var(--radius-2);
+  margin-bottom: var(--space-5);
+}
+
+.dialer__ondeck--done {
+  border-left-color: var(--line);
+  color: var(--ink-2);
+}
+
+.dialer__ondeck-who {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.dialer__ondeck-name {
+  font-family: var(--font-display);
+  font-weight: var(--fw-display);
+  font-size: var(--fs-xl);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dialer__ondeck-phone {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+  font-size: var(--fs-md);
+}
+
+.dialer__ondeck-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: none;
+}
+
+.dialer__ondeck-actions .sb-kbd {
+  margin-left: var(--space-2);
+}
+
+.dialer__queue {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+}
+
+.dialer__row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: var(--space-4);
+  height: 40px;
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+
+.dialer__row:last-child {
+  border-bottom: none;
+}
+
+.dialer__row[data-current] {
+  background: var(--surface-1);
+}
+
+.dialer__row[data-blocked] {
+  opacity: 0.55;
+}
+
+.dialer__row-name {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--fs-base);
+}
+
+.dialer__row-phone {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+}
+
+.dialer__row-ready {
+  color: var(--ink-3);
+  font-size: var(--fs-sm);
+}
+
+@media (max-width: 640px) {
+  .dialer__head {
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+  .dialer__ondeck {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-4);
+  }
+  .call-strip {
+    width: calc(100vw - var(--space-5));
+  }
+}
