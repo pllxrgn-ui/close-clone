@@ -8,7 +8,7 @@ import {
 } from '@switchboard/shared/providers';
 import { BUILTIN_FIELD_NAMES, astToDsl } from '@switchboard/shared';
 import type { Db } from '../db/index.ts';
-import { LeadNotFoundError } from '../services/activity/index.ts';
+import { LeadNotFoundError, type ActivityWebhookEmitter } from '../services/activity/index.ts';
 import {
   CallNotFoundError,
   EmailDraftError,
@@ -55,6 +55,8 @@ export interface AiRouteDeps {
   now?: () => Date;
   /** Default NL→Smart View field catalog when a request omits one. */
   fieldCatalog?: SmartViewFieldCatalog;
+  /** Fans the confirmed AI note onto activity.recorded webhooks. */
+  activityEmitter?: ActivityWebhookEmitter;
 }
 
 const generateBodySchema = z.object({
@@ -137,7 +139,11 @@ export function registerAiRoutes(app: FastifyInstance, deps: AiRouteDeps): void 
     }
     try {
       const result = await confirmCallSummary(
-        { db: deps.db, now },
+        {
+          db: deps.db,
+          now,
+          ...(deps.activityEmitter !== undefined ? { emitter: deps.activityEmitter } : {}),
+        },
         { noteId: idResult.data, confirmedBy: parsed.data.confirmedBy },
       );
       return reply.send(result);

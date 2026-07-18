@@ -127,7 +127,11 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     registerSmartViewRoutes(app, { db: deps.db, ...deps.smartViews });
   }
   if (deps.bulk !== undefined) {
-    registerBulkRoutes(app, { db: deps.db, ...deps.bulk });
+    registerBulkRoutes(app, {
+      db: deps.db,
+      ...deps.bulk,
+      ...(deps.activityEmitter !== undefined ? { activityEmitter: deps.activityEmitter } : {}),
+    });
   }
   if (deps.adminCrud !== undefined) {
     registerAdminCrudRoutes(app, { db: deps.db, ...deps.adminCrud });
@@ -139,10 +143,18 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     registerSmsRoutes(app, { db: deps.db, ...deps.sms });
   }
   if (deps.ai !== undefined) {
-    registerAiRoutes(app, { db: deps.db, ...deps.ai });
+    registerAiRoutes(app, {
+      db: deps.db,
+      ...deps.ai,
+      ...(deps.activityEmitter !== undefined ? { activityEmitter: deps.activityEmitter } : {}),
+    });
   }
   if (deps.imports !== undefined) {
-    registerImportRoutes(app, { db: deps.db, ...deps.imports });
+    registerImportRoutes(app, {
+      db: deps.db,
+      ...deps.imports,
+      ...(deps.activityEmitter !== undefined ? { activityEmitter: deps.activityEmitter } : {}),
+    });
   }
   if (deps.adminAudit !== undefined) {
     registerAdminAuditRoutes(app, { db: deps.db, ...deps.adminAudit });

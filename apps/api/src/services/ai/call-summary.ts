@@ -6,7 +6,7 @@ import {
   type CallSummaryContext,
 } from '@switchboard/shared/providers';
 import { calls, contacts, leads, notes, type Db } from '../../db/index.ts';
-import { recordActivity } from '../activity/index.ts';
+import { recordActivity, type ActivityWebhookEmitter } from '../activity/index.ts';
 
 /**
  * AI call summaries (task 3e) — the §I-AI through-line.
@@ -181,6 +181,8 @@ export async function generateCallSummaryDraft(
 export interface ConfirmCallSummaryDeps {
   db: Db;
   now?: () => Date;
+  /** Fans the confirmed AI note onto activity.recorded webhooks. */
+  emitter?: ActivityWebhookEmitter;
 }
 
 export interface ConfirmCallSummaryInput {
@@ -233,13 +235,17 @@ export async function confirmCallSummary(
 
     // Emit the timeline event ONLY now, carrying confirmedBy (§I-AI). recordActivity
     // opens a savepoint on this tx, so the flip + the event commit atomically.
-    const activity = await recordActivity(tx, {
-      leadId: note.leadId,
-      userId: input.confirmedBy,
-      type: 'note_added',
-      occurredAt: nowIso,
-      payload: { noteId: input.noteId, aiGenerated: true, confirmedBy: input.confirmedBy },
-    });
+    const activity = await recordActivity(
+      tx,
+      {
+        leadId: note.leadId,
+        userId: input.confirmedBy,
+        type: 'note_added',
+        occurredAt: nowIso,
+        payload: { noteId: input.noteId, aiGenerated: true, confirmedBy: input.confirmedBy },
+      },
+      deps.emitter,
+    );
 
     return {
       noteId: input.noteId,

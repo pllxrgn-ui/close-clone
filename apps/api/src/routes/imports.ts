@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest, preHandlerHookHandl
 import { z, ZodError } from 'zod';
 
 import type { Db, ImportRow } from '../db/index.ts';
+import type { ActivityWebhookEmitter } from '../services/activity/index.ts';
 import {
   AlreadyCommittedError,
   commitImport,
@@ -56,6 +57,8 @@ export interface ImportRouteDeps {
   preHandler?: preHandlerHookHandler | preHandlerHookHandler[];
   /** Upload byte cap; enforced while streaming to storage. */
   maxBytes?: number;
+  /** Fans import_created / lead_created onto activity.recorded webhooks. */
+  activityEmitter?: ActivityWebhookEmitter;
 }
 
 const paramsSchema = z.object({ id: z.string().min(1) });
@@ -227,7 +230,11 @@ export function registerImportRoutes(app: FastifyInstance, deps: ImportRouteDeps
       if (!params.success) return sendError(reply, 'VALIDATION_FAILED', 'invalid import id');
 
       try {
-        const outcome = await commitImport(deps.db, params.data.id);
+        const outcome = await commitImport(
+          deps.db,
+          params.data.id,
+          deps.activityEmitter !== undefined ? { emitter: deps.activityEmitter } : {},
+        );
         return reply.send({
           importId: params.data.id,
           status: outcome.status,

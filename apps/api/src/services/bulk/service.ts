@@ -3,7 +3,7 @@ import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import type { Ast } from '@switchboard/shared';
 
 import { contacts, leads, leadStatuses, users, type Db } from '../../db/index.ts';
-import { recordActivity } from '../activity/index.ts';
+import { recordActivity, type ActivityWebhookEmitter } from '../activity/index.ts';
 import { enrollContacts, type EnrollTarget } from '../sequences/index.ts';
 import type { QueueDriver } from '../../queue/index.ts';
 import {
@@ -138,6 +138,8 @@ export interface BulkServiceDeps {
   queue: QueueDriver;
   /** Injectable clock; anchors event `occurredAt` + enroll due dates. */
   now: () => Date;
+  /** Fans bulk field/status/dnc changes onto activity.recorded webhooks. */
+  emitter?: ActivityWebhookEmitter;
 }
 
 export class BulkService {
@@ -146,6 +148,7 @@ export class BulkService {
   private readonly orgTimezone: string;
   private readonly queue: QueueDriver;
   private readonly now: () => Date;
+  private readonly emitter: ActivityWebhookEmitter | undefined;
   private readonly smartViews: SmartViewService;
 
   constructor(deps: BulkServiceDeps) {
@@ -154,6 +157,7 @@ export class BulkService {
     this.orgTimezone = deps.orgTimezone;
     this.queue = deps.queue;
     this.now = deps.now;
+    this.emitter = deps.emitter;
     this.smartViews = new SmartViewService({
       db: deps.db,
       client: deps.client,
@@ -243,13 +247,17 @@ export class BulkService {
       if (cur === undefined) return { kind: 'skipped', reason: 'not_found' } as const;
       if (cur.ownerId === ownerId) return { kind: 'skipped', reason: 'no_change' } as const;
       await tx.update(leads).set({ ownerId }).where(eq(leads.id, leadId));
-      await recordActivity(tx, {
-        leadId,
-        userId,
-        type: 'field_changed',
-        occurredAt: this.now().toISOString(),
-        payload: { field: 'owner', before: cur.ownerId, after: ownerId },
-      });
+      await recordActivity(
+        tx,
+        {
+          leadId,
+          userId,
+          type: 'field_changed',
+          occurredAt: this.now().toISOString(),
+          payload: { field: 'owner', before: cur.ownerId, after: ownerId },
+        },
+        this.emitter,
+      );
       return { kind: 'updated' } as const;
     });
   }
@@ -284,13 +292,17 @@ export class BulkService {
       if (cur === undefined) return { kind: 'skipped', reason: 'not_found' } as const;
       if (cur.statusId === statusId) return { kind: 'skipped', reason: 'no_change' } as const;
       await tx.update(leads).set({ statusId }).where(eq(leads.id, leadId));
-      await recordActivity(tx, {
-        leadId,
-        userId,
-        type: 'status_changed',
-        occurredAt: this.now().toISOString(),
-        payload: { statusId, from: cur.statusId, to: statusId },
-      });
+      await recordActivity(
+        tx,
+        {
+          leadId,
+          userId,
+          type: 'status_changed',
+          occurredAt: this.now().toISOString(),
+          payload: { statusId, from: cur.statusId, to: statusId },
+        },
+        this.emitter,
+      );
       return { kind: 'updated' } as const;
     });
   }
@@ -327,13 +339,17 @@ export class BulkService {
         return { kind: 'skipped', reason: value ? 'already_dnc' : 'not_dnc' } as const;
       }
       await tx.update(leads).set({ dnc: value }).where(eq(leads.id, leadId));
-      await recordActivity(tx, {
-        leadId,
-        userId,
-        type: value ? 'dnc_set' : 'dnc_cleared',
-        occurredAt: this.now().toISOString(),
-        payload: { scope: 'lead', reason },
-      });
+      await recordActivity(
+        tx,
+        {
+          leadId,
+          userId,
+          type: value ? 'dnc_set' : 'dnc_cleared',
+          occurredAt: this.now().toISOString(),
+          payload: { scope: 'lead', reason },
+        },
+        this.emitter,
+      );
       return { kind: 'updated' } as const;
     });
   }

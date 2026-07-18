@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 
 import type { Db } from '../db/index.ts';
+import type { ActivityWebhookEmitter } from '../services/activity/index.ts';
 import type { QueueDriver } from '../queue/index.ts';
 import {
   BulkInputError,
@@ -52,6 +53,8 @@ export interface BulkRouteDeps {
   queue: QueueDriver;
   /** Injectable clock (event `occurredAt` + enroll due dates). Defaults to `Date`. */
   now?: () => Date;
+  /** Fans bulk lead changes onto activity.recorded webhooks. */
+  activityEmitter?: ActivityWebhookEmitter;
   /** Resolve the acting user; `null` ⇒ fall back to `defaultUserId`. */
   getActor?: (request: FastifyRequest) => BulkActor | null | Promise<BulkActor | null>;
   /** Acting-user fallback + `me` binding when there is no resolved actor. */
@@ -90,6 +93,7 @@ export function registerBulkRoutes(app: FastifyInstance, deps: BulkRouteDeps): v
     orgTimezone: deps.orgTimezone,
     queue: deps.queue,
     now: deps.now ?? ((): Date => new Date()),
+    ...(deps.activityEmitter !== undefined ? { emitter: deps.activityEmitter } : {}),
   });
   const routeOpts = deps.preHandler !== undefined ? { preHandler: deps.preHandler } : {};
 

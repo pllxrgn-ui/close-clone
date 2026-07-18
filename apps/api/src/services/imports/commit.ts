@@ -1,7 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm';
 
 import { contacts, imports, leads, type Db } from '../../db/index.ts';
-import { recordActivity } from '../activity/writer.ts';
+import { recordActivity, type ActivityWebhookEmitter } from '../activity/writer.ts';
 import type { CommitCounters, CommitResult, ImportPlan, RowPlan } from './types.ts';
 
 /**
@@ -84,6 +84,8 @@ export interface CommitOptions {
   leaseTtlMs?: number;
   /** TEST SEAM: stop after N committed batches, leaving status 'committing'. */
   stopAfterBatches?: number;
+  /** Fans import_created / lead_created onto activity.recorded webhooks. */
+  emitter?: ActivityWebhookEmitter;
 }
 
 export interface CommitOutcome {
@@ -135,6 +137,7 @@ async function applyRow(
   rowCount: number | null,
   occurredAt: string,
   counters: CommitCounters,
+  emitter?: ActivityWebhookEmitter,
 ): Promise<void> {
   if (row.outcome === 'create' && row.lead !== null) {
     const l = row.lead;
@@ -160,20 +163,28 @@ async function applyRow(
       counters.contacts += 1;
     }
     // import_created + lead_created, once each, via the sole write path.
-    await recordActivity(tx, {
-      leadId: l.id,
-      userId: actingUserId,
-      type: 'import_created',
-      occurredAt,
-      payload: rowCount === null ? { importId } : { importId, rowCount },
-    });
-    await recordActivity(tx, {
-      leadId: l.id,
-      userId: actingUserId,
-      type: 'lead_created',
-      occurredAt,
-      payload: {},
-    });
+    await recordActivity(
+      tx,
+      {
+        leadId: l.id,
+        userId: actingUserId,
+        type: 'import_created',
+        occurredAt,
+        payload: rowCount === null ? { importId } : { importId, rowCount },
+      },
+      emitter,
+    );
+    await recordActivity(
+      tx,
+      {
+        leadId: l.id,
+        userId: actingUserId,
+        type: 'lead_created',
+        occurredAt,
+        payload: {},
+      },
+      emitter,
+    );
     counters.leads += 1;
     counters.activities += 2;
     return;
@@ -332,7 +343,16 @@ export async function commitImport(
         for (let i = idx; i < end; i += 1) {
           const r = plan.rows[i];
           if (r !== undefined) {
-            await applyRow(tx, r, row.createdBy, importId, row.rowCount, occurredAt, counters);
+            await applyRow(
+              tx,
+              r,
+              row.createdBy,
+              importId,
+              row.rowCount,
+              occurredAt,
+              counters,
+              opts.emitter,
+            );
           }
         }
         await writeCheckpoint(
