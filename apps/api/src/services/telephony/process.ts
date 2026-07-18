@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { callStatusValues, type ActivityType } from '@switchboard/shared';
 import type { TelephonyProvider } from '@switchboard/shared/providers';
 import { calls, smsMessages, webhookInbox, type Db } from '../../db/index.ts';
-import { recordActivity } from '../activity/index.ts';
+import { recordActivity, type ActivityWebhookEmitter } from '../activity/index.ts';
 import { matchOptOutKeyword } from '../../providers/telephony/opt-out.ts';
 import { resolveContactByPhone, phoneMatchKey } from './phone.ts';
 import { addPhoneSuppression } from './suppression.ts';
@@ -49,6 +49,8 @@ export interface TelephonyProcessDeps {
   provider: Pick<TelephonyProvider, 'sendSms'>;
   /** Body of the opt-out confirmation SMS. */
   optOutConfirmationBody?: string;
+  /** Fans call/sms-received activities onto activity.recorded webhooks. */
+  emitter?: ActivityWebhookEmitter;
 }
 
 export interface ProcessResult {
@@ -118,7 +120,7 @@ export async function processTwilioInboxRow(
         // stored voice request is retained for audit/replay only.
         result = { activity: null, error: null, confirmation: null };
       } else if (decoded.channel === 'status') {
-        result = await processStatus(tx, decoded.params, decoded.receivedAt);
+        result = await processStatus(tx, decoded.params, decoded.receivedAt, deps.emitter);
       } else {
         result = await processSms(tx, deps, decoded.params, decoded.receivedAt);
       }
@@ -199,6 +201,7 @@ async function processStatus(
   tx: Db,
   params: Record<string, string>,
   receivedAt: string,
+  emitter?: ActivityWebhookEmitter,
 ): Promise<ChannelOutcome> {
   const callSid = params['CallSid'];
   if (callSid === undefined || callSid.length === 0) return noop('missing_call_sid');
@@ -214,7 +217,7 @@ async function processStatus(
     // A recording callback: a recording only exists because consent was announced
     // (§I-REC, enforced at the adapter line). Record the consent marker once, and
     // attach the ref when the recording completes.
-    await ensureConsentPlayed(tx, call, occurredAt);
+    await ensureConsentPlayed(tx, call, occurredAt, emitter);
     if (recordingStatus === 'completed' && recordingUrl !== undefined && recordingUrl.length > 0) {
       await tx
         .update(calls)
@@ -256,14 +259,18 @@ async function processStatus(
   const payload: Record<string, unknown> = { callId: call.id, direction, channel: 'voice' };
   if (terminal.durationS !== undefined) payload['durationS'] = terminal.durationS;
   if (terminal.recordingRef !== undefined) payload['recordingRef'] = terminal.recordingRef;
-  await recordActivity(tx, {
-    leadId: call.leadId,
-    contactId: call.contactId,
-    ...(call.userId !== null ? { userId: call.userId } : {}),
-    type: terminal.activity,
-    occurredAt,
-    payload,
-  });
+  await recordActivity(
+    tx,
+    {
+      leadId: call.leadId,
+      contactId: call.contactId,
+      ...(call.userId !== null ? { userId: call.userId } : {}),
+      type: terminal.activity,
+      occurredAt,
+      payload,
+    },
+    emitter,
+  );
   return { activity: terminal.activity, error: null, confirmation: null };
 }
 
@@ -358,18 +365,22 @@ async function processSms(
       source: 'stop_keyword',
       reason: `sms ${keyword}`,
     });
-    await recordActivity(tx, {
-      leadId: match.leadId,
-      contactId: match.contactId,
-      type: 'sms_opt_out',
-      occurredAt: receivedAt,
-      payload: {
-        number: from,
-        keyword,
-        channel: 'sms',
-        ...(smsId !== null ? { smsMessageId: smsId } : {}),
+    await recordActivity(
+      tx,
+      {
+        leadId: match.leadId,
+        contactId: match.contactId,
+        type: 'sms_opt_out',
+        occurredAt: receivedAt,
+        payload: {
+          number: from,
+          keyword,
+          channel: 'sms',
+          ...(smsId !== null ? { smsMessageId: smsId } : {}),
+        },
       },
-    });
+      deps.emitter,
+    );
     return {
       activity: 'sms_opt_out',
       error: null,
@@ -382,13 +393,17 @@ async function processSms(
     };
   }
 
-  await recordActivity(tx, {
-    leadId: match.leadId,
-    contactId: match.contactId,
-    type: 'sms_received',
-    occurredAt: receivedAt,
-    payload: { body, channel: 'sms', ...(smsId !== null ? { smsMessageId: smsId } : {}) },
-  });
+  await recordActivity(
+    tx,
+    {
+      leadId: match.leadId,
+      contactId: match.contactId,
+      type: 'sms_received',
+      occurredAt: receivedAt,
+      payload: { body, channel: 'sms', ...(smsId !== null ? { smsMessageId: smsId } : {}) },
+    },
+    deps.emitter,
+  );
   return { activity: 'sms_received', error: null, confirmation: null };
 }
 
@@ -484,7 +499,12 @@ async function loadCall(tx: Db, callSid: string): Promise<CallRowLite | null> {
   return rows[0] ?? null;
 }
 
-async function ensureConsentPlayed(tx: Db, call: CallRowLite, occurredAt: string): Promise<void> {
+async function ensureConsentPlayed(
+  tx: Db,
+  call: CallRowLite,
+  occurredAt: string,
+  emitter?: ActivityWebhookEmitter,
+): Promise<void> {
   const exists = await tx.execute(sql`
     SELECT 1 FROM activities
     WHERE lead_id = ${call.leadId}
@@ -493,14 +513,18 @@ async function ensureConsentPlayed(tx: Db, call: CallRowLite, occurredAt: string
     LIMIT 1
   `);
   if ((exists as { rows: unknown[] }).rows.length > 0) return;
-  await recordActivity(tx, {
-    leadId: call.leadId,
-    contactId: call.contactId,
-    ...(call.userId !== null ? { userId: call.userId } : {}),
-    type: 'recording_consent_played',
-    occurredAt,
-    payload: { callId: call.id, channel: 'voice' },
-  });
+  await recordActivity(
+    tx,
+    {
+      leadId: call.leadId,
+      contactId: call.contactId,
+      ...(call.userId !== null ? { userId: call.userId } : {}),
+      type: 'recording_consent_played',
+      occurredAt,
+      payload: { callId: call.id, channel: 'voice' },
+    },
+    emitter,
+  );
 }
 
 async function hasTerminalCallActivity(tx: Db, call: CallRowLite): Promise<boolean> {

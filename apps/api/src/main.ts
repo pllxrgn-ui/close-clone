@@ -429,7 +429,9 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
   // sendSms (the quiet-hours opt-out confirmation). Present only when a
   // telephony provider exists (mock now; real Twilio is HUMAN_TODO).
   const telephonyProcessDeps =
-    registry?.telephony !== undefined ? { db, provider: registry.telephony } : null;
+    registry?.telephony !== undefined
+      ? { db, provider: registry.telephony, emitter: activityEmitter }
+      : null;
 
   // Outbound webhook delivery (guide §5c): emitWebhookEvent (fired by domain
   // events) writes durable webhook_deliveries rows + enqueues webhook:deliver;
