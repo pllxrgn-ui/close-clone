@@ -8,7 +8,7 @@ import {
   sequences,
   type Db,
 } from '../../db/index.ts';
-import { recordActivity } from '../activity/index.ts';
+import { recordActivity, type ActivityWebhookEmitter } from '../activity/index.ts';
 import type { QueueDriver } from '../../queue/index.ts';
 import { SEND_JOB_NAME, wakeupJobId } from './job-names.ts';
 import { SequenceNotFoundError, SequenceValidationError } from './errors.ts';
@@ -63,6 +63,8 @@ export interface EnrollmentDeps {
   queue: QueueDriver;
   /** Injectable clock; enroll time anchors intent due dates. */
   now: () => Date;
+  /** Fans sequence_enrolled onto activity.recorded webhooks. */
+  emitter?: ActivityWebhookEmitter;
 }
 
 interface StepRow {
@@ -225,14 +227,18 @@ async function enrollOne(
         }
       }
 
-      await recordActivity(tx, {
-        leadId: target.leadId,
-        contactId: target.contactId,
-        ...(input.enrolledBy !== undefined ? { userId: input.enrolledBy } : {}),
-        type: 'sequence_enrolled',
-        occurredAt: now.toISOString(),
-        payload: { enrollmentId, sequenceId: input.sequenceId },
-      });
+      await recordActivity(
+        tx,
+        {
+          leadId: target.leadId,
+          contactId: target.contactId,
+          ...(input.enrolledBy !== undefined ? { userId: input.enrolledBy } : {}),
+          type: 'sequence_enrolled',
+          occurredAt: now.toISOString(),
+          payload: { enrollmentId, sequenceId: input.sequenceId },
+        },
+        deps.emitter,
+      );
 
       return { kind: 'enrolled', enrollmentId, wakeups };
     });

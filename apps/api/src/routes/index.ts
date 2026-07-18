@@ -96,6 +96,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       db: deps.db,
       queue: deps.sequences.queue,
       now: deps.sequences.now,
+      ...(deps.activityEmitter !== undefined ? { emitter: deps.activityEmitter } : {}),
     });
   }
   if (deps.unsubscribe !== undefined) {
