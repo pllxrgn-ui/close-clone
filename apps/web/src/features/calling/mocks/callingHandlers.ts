@@ -101,18 +101,29 @@ function twilioSid(): string {
 // ── Shared dial resolution (I-DNC / I-REC), used by /dial and /dialer/advance ──
 
 type DialResolution =
-  | { ok: true; leadId: string; contactId: string | null; to: string; from: string; record: boolean }
+  | {
+      ok: true;
+      leadId: string;
+      contactId: string | null;
+      to: string;
+      from: string;
+      record: boolean;
+    }
   | { ok: false; response: Response };
 
 function resolveDial(body: Record<string, unknown>): DialResolution {
   const userId = str(body.userId);
   const leadId = str(body.leadId);
   if (!userId || !leadId) {
-    return { ok: false, response: errorJson(400, 'VALIDATION_FAILED', 'userId and leadId are required') };
+    return {
+      ok: false,
+      response: errorJson(400, 'VALIDATION_FAILED', 'userId and leadId are required'),
+    };
   }
 
   const lead = db.leads.find((l) => l.id === leadId && l.deletedAt === null);
-  if (!lead) return { ok: false, response: errorJson(404, 'NOT_FOUND', `lead ${leadId} not found`) };
+  if (!lead)
+    return { ok: false, response: errorJson(404, 'NOT_FOUND', `lead ${leadId} not found`) };
   if (lead.dnc) {
     return { ok: false, response: errorJson(422, 'SUPPRESSED', 'dial blocked: lead_dnc') };
   }
@@ -124,10 +135,16 @@ function resolveDial(body: Record<string, unknown>): DialResolution {
   if (explicitContactId) {
     const contact = db.contacts.find((c) => c.id === explicitContactId && c.deletedAt === null);
     if (!contact) {
-      return { ok: false, response: errorJson(404, 'NOT_FOUND', `contact ${explicitContactId} not found`) };
+      return {
+        ok: false,
+        response: errorJson(404, 'NOT_FOUND', `contact ${explicitContactId} not found`),
+      };
     }
     if (contact.leadId !== leadId) {
-      return { ok: false, response: errorJson(400, 'VALIDATION_FAILED', 'contact does not belong to lead') };
+      return {
+        ok: false,
+        response: errorJson(400, 'VALIDATION_FAILED', 'contact does not belong to lead'),
+      };
     }
     if (contact.dnc) {
       return { ok: false, response: errorJson(422, 'SUPPRESSED', 'dial blocked: contact_dnc') };
@@ -150,7 +167,11 @@ function resolveDial(body: Record<string, unknown>): DialResolution {
   if (!toNumber) {
     return {
       ok: false,
-      response: errorJson(400, 'VALIDATION_FAILED', 'no destination number (provide `to` or a contact with a phone)'),
+      response: errorJson(
+        400,
+        'VALIDATION_FAILED',
+        'no destination number (provide `to` or a contact with a phone)',
+      ),
     };
   }
   if (isPhoneSuppressed(toNumber)) {
@@ -379,7 +400,11 @@ export const callingHandlers = [
     if (!userId) return errorJson(400, 'VALIDATION_FAILED', 'userId is required');
     // Sequential guard: one live call per rep (C8 CONFLICT), never predictive.
     if (activeCallForUser(userId)) {
-      return errorJson(409, 'CONFLICT', 'a call is already in progress for this user (sequential dialer)');
+      return errorJson(
+        409,
+        'CONFLICT',
+        'a call is already in progress for this user (sequential dialer)',
+      );
     }
     const resolved = resolveDial(body);
     if (!resolved.ok) return resolved.response;
@@ -393,7 +418,8 @@ export const callingHandlers = [
     if (!call) return errorJson(404, 'NOT_FOUND', `call ${callId} not found`);
     const body = await readJson(request);
     const recordingRef = body ? str(body.recordingRef) : null;
-    if (!recordingRef) return errorJson(400, 'VALIDATION_FAILED', 'a voicemail recordingRef is required');
+    if (!recordingRef)
+      return errorJson(400, 'VALIDATION_FAILED', 'a voicemail recordingRef is required');
     if (call.direction !== 'outbound' || call.twilioSid === null) {
       return errorJson(400, 'VALIDATION_FAILED', 'voicemail drop requires a live outbound call');
     }

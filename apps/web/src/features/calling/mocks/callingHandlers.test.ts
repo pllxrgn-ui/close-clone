@@ -79,22 +79,50 @@ function errorCode(json: unknown): string | undefined {
   return undefined;
 }
 
-async function post(path: string, body: unknown): Promise<{ status: number; json: any }> {
+interface DialResp {
+  callId: string;
+  callSid: string;
+  to: string;
+  from: string;
+  recording: boolean;
+}
+interface PatchResp {
+  callId: string;
+  outcome: string | null;
+  noteId: string | null;
+}
+interface QueueResp {
+  items: DialerEntry[];
+  nextCursor?: string;
+}
+interface DropResp {
+  callId: string;
+  recordingRef: string;
+  activity: string;
+}
+
+async function post<T = unknown>(
+  path: string,
+  body: unknown,
+): Promise<{ status: number; json: T }> {
   const res = await fetch(`/api/v1${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  return { status: res.status, json: await res.json().catch(() => null) };
+  return { status: res.status, json: (await res.json().catch(() => null)) as T };
 }
 
-async function patch(path: string, body: unknown): Promise<{ status: number; json: any }> {
+async function patch<T = unknown>(
+  path: string,
+  body: unknown,
+): Promise<{ status: number; json: T }> {
   const res = await fetch(`/api/v1${path}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  return { status: res.status, json: await res.json().catch(() => null) };
+  return { status: res.status, json: (await res.json().catch(() => null)) as T };
 }
 
 beforeEach(() => {
@@ -107,7 +135,7 @@ describe('POST /calls/dial', () => {
     const { lead, phone } = findDialable();
     const before = timelineCount(lead.id, 'recording_consent_played');
 
-    const { status, json } = await post('/calls/dial', { userId, leadId: lead.id });
+    const { status, json } = await post<DialResp>('/calls/dial', { userId, leadId: lead.id });
 
     expect(status).toBe(200);
     expect(json.callId).toEqual(expect.any(String));
@@ -122,21 +150,25 @@ describe('POST /calls/dial', () => {
   test('honors a per-call recording opt-out (no consent event armed)', async () => {
     const { lead } = findDialable();
     const before = timelineCount(lead.id, 'recording_consent_played');
-    const { json } = await post('/calls/dial', { userId, leadId: lead.id, recordOptOut: true });
+    const { json } = await post<DialResp>('/calls/dial', {
+      userId,
+      leadId: lead.id,
+      recordOptOut: true,
+    });
     expect(json.recording).toBe(false);
     expect(timelineCount(lead.id, 'recording_consent_played')).toBe(before);
   });
 
   test('a DNC lead is a hard 422 SUPPRESSED, never an override (I-DNC)', async () => {
     const lead = findDncLead();
-    const { status, json } = await post('/calls/dial', { userId, leadId: lead.id });
+    const { status, json } = await post<DialResp>('/calls/dial', { userId, leadId: lead.id });
     expect(status).toBe(422);
     expect(errorCode(json)).toBe('SUPPRESSED');
   });
 
   test('a suppressed number is a hard 422 SUPPRESSED even on a non-DNC lead', async () => {
     const { lead } = findSuppressed();
-    const { status, json } = await post('/calls/dial', { userId, leadId: lead.id });
+    const { status, json } = await post<DialResp>('/calls/dial', { userId, leadId: lead.id });
     expect(status).toBe(422);
     expect(errorCode(json)).toBe('SUPPRESSED');
   });
@@ -165,10 +197,10 @@ describe('POST /calls/dial', () => {
 describe('PATCH /calls/:id', () => {
   test('an outcome finalizes the call and lands a call_logged on the timeline', async () => {
     const { lead } = findDialable();
-    const { json: dialed } = await post('/calls/dial', { userId, leadId: lead.id });
+    const { json: dialed } = await post<DialResp>('/calls/dial', { userId, leadId: lead.id });
     const before = timelineCount(lead.id, 'call_logged');
 
-    const { status, json } = await patch(`/calls/${dialed.callId}`, {
+    const { status, json } = await patch<PatchResp>(`/calls/${dialed.callId}`, {
       outcome: 'Connected',
       notes: 'Discussed pricing; sending a recap.',
       actorId: userId,
@@ -187,14 +219,14 @@ describe('PATCH /calls/:id', () => {
 
   test('a "No answer" outcome finalizes to the missed status', async () => {
     const { lead } = findDialable();
-    const { json: dialed } = await post('/calls/dial', { userId, leadId: lead.id });
+    const { json: dialed } = await post<DialResp>('/calls/dial', { userId, leadId: lead.id });
     await patch(`/calls/${dialed.callId}`, { outcome: 'No answer' });
     expect(findCall(dialed.callId)?.status).toBe('missed');
   });
 
   test('finalizing is idempotent — a second outcome does not double-log', async () => {
     const { lead } = findDialable();
-    const { json: dialed } = await post('/calls/dial', { userId, leadId: lead.id });
+    const { json: dialed } = await post<DialResp>('/calls/dial', { userId, leadId: lead.id });
     await patch(`/calls/${dialed.callId}`, { outcome: 'Connected' });
     const after1 = timelineCount(lead.id, 'call_logged');
     await patch(`/calls/${dialed.callId}`, { outcome: 'Meeting booked' });
@@ -213,13 +245,13 @@ describe('PATCH /calls/:id', () => {
 describe('POST /calls/dialer/queue', () => {
   test('returns callable-lead entries annotated with the compliance flags', async () => {
     const view = db.smartViews[0]!;
-    const { status, json } = await post('/calls/dialer/queue', {
+    const { status, json } = await post<QueueResp>('/calls/dialer/queue', {
       userId,
       smartViewId: view.id,
       limit: 100,
     });
     expect(status).toBe(200);
-    const items = json.items as DialerEntry[];
+    const items = json.items;
     expect(items.length).toBeGreaterThan(0);
     for (const entry of items) {
       expect(entry.phone).not.toBeNull();
@@ -232,17 +264,21 @@ describe('POST /calls/dialer/queue', () => {
 
   test('paginates by keyset cursor', async () => {
     const view = db.smartViews[0]!;
-    const first = await post('/calls/dialer/queue', { userId, smartViewId: view.id, limit: 1 });
+    const first = await post<QueueResp>('/calls/dialer/queue', {
+      userId,
+      smartViewId: view.id,
+      limit: 1,
+    });
     expect(first.json.items).toHaveLength(1);
     expect(first.json.nextCursor).toEqual(expect.any(String));
-    const second = await post('/calls/dialer/queue', {
+    const second = await post<QueueResp>('/calls/dialer/queue', {
       userId,
       smartViewId: view.id,
       limit: 1,
       cursor: first.json.nextCursor,
     });
     expect(second.json.items).toHaveLength(1);
-    expect(second.json.items[0].leadId).not.toBe(first.json.items[0].leadId);
+    expect(second.json.items[0]!.leadId).not.toBe(first.json.items[0]!.leadId);
   });
 
   test('missing query source is 400', async () => {
@@ -264,7 +300,10 @@ describe('POST /calls/dialer/queue', () => {
 describe('POST /calls/dialer/advance', () => {
   test('places the next call when the rep has none live', async () => {
     const { lead, phone } = findDialable();
-    const { status, json } = await post('/calls/dialer/advance', { userId, leadId: lead.id });
+    const { status, json } = await post<DialResp>('/calls/dialer/advance', {
+      userId,
+      leadId: lead.id,
+    });
     expect(status).toBe(200);
     expect(json.to).toBe(phone);
   });
@@ -284,10 +323,10 @@ describe('POST /calls/dialer/advance', () => {
 describe('POST /calls/:id/voicemail-drop', () => {
   test('drops an asset, finalizes to voicemail, and logs the call', async () => {
     const { lead } = findDialable();
-    const { json: dialed } = await post('/calls/dial', { userId, leadId: lead.id });
+    const { json: dialed } = await post<DialResp>('/calls/dial', { userId, leadId: lead.id });
     const before = timelineCount(lead.id, 'call_logged');
 
-    const { status, json } = await post(`/calls/${dialed.callId}/voicemail-drop`, {
+    const { status, json } = await post<DropResp>(`/calls/${dialed.callId}/voicemail-drop`, {
       recordingRef: 'vm-intro-first-touch',
       actorId: userId,
     });
@@ -301,7 +340,7 @@ describe('POST /calls/:id/voicemail-drop', () => {
 
   test('a drop with no recordingRef is 400', async () => {
     const { lead } = findDialable();
-    const { json: dialed } = await post('/calls/dial', { userId, leadId: lead.id });
+    const { json: dialed } = await post<DialResp>('/calls/dial', { userId, leadId: lead.id });
     const { status, json } = await post(`/calls/${dialed.callId}/voicemail-drop`, {});
     expect(status).toBe(400);
     expect(errorCode(json)).toBe('VALIDATION_FAILED');
@@ -309,7 +348,7 @@ describe('POST /calls/:id/voicemail-drop', () => {
 
   test('a drop on an already-finalized call is 409 CONFLICT', async () => {
     const { lead } = findDialable();
-    const { json: dialed } = await post('/calls/dial', { userId, leadId: lead.id });
+    const { json: dialed } = await post<DialResp>('/calls/dial', { userId, leadId: lead.id });
     await patch(`/calls/${dialed.callId}`, { outcome: 'Connected' }); // finalized
     const { status, json } = await post(`/calls/${dialed.callId}/voicemail-drop`, {
       recordingRef: 'vm-intro-first-touch',
@@ -319,9 +358,12 @@ describe('POST /calls/:id/voicemail-drop', () => {
   });
 
   test('a drop on an unknown call is 404', async () => {
-    const { status, json } = await post('/calls/00000000-0000-4000-8000-000000000000/voicemail-drop', {
-      recordingRef: 'vm-intro-first-touch',
-    });
+    const { status, json } = await post(
+      '/calls/00000000-0000-4000-8000-000000000000/voicemail-drop',
+      {
+        recordingRef: 'vm-intro-first-touch',
+      },
+    );
     expect(status).toBe(404);
     expect(errorCode(json)).toBe('NOT_FOUND');
   });
