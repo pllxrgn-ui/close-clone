@@ -21,11 +21,11 @@ confidential client `switchboard`, the two groups the app maps to roles, a
 protocol mapper that emits `groups` **as names** into the ID token (what
 `apps/api/src/auth/rbac.ts` requires), and three test users:
 
-| Username   | Password   | Groups                            | Role in Switchboard |
-| ---------- | ---------- | --------------------------------- | ------------------- |
-| `ada`      | `ada`      | sales-crm-users + sales-crm-admins | **admin**           |
-| `rep`      | `rep`      | sales-crm-users                   | rep                 |
-| `nomember` | `nomember` | (none)                            | **refused** (no access) |
+| Username   | Password   | Groups                             | Role in Switchboard     |
+| ---------- | ---------- | ---------------------------------- | ----------------------- |
+| `ada`      | `ada`      | sales-crm-users + sales-crm-admins | **admin**               |
+| `rep`      | `rep`      | sales-crm-users                    | rep                     |
+| `nomember` | `nomember` | (none)                             | **refused** (no access) |
 
 `nomember` is the §8 "a non-group user is refused" check: a valid IdP login that
 Switchboard rejects because no group grants access.
@@ -53,6 +53,7 @@ the web front door — it renders the SSO screen in real mode and hands off to
 
 > **Direct-grant proof (no browser):** the client has direct access grants
 > enabled, so you can prove the groups claim from a shell:
+>
 > ```bash
 > curl -s -X POST http://localhost:8081/realms/switchboard/protocol/openid-connect/token \
 >   -d grant_type=password -d client_id=switchboard \

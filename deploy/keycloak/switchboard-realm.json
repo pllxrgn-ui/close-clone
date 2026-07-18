@@ -80,13 +80,7 @@
         "http://localhost:3000/api/v1/auth/callback"
       ],
       "webOrigins": ["http://localhost:8080", "http://localhost:3000"],
-      "defaultClientScopes": [
-        "web-origins",
-        "profile",
-        "roles",
-        "email",
-        "switchboard-groups"
-      ]
+      "defaultClientScopes": ["web-origins", "profile", "roles", "email", "switchboard-groups"]
     }
   ],
   "users": [

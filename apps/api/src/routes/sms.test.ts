@@ -75,7 +75,9 @@ describe('happy path', () => {
     expect(body.providerSid.length).toBeGreaterThan(0);
     expect(body.optOutLanguageAppended).toBe(true);
     expect(await smsFor(ctx.db, lead)).toHaveLength(1);
-    expect((await activitiesFor(ctx.db, lead)).filter((a) => a.type === 'sms_sent')).toHaveLength(1);
+    expect((await activitiesFor(ctx.db, lead)).filter((a) => a.type === 'sms_sent')).toHaveLength(
+      1,
+    );
   });
 });
 

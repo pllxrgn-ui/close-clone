@@ -4,34 +4,48 @@ import { openEmailComposer, openFirstLead } from './support/app';
 /*
  * AI confirm-before-commit (build guide §8 / CONTRACTS I-AI).
  *
- * As of this build there is NO AI affordance wired into the web UI. The three AI
- * paths in ARCHITECTURE §7 — call-summary draft note, email draft/rewrite, and
- * NL → Smart View — have no rendered control on any surface this suite drives
- * (composer, inbox, pipeline, reports, sequences, settings were all verified
- * free of AI/draft/rewrite/generate controls). There is therefore no AI
- * write-path to confirm end-to-end yet, so per task 5d the confirm-flow test is
- * skipped rather than fabricated.
+ * The composer now ships the "Draft with AI" affordance (features/ai
+ * AiDraftControl — D-047/D-048). The invariant this locks in: the AI can DRAFT,
+ * but only the rep can COMMIT. Generating a draft and inserting it into the
+ * composer must never send — the composer's explicit Send button remains the
+ * sole send path, and nothing inside the AI panel is send-capable.
+ *
+ * "Nothing sent" is asserted structurally: a successful send CLOSES the
+ * composer (sendMutation.onSuccess) and toasts "Email sent to …" — so the
+ * dialog staying open plus an empty send-toast is the no-send proof. (The
+ * timeline legitimately contains "Email sent" history rows, so the toast check
+ * pins the "to" phrasing only a real send produces.)
  */
 
-// Enable once an AI affordance (e.g. "Draft with AI" in the composer, or a
-// call-summary that produces a draft note) is exposed in the UI. The assertion:
-// invoking AI must NOT mutate a record or send until the rep clicks a confirm
-// control (I-AI: the confirming request carries confirmedBy).
-test.skip('AI output requires an explicit user confirm before it writes', async () => {
-  // Intentionally empty — no AI affordance exists to exercise. See file header.
-});
-
-// Positive guard locking in the invariant today: the email composer's only
-// backend write is the explicit Send button. There is no AI control to bypass
-// it, and the template/snippet insert affordances are local-state only.
-test('email composer exposes no AI write-path — Send is the only commit', async ({ page }) => {
+test('AI draft requires the rep: generate + insert never sends — Send stays the only commit', async ({
+  page,
+}) => {
   await openFirstLead(page);
   const dialog = await openEmailComposer(page);
+  const sentToast = page.locator('[role="status"]').getByText(/Email sent to/);
 
-  await expect(
-    dialog.getByRole('button', { name: /\bAI\b|draft|rewrite|generate|assist|magic/i }),
-  ).toHaveCount(0);
+  // The AI affordance exists…
+  await dialog.getByRole('button', { name: 'Draft with AI' }).click();
+  const panel = dialog.getByRole('region', { name: 'AI email assistant' });
+  await expect(panel).toBeVisible();
+
+  // …but nothing inside it can send.
+  await expect(panel.getByRole('button', { name: /send/i })).toHaveCount(0);
+
+  // Generate a draft — the review note renders; nothing was sent.
+  await panel.getByRole('textbox').fill('friendly first-touch intro about saving reps time');
+  await panel.getByRole('button', { name: 'Generate draft' }).click();
+  await expect(panel.getByText(/never sends for you/i)).toBeVisible();
+  await expect(panel.getByRole('button', { name: /send/i })).toHaveCount(0);
+  await expect(dialog).toBeVisible();
+  await expect(sentToast).toHaveCount(0);
+
+  // Insert fills the composer fields — still no send; the human owns Send.
+  await panel.getByRole('button', { name: 'Insert into email' }).click();
+  await expect(dialog.getByRole('textbox', { name: 'Message body' })).toHaveValue(/Hi there/);
   await expect(dialog.getByRole('button', { name: 'Send' })).toBeVisible();
+  await expect(dialog).toBeVisible();
+  await expect(sentToast).toHaveCount(0);
 
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();

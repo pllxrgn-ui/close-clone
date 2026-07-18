@@ -13,3 +13,8 @@ DECISIONS.md
 STATUS.md
 HUMAN_TODO.md
 apps/api/src/db/migrations/meta/
+
+# Playwright local artifacts (untracked; never format-gate these)
+e2e/.auth/
+e2e/playwright-report/
+e2e/test-results/

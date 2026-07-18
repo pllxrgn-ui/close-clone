@@ -52,6 +52,9 @@ export async function openFirstLead(page: Page): Promise<string> {
   await expect(page).toHaveURL(/\/leads\/[0-9a-f-]{36}$/);
   const heading = page.getByRole('heading', { level: 1 });
   await expect(heading).toBeVisible();
+  // The lazy lead route can briefly leave the LIST heading in the tree after the
+  // URL flips — wait until the h1 is the lead's actual name, not the list title.
+  await expect(heading).not.toHaveText(/^(All leads|Leads)$/);
   return (await heading.textContent())?.trim() ?? '';
 }
 

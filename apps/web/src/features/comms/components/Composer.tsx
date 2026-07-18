@@ -544,6 +544,11 @@ function ComposeForm({
                 if (draft.subject !== undefined) setSubject(draft.subject);
                 setBody(draft.body);
                 setSnipToken(null);
+                // The clicked Insert button unmounts with the panel — without an
+                // explicit hand-off, focus falls out of the dialog's trap to
+                // <body> and Escape stops closing the composer. Land in the
+                // body field, where editing the draft continues anyway.
+                bodyRef.current?.focus();
               }}
             />
 

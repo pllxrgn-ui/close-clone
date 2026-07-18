@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import type { EmailDraft, EmailThreadContext } from '@switchboard/shared';
@@ -49,6 +49,19 @@ export function AiDraftControl({
   const [mode, setMode] = useState<Mode>('draft');
   const [instruction, setInstruction] = useState('');
   const [draft, setDraft] = useState<EmailDraft | null>(null);
+  const triggersRef = useRef<HTMLDivElement | null>(null);
+  const restoreToTrigger = useRef(false);
+
+  // Closing unmounts the panel with the clicked button inside it — without a
+  // hand-off, focus falls to <body>, escaping the composer's focus trap (Escape
+  // then stops closing the dialog). Land back on the trigger row. Insert-apply
+  // opts out: the composer moves focus into the body field instead.
+  useEffect(() => {
+    if (!open && restoreToTrigger.current) {
+      restoreToTrigger.current = false;
+      triggersRef.current?.querySelector('button')?.focus();
+    }
+  }, [open]);
 
   const hasBody = body.trim().length > 0;
 
@@ -74,6 +87,7 @@ export function AiDraftControl({
   }
 
   function close(): void {
+    restoreToTrigger.current = true;
     setOpen(false);
     setDraft(null);
     mutation.reset();
@@ -86,11 +100,12 @@ export function AiDraftControl({
       body: draft.body,
     });
     close();
+    restoreToTrigger.current = false;
   }
 
   if (!open) {
     return (
-      <div className="ai-draft__triggers">
+      <div className="ai-draft__triggers" ref={triggersRef}>
         <Button
           type="button"
           variant="ghost"
