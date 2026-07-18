@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 
 import type { Db } from '../db/index.ts';
+import type { ActivityWebhookEmitter } from '../services/activity/index.ts';
 import {
   InvalidLeadReferenceError,
   MAX_LIMIT,
@@ -36,6 +37,7 @@ import { sendError } from './http.ts';
 
 export interface LeadRouteDeps {
   db: Db;
+  activityEmitter?: ActivityWebhookEmitter;
 }
 
 // --- Request DTOs (colocated; promote to shared at merge if needed) ---------
@@ -101,7 +103,7 @@ const mergeBodySchema = z.object({
 });
 
 export function registerLeadRoutes(app: FastifyInstance, deps: LeadRouteDeps): void {
-  const { db } = deps;
+  const { db, activityEmitter } = deps;
 
   // GET /api/v1/leads — keyset list (created desc), web filters statusId/ownerId.
   app.get('/api/v1/leads', async (request, reply) => {
@@ -131,7 +133,7 @@ export function registerLeadRoutes(app: FastifyInstance, deps: LeadRouteDeps): v
       return sendError(reply, 'VALIDATION_FAILED', 'invalid lead body', parsed.error.flatten());
     }
     try {
-      const lead = await createLead(db, parsed.data);
+      const lead = await createLead(db, parsed.data, {}, activityEmitter);
       return reply.status(201).send(lead);
     } catch (err) {
       if (err instanceof InvalidLeadReferenceError) {
@@ -198,7 +200,7 @@ export function registerLeadRoutes(app: FastifyInstance, deps: LeadRouteDeps): v
       return sendError(reply, 'VALIDATION_FAILED', 'invalid lead patch', parsed.error.flatten());
     }
     try {
-      const lead = await updateLead(db, request.params.id, parsed.data);
+      const lead = await updateLead(db, request.params.id, parsed.data, {}, activityEmitter);
       if (lead === null) return sendError(reply, 'NOT_FOUND', 'Lead not found');
       return reply.send(lead);
     } catch (err) {

@@ -1,7 +1,7 @@
 import { and, desc, eq, ilike, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 
 import { activities, leads, leadStatuses, users, type Db } from '../../db/index.ts';
-import { recordActivity } from '../activity/index.ts';
+import { recordActivity, type ActivityWebhookEmitter } from '../activity/index.ts';
 import type { Activity, Lead } from '@switchboard/shared';
 
 /**
@@ -350,6 +350,7 @@ export async function createLead(
   db: Db,
   input: CreateLeadInput,
   actor: WriteActor = {},
+  emitter?: ActivityWebhookEmitter,
 ): Promise<Lead> {
   return db.transaction(async (tx) => {
     await assertReferences(tx, { statusId: input.statusId, ownerId: input.ownerId });
@@ -368,13 +369,17 @@ export async function createLead(
     const row = inserted[0];
     if (row === undefined) throw new Error('lead insert returned no row');
 
-    await recordActivity(tx, {
-      leadId: row.id,
-      userId: actor.userId ?? null,
-      type: 'lead_created',
-      occurredAt: new Date(),
-      payload: {},
-    });
+    await recordActivity(
+      tx,
+      {
+        leadId: row.id,
+        userId: actor.userId ?? null,
+        type: 'lead_created',
+        occurredAt: new Date(),
+        payload: {},
+      },
+      emitter,
+    );
 
     // Re-read so the DTO reflects the writer's `updated_at` bump.
     const finalRow = await getLead(tx, row.id);
@@ -427,6 +432,7 @@ export async function updateLead(
   id: string,
   input: UpdateLeadInput,
   actor: WriteActor = {},
+  emitter?: ActivityWebhookEmitter,
 ): Promise<Lead | null> {
   if (!isUuid(id)) return null;
   return db.transaction(async (tx) => {
@@ -473,41 +479,55 @@ export async function updateLead(
       const beforeVal = current[key as keyof RawLeadRow] as unknown;
       const afterVal = input[key as FieldChangedKey];
       if (afterVal !== undefined && changed(beforeVal, afterVal)) {
-        await recordActivity(tx, {
-          leadId: id,
-          userId: actor.userId ?? null,
-          type: 'field_changed',
-          occurredAt,
-          payload: { field: key, before: beforeVal ?? null, after: afterVal },
-        });
+        await recordActivity(
+          tx,
+          {
+            leadId: id,
+            userId: actor.userId ?? null,
+            type: 'field_changed',
+            occurredAt,
+            payload: { field: key, before: beforeVal ?? null, after: afterVal },
+          },
+          emitter,
+        );
       }
     }
 
     // status_changed.
     if (input.statusId !== undefined && changed(current.statusId, input.statusId)) {
-      await recordActivity(tx, {
-        leadId: id,
-        userId: actor.userId ?? null,
-        type: 'status_changed',
-        occurredAt,
-        payload: {
-          from: current.statusId,
-          to: input.statusId,
-          statusId: input.statusId ?? undefined,
+      await recordActivity(
+        tx,
+        {
+          leadId: id,
+          userId: actor.userId ?? null,
+          type: 'status_changed',
+          occurredAt,
+          payload: {
+            from: current.statusId,
+            to: input.statusId,
+            statusId: input.statusId ?? undefined,
+          },
         },
-      });
+        emitter,
+      );
     }
 
     // dnc_set / dnc_cleared.
     if (dncChange !== undefined) {
-      await recordActivity(tx, {
-        leadId: id,
-        userId: actor.userId ?? null,
-        type: dncChange ? 'dnc_set' : 'dnc_cleared',
-        occurredAt,
-        payload:
-          input.reason !== undefined ? { scope: 'lead', reason: input.reason } : { scope: 'lead' },
-      });
+      await recordActivity(
+        tx,
+        {
+          leadId: id,
+          userId: actor.userId ?? null,
+          type: dncChange ? 'dnc_set' : 'dnc_cleared',
+          occurredAt,
+          payload:
+            input.reason !== undefined
+              ? { scope: 'lead', reason: input.reason }
+              : { scope: 'lead' },
+        },
+        emitter,
+      );
     }
 
     const finalRow = await getLead(tx, id);
