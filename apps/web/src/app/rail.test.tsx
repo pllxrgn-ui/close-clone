@@ -51,7 +51,11 @@ describe('LeftRail — structure', () => {
     await screen.findByRole('heading', { name: 'Inbox', level: 1 });
 
     await userEvent.click(within(rail()).getByRole('link', { name: /Support & FAQs/ }));
-    expect(await screen.findByRole('heading', { name: 'Support & FAQs', level: 1 })).toBeVisible();
+    // Lazy route: the help chunk can take >1s under full-suite CPU contention,
+    // so this navigation assertion gets a real timeout (flaked twice at 1s).
+    expect(
+      await screen.findByRole('heading', { name: 'Support & FAQs', level: 1 }, { timeout: 5000 }),
+    ).toBeVisible();
     // Real answers, not placeholder copy.
     expect(screen.getByText(/do not contact/i)).toBeInTheDocument();
   });

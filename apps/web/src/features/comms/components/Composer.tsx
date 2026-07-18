@@ -221,6 +221,11 @@ function ComposeForm({
   });
 
   const contacts = useMemo(() => contactsQuery.data ?? [], [contactsQuery.data]);
+  // Email composer → email templates only (SMS templates live in the SMS drawer).
+  const emailTemplates = useMemo(
+    () => (templatesQuery.data ?? []).filter((t) => t.channel === 'email'),
+    [templatesQuery.data],
+  );
   const [contactId, setContactId] = useState<string | null>(null);
   const selectedContact: Contact | null = useMemo(
     () => contacts.find((c) => c.id === contactId) ?? contacts[0] ?? null,
@@ -342,7 +347,7 @@ function ComposeForm({
 
   function applyTemplate(id: string): void {
     setTemplateId(id);
-    const tmpl = (templatesQuery.data ?? []).find((t) => t.id === id);
+    const tmpl = emailTemplates.find((t) => t.id === id);
     if (!tmpl) return;
     setSubject(tmpl.subject ?? '');
     setBody(tmpl.body);
@@ -471,7 +476,7 @@ function ComposeForm({
                 aria-label="Template"
               >
                 <option value="">Start from scratch…</option>
-                {(templatesQuery.data ?? []).map((t) => (
+                {emailTemplates.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
                   </option>
@@ -530,6 +535,18 @@ function ComposeForm({
               </div>
             </label>
 
+            {/* AI assistant — fed the RENDERED subject/body (what the rep sees),
+                so drafts and rewrites come back as clean prose, never raw tags. */}
+            <AiDraftControl
+              subject={renderMergeTemplate(subject, ctx)}
+              body={renderMergeTemplate(body, ctx)}
+              onApply={(draft) => {
+                if (draft.subject !== undefined) setSubject(draft.subject);
+                setBody(draft.body);
+                setSnipToken(null);
+              }}
+            />
+
             {/* Live merge preview */}
             <section className="comms-previewbox" aria-label="Preview">
               <div className="comms-previewbox__head">
@@ -561,16 +578,6 @@ function ComposeForm({
           </span>
         )}
         <div className="comms-drawer__foot-actions">
-          <AiDraftControl
-            subject={subject}
-            body={body}
-            onApply={(draft) => {
-              if (draft.subject !== undefined) setSubject(draft.subject);
-              setBody(draft.body);
-              setSnipToken(null);
-            }}
-            disabled={isLoading || noContacts}
-          />
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>

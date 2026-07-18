@@ -130,9 +130,28 @@ function rewriteClose(directive: string): string {
   return 'Let me know what you think.';
 }
 
+/**
+ * Strip {{merge.tags}} and tidy the whitespace/punctuation they leave behind.
+ * The composer now sends RENDERED text, so tags only reach here when a tag is
+ * unresolved — the AI must never echo raw template syntax back into a draft.
+ */
+function stripTags(text: string): string {
+  return text
+    .replace(/\{\{[^}]*\}\}/g, '')
+    .replace(/[ \t]+([,.;!?])/g, '$1')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+}
+
 /** First 1–2 sentences of the current draft, for a believable rewrite base. */
 function condense(text: string): string {
-  const sentences = text.replace(/\s+/g, ' ').match(/[^.!?]+[.!?]/g) ?? [text.trim()];
+  // Tags are stripped FIRST — the "." inside {{contact.firstName}} would
+  // otherwise split mid-tag and echo broken fragments like "{{lead." back.
+  const clean = stripTags(text).replace(/\s+/g, ' ');
+  // Drop a leading greeting; the rewrite shell supplies its own (no "Hi… Hi…").
+  const ungreeted = clean.replace(/^(hi|hello|hey)\b[^,.!\n]{0,40}[,.!]\s*/i, '');
+  const base = ungreeted.length > 0 ? ungreeted : clean;
+  const sentences = base.match(/[^.!?]+[.!?]/g) ?? [base.trim()];
   return sentences.slice(0, 2).join(' ').trim();
 }
 
@@ -148,17 +167,21 @@ function deriveDraft(
   priorBody: string | undefined,
 ): { subject?: string; body: string } {
   const directive = instruction.trim();
+  const cleanSubject = subject !== undefined ? stripTags(subject) : '';
   const replySubject =
-    subject !== undefined && subject.length > 0
-      ? subject.startsWith('Re:')
-        ? subject
-        : `Re: ${subject}`
+    cleanSubject.length > 0
+      ? cleanSubject.startsWith('Re:')
+        ? cleanSubject
+        : `Re: ${cleanSubject}`
       : undefined;
 
   let body: string;
   if (priorBody !== undefined && priorBody.trim().length > 0) {
-    // Rewrite: polish the existing draft and apply the requested tone.
-    body = `Hi there,\n\n${condense(priorBody)}\n\n${rewriteClose(directive)}\n\nBest,\n`;
+    // Rewrite: polish the existing draft and apply the requested tone. If the
+    // draft was nothing but unresolved tags, fall back to a fresh intent line.
+    const gist = condense(priorBody);
+    const core = gist.length > 0 ? gist : intentLine(directive);
+    body = `Hi there,\n\n${core}\n\n${rewriteClose(directive)}\n\nBest,\n`;
   } else {
     body = `Hi there,\n\n${intentLine(directive)}\n\nWould you be open to a quick 15 minutes this week?\n\nBest,\n`;
   }

@@ -14,9 +14,11 @@ import '../ai.css';
  * A generated draft is ALWAYS shown for review first; nothing is inserted until the
  * rep clicks Insert.
  *
- * Composer seam (see routeWiring): mount inside features/comms Composer's ComposeForm,
- * wiring `onApply` to the composer's setSubject/setBody:
- *   <AiDraftControl subject={subject} body={body} onApply={(d) => {
+ * Composer seam: mounted inside features/comms Composer's ComposeForm as a
+ * full-width block under the Message field (NOT in the footer — the panel needs
+ * room). Feed it the RENDERED subject/body — renderMergeTemplate(subject, ctx) —
+ * so the AI sees what the rep sees and drafts come back tag-free:
+ *   <AiDraftControl subject={rendered.subject} body={rendered.body} onApply={(d) => {
  *     if (d.subject !== undefined) setSubject(d.subject);
  *     setBody(d.body);
  *   }} />
@@ -185,7 +187,10 @@ export function AiDraftControl({
         <>
           <div className="ai-draft__preview" aria-label="AI draft preview">
             {draft.subject !== undefined ? (
-              <div className="ai-draft__preview-subject">{draft.subject}</div>
+              <div className="ai-draft__preview-subject">
+                <span className="ai-draft__preview-label">Subject</span>
+                <span className="ai-draft__preview-subject-text">{draft.subject}</span>
+              </div>
             ) : null}
             <div className="ai-draft__preview-body">{draft.body}</div>
           </div>

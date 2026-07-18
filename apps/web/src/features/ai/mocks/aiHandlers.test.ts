@@ -184,6 +184,31 @@ describe('POST /ai/email-drafts (never auto-sent)', () => {
     expect(bad.status).toBe(400);
     expect(errorCode(bad.json)).toBe('VALIDATION_FAILED');
   });
+
+  test('rewrite never echoes merge tags, tag fragments, or a doubled greeting', async () => {
+    // Regression: template text with {{tags}} used to come back mangled — the
+    // sentence splitter cut inside {{contact.firstName}} ("{{contact. firstName}}",
+    // a truncated "{{lead.") and the shell stacked a second greeting on top.
+    const res = await req('POST', '/ai/email-drafts', {
+      instruction: 'make it shorter',
+      threadCtx: {
+        subject: 'Quick question about {{lead.name}}',
+        recentMessages: [
+          {
+            from: 'You (current draft)',
+            body: 'Hi {{contact.firstName}}, I work with revenue teams like {{lead.name}} to keep follow-up in one place. It saves hours every week. Let me know.',
+          },
+        ],
+      },
+    });
+    expect(res.status).toBe(200);
+    const draft = res.json as { subject?: string; body: string };
+    expect(draft.body).not.toContain('{{');
+    expect(draft.body).not.toContain('}}');
+    expect(draft.subject ?? '').not.toContain('{{');
+    // Exactly one greeting — the rewrite shell's own.
+    expect(draft.body.match(/\bHi\b/g)?.length ?? 0).toBe(1);
+  });
 });
 
 describe('POST /ai/smart-view (NL → DSL, re-parsed)', () => {

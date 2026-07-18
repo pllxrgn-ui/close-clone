@@ -18,7 +18,7 @@ import { LeadOpportunitiesCard } from './LeadOpportunitiesCard.tsx';
 import { LeadCallSummaries } from '../../ai/index.ts';
 
 /*
- * The lead page: header (identity/status/owner/DNC/next-action placeholder), a
+ * The lead page: header (identity/status/owner/DNC/live next-action bar), a
  * center C4 timeline (keyset load-older), and a read-only right rail of contacts
  * and opportunities. Every fetch has C8-typed loading/error/empty states.
  */
