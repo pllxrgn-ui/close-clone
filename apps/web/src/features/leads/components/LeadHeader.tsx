@@ -1,12 +1,12 @@
 import type { JSX } from 'react';
 import { Link } from 'react-router-dom';
 import type { Lead } from '@switchboard/shared';
-import { Button, StatusPill } from '../../../ui/index.ts';
+import { StatusPill } from '../../../ui/index.ts';
 import { Suspense, lazy } from 'react';
 
-// Lazy: keeps the comms feature out of the leads chunk (audit #6); the
-// launcher is one control in the actions row and hydrates in the same paint
-// in practice (chunk is shared with the comms routes).
+// Lazy: keeps the comms/calling/sms features out of the leads chunk (audit #6);
+// the launchers are single controls in the actions row and hydrate in the same
+// paint in practice (chunks are shared with their feature routes).
 const LeadComposerLauncher = lazy(() =>
   import('../../comms/index.ts').then((m) => ({ default: m.LeadComposerLauncher })),
 );
@@ -16,17 +16,20 @@ const LeadCallLauncher = lazy(() =>
 const LeadSmsLauncher = lazy(() =>
   import('../../sms/index.ts').then((m) => ({ default: m.LeadSmsLauncher })),
 );
+const LeadEnrollLauncher = lazy(() =>
+  import('../../comms/index.ts').then((m) => ({ default: m.LeadEnrollLauncher })),
+);
 import type { StatusTone } from '../../../ui/index.ts';
 import { initials } from '../../../lib/format.ts';
-import { ArrowLeftIcon, BranchIcon, CircleDashedIcon, ExternalLinkIcon } from '../icons.tsx';
+import { LeadTaskLauncher } from './LeadTaskLauncher.tsx';
+import { ArrowLeftIcon, ExternalLinkIcon } from '../icons.tsx';
 
 /*
- * Lead-page header: identity + status + owner + a prominent DNC indicator, then a
- * next-action bar. Call / SMS / Email are live (each opens its compliance-gated
- * surface); Task / Enroll remain disabled stubs until their lead-scoped launchers
- * land (enrollment lives on /sequences today). Nothing here can send, dial, or
- * bypass a compliance rail — the launchers enforce DNC/suppression/quiet-hours
- * at send/dial inside the engine layer.
+ * Lead-page header: identity + status + owner + a prominent DNC indicator, then
+ * the next-action bar — Call / SMS / Email / Task / Enroll, all live. Nothing
+ * here can send, dial, or bypass a compliance rail: every launcher's engine path
+ * enforces DNC/suppression/quiet-hours inside the send/dial transaction, and
+ * sequence enrollment re-checks the §4.3 rails at each send.
  */
 
 interface LeadHeaderProps {
@@ -40,15 +43,6 @@ function statusTone(label: string): StatusTone {
   if (label === 'Lost') return 'lost';
   return 'neutral';
 }
-
-const NEXT_ACTIONS: ReadonlyArray<{
-  id: string;
-  label: string;
-  icon: (p: { size?: number }) => JSX.Element;
-}> = [
-  { id: 'task', label: 'Task', icon: CircleDashedIcon },
-  { id: 'sequence', label: 'Enroll', icon: BranchIcon },
-];
 
 export function LeadHeader({ lead, statusLabel, ownerName }: LeadHeaderProps): JSX.Element {
   return (
@@ -100,22 +94,9 @@ export function LeadHeader({ lead, statusLabel, ownerName }: LeadHeaderProps): J
           <LeadCallLauncher lead={lead} />
           <LeadSmsLauncher leadId={lead.id} />
           <LeadComposerLauncher leadId={lead.id} />
+          <LeadTaskLauncher lead={lead} />
+          <LeadEnrollLauncher lead={lead} />
         </Suspense>
-        {NEXT_ACTIONS.map((action) => {
-          const Icon = action.icon;
-          return (
-            <Button
-              key={action.id}
-              size="sm"
-              disabled
-              title={`${action.label} — not yet available`}
-              aria-label={`${action.label} (not yet available)`}
-            >
-              <Icon size={14} />
-              {action.label}
-            </Button>
-          );
-        })}
       </div>
     </header>
   );

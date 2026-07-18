@@ -910,3 +910,38 @@
 .lead-table[data-reduced-motion='true'] .lead-row {
   transition: none;
 }
+
+/* ── New-task modal (lead header "Task" action) ─────────────────────────────── */
+.lead-newtask {
+  width: min(420px, 94vw);
+  max-height: 100%;
+  overflow-y: auto;
+}
+.lead-newtask__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+.lead-newtask__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.lead-newtask__title {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-display-strong);
+  color: var(--ink-0);
+}
+.lead-newtask__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}

@@ -10,6 +10,7 @@
 export { SequencesRoutePage, SequenceDetailRoutePage } from './pages/routes.tsx';
 export { CommsProvider, useComms } from './context/CommsProvider.tsx';
 export { LeadComposerLauncher } from './components/LeadComposerLauncher.tsx';
+export { LeadEnrollLauncher } from './components/LeadEnrollLauncher.tsx';
 export { Composer } from './components/Composer.tsx';
 export { useCommsCommands } from './commands.ts';
 export { commsHandlers } from './mocks/commsHandlers.ts';

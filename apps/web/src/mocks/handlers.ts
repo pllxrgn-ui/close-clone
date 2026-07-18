@@ -99,6 +99,52 @@ export const handlers = [
     if (!lead) return errorJson(404, 'NOT_FOUND', 'Lead not found');
     return HttpResponse.json(lead);
   }),
+
+  // ── Tasks: create (C7 tasks CRUD; completion lives with the inbox) ────────
+  // Mirrors the real route's contract: {leadId, title (1-500), assigneeId?,
+  // dueAt?} → 201 Task, landing a task_created activity on the lead timeline
+  // and tightening the lead's denormalized nextTaskDueAt.
+  http.post(api('/tasks'), async ({ request }) => {
+    const body = await readJson(request);
+    const leadId = body && typeof body.leadId === 'string' ? body.leadId : '';
+    const title = body && typeof body.title === 'string' ? body.title.trim() : '';
+    if (leadId === '' || title === '' || title.length > 500) {
+      return errorJson(400, 'VALIDATION_FAILED', 'leadId and a title (1-500 chars) are required');
+    }
+    const lead = db.leads.find((l) => l.id === leadId && l.deletedAt === null);
+    if (!lead) return errorJson(404, 'NOT_FOUND', 'Lead not found');
+    const assigneeId = typeof body?.assigneeId === 'string' ? body.assigneeId : null;
+    const dueAt = typeof body?.dueAt === 'string' ? body.dueAt : null;
+
+    const now = new Date().toISOString();
+    const task = {
+      id: crypto.randomUUID(),
+      leadId,
+      assigneeId,
+      title,
+      dueAt,
+      completedAt: null,
+      createdBy: assigneeId,
+      createdAt: now,
+      updatedAt: now,
+    };
+    // Timeline is newest-first; the activity carries the title for the event row.
+    db.activitiesByLead.get(leadId)?.unshift({
+      id: crypto.randomUUID(),
+      leadId,
+      contactId: null,
+      userId: assigneeId,
+      type: 'task_created',
+      occurredAt: now,
+      payload: { title },
+      createdAt: now,
+      updatedAt: now,
+    });
+    if (dueAt !== null && (lead.nextTaskDueAt === null || dueAt < lead.nextTaskDueAt)) {
+      lead.nextTaskDueAt = dueAt;
+    }
+    return HttpResponse.json(task, { status: 201 });
+  }),
   http.get(api('/leads'), ({ request }) => {
     const url = new URL(request.url);
     const statusId = url.searchParams.get('statusId');

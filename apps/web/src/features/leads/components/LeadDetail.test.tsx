@@ -88,19 +88,20 @@ describe('LeadDetail — header', () => {
     expect(within(header).getByText('Do not contact')).toBeInTheDocument();
   });
 
-  test('next-action bar: Email + SMS are live launchers, Call is DNC-blocked, Task/Enroll stay Phase-4 placeholders', async () => {
+  test('next-action bar: all five actions are live; Call alone hard-blocks on DNC', async () => {
     renderDetail(lead.id);
     const group = await screen.findByRole('group', { name: /Lead actions/ });
-    // Email + SMS are live launchers — the compliance gate fires at send / in-thread,
-    // not on the button, so they stay enabled even for this DNC lead. The launchers
-    // are lazy-loaded behind one Suspense boundary, so await the first to resolve it.
+    // The launchers are lazy-loaded behind one Suspense boundary — await the
+    // first to resolve it. Email/SMS/Task/Enroll stay enabled even for this DNC
+    // lead: their compliance gates fire at send / in-thread / at each sequence
+    // send, not on the button.
     expect(await within(group).findByRole('button', { name: 'Email' })).toBeEnabled();
     expect(within(group).getByRole('button', { name: /SMS/ })).toBeEnabled();
-    // This lead is do-not-contact → the Call launcher hard-disables (cannot dial).
+    expect(within(group).getByRole('button', { name: /Task/ })).toBeEnabled();
+    expect(within(group).getByRole('button', { name: /Enroll/ })).toBeEnabled();
+    // Dialing a do-not-contact lead is impossible from the UI, not just refused
+    // by the engine → the Call launcher hard-disables.
     expect(within(group).getByRole('button', { name: /Call/ })).toBeDisabled();
-    // Task/Enroll remain disabled Phase-4 placeholders.
-    expect(within(group).getByRole('button', { name: /Task/ })).toBeDisabled();
-    expect(within(group).getByRole('button', { name: /Enroll/ })).toBeDisabled();
   });
 });
 

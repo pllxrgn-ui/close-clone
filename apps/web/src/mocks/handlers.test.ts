@@ -8,6 +8,7 @@ import {
   listSmartViews,
   updateSmartView,
 } from '../api/smartViews.ts';
+import { createTask } from '../api/tasks.ts';
 import { db } from './fixtures.ts';
 import { mulberry32 } from './seed.ts';
 
@@ -102,5 +103,57 @@ describe('smart-view CRUD handlers', () => {
     );
     expect(err).toBeInstanceOf(ApiError);
     if (err instanceof ApiError) expect(err.code).toBe('VALIDATION_FAILED');
+  });
+});
+
+describe('POST /tasks (C7 create — the lead-page Task action)', () => {
+  test('creates the task and lands a task_created activity on the timeline', async () => {
+    const lead = db.leads.find((l) => l.deletedAt === null);
+    if (!lead) throw new Error('fixtures must include a live lead');
+    const before = db.activitiesByLead.get(lead.id)?.length ?? 0;
+
+    const task = await createTask({
+      leadId: lead.id,
+      title: 'Send the revised quote',
+      dueAt: null,
+    });
+    expect(task.leadId).toBe(lead.id);
+    expect(task.title).toBe('Send the revised quote');
+    expect(task.completedAt).toBeNull();
+
+    const events = db.activitiesByLead.get(lead.id) ?? [];
+    expect(events.length).toBe(before + 1);
+    // Timeline is newest-first; the fresh activity carries the title.
+    expect(events[0]?.type).toBe('task_created');
+    expect(events[0]?.payload).toMatchObject({ title: 'Send the revised quote' });
+  });
+
+  test("a sooner due date tightens the lead's denormalized nextTaskDueAt", async () => {
+    const lead = db.leads.find((l) => l.deletedAt === null && l.nextTaskDueAt !== null);
+    if (!lead) throw new Error('fixtures must include a lead with a due task');
+    const sooner = new Date(Date.parse(lead.nextTaskDueAt as string) - 86_400_000).toISOString();
+    await createTask({ leadId: lead.id, title: 'Jump the queue', dueAt: sooner });
+    expect(lead.nextTaskDueAt).toBe(sooner);
+  });
+
+  test('validates: blank title is 400, unknown lead is 404', async () => {
+    const lead = db.leads[0];
+    if (!lead) throw new Error('fixtures must include leads');
+    const blank = await createTask({ leadId: lead.id, title: '   ' }).then(
+      () => null,
+      (e: unknown) => e,
+    );
+    expect(blank).toBeInstanceOf(ApiError);
+    if (blank instanceof ApiError) expect(blank.code).toBe('VALIDATION_FAILED');
+
+    const missing = await createTask({
+      leadId: '00000000-0000-4000-8000-000000000000',
+      title: 'x',
+    }).then(
+      () => null,
+      (e: unknown) => e,
+    );
+    expect(missing).toBeInstanceOf(ApiError);
+    if (missing instanceof ApiError) expect(missing.code).toBe('NOT_FOUND');
   });
 });
