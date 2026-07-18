@@ -1,7 +1,7 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { sequencePausedReasonSchema, type ActivityType } from '@switchboard/shared';
 import { sequenceEnrollments, type Db } from '../../db/index.ts';
-import { recordActivity } from '../activity/index.ts';
+import { recordActivity, type ActivityWebhookEmitter } from '../activity/index.ts';
 
 /**
  * Enrollment pause — the reply/bounce/unsubscribe side of the send-safety rails
@@ -40,6 +40,7 @@ export async function pauseActiveEnrollments(
   exec: Db,
   target: PauseTarget,
   reason: PauseReason,
+  emitter?: ActivityWebhookEmitter,
 ): Promise<string[]> {
   const validReason = sequencePausedReasonSchema.parse(reason);
 
@@ -68,13 +69,17 @@ export async function pauseActiveEnrollments(
   const nowIso = new Date().toISOString();
   const eventType: ActivityType = 'sequence_paused';
   for (const row of locked) {
-    await recordActivity(exec, {
-      leadId: target.leadId,
-      contactId: row.contactId,
-      type: eventType,
-      occurredAt: nowIso,
-      payload: { enrollmentId: row.id, reason: validReason },
-    });
+    await recordActivity(
+      exec,
+      {
+        leadId: target.leadId,
+        contactId: row.contactId,
+        type: eventType,
+        occurredAt: nowIso,
+        payload: { enrollmentId: row.id, reason: validReason },
+      },
+      emitter,
+    );
   }
   return ids;
 }
@@ -84,8 +89,12 @@ export async function pauseActiveEnrollments(
  * inbound email matched to a lead pauses that lead's active enrollments. Any human
  * reply stops the automated outreach (CONTRACTS §C6 I-SEND-2).
  */
-export async function pauseOnInboundReply(exec: Db, leadId: string): Promise<string[]> {
-  return pauseActiveEnrollments(exec, { leadId }, 'reply');
+export async function pauseOnInboundReply(
+  exec: Db,
+  leadId: string,
+  emitter?: ActivityWebhookEmitter,
+): Promise<string[]> {
+  return pauseActiveEnrollments(exec, { leadId }, 'reply', emitter);
 }
 
 /**
@@ -101,24 +110,32 @@ export interface BounceInput {
   reason?: string;
 }
 
-export async function recordBounceAndPause(db: Db, input: BounceInput): Promise<string[]> {
+export async function recordBounceAndPause(
+  db: Db,
+  input: BounceInput,
+  emitter?: ActivityWebhookEmitter,
+): Promise<string[]> {
   return db.transaction(async (txRaw) => {
     const tx = txRaw as Db;
     const nowIso = new Date().toISOString();
-    await recordActivity(tx, {
-      leadId: input.leadId,
-      ...(input.contactId !== undefined ? { contactId: input.contactId } : {}),
-      type: 'email_bounced',
-      occurredAt: nowIso,
-      payload: {
-        ...(input.emailMessageId !== undefined ? { emailMessageId: input.emailMessageId } : {}),
-        ...(input.reason !== undefined ? { reason: input.reason } : {}),
+    await recordActivity(
+      tx,
+      {
+        leadId: input.leadId,
+        ...(input.contactId !== undefined ? { contactId: input.contactId } : {}),
+        type: 'email_bounced',
+        occurredAt: nowIso,
+        payload: {
+          ...(input.emailMessageId !== undefined ? { emailMessageId: input.emailMessageId } : {}),
+          ...(input.reason !== undefined ? { reason: input.reason } : {}),
+        },
       },
-    });
+      emitter,
+    );
     const targetBase: PauseTarget = { leadId: input.leadId };
     const targetForPause: PauseTarget =
       input.contactId !== undefined ? { ...targetBase, contactId: input.contactId } : targetBase;
-    return pauseActiveEnrollments(tx, targetForPause, 'bounce');
+    return pauseActiveEnrollments(tx, targetForPause, 'bounce', emitter);
   });
 }
 

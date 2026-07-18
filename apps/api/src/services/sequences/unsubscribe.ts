@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { Db } from '../../db/index.ts';
-import { recordActivity } from '../activity/index.ts';
+import { recordActivity, type ActivityWebhookEmitter } from '../activity/index.ts';
 import { contactsWithEmail, pauseActiveEnrollments } from './pause.ts';
 import { addEmailSuppression } from './suppression.ts';
 
@@ -100,6 +100,7 @@ export interface ApplyUnsubscribeResult {
 export async function applyUnsubscribe(
   db: Db,
   input: ApplyUnsubscribeInput,
+  emitter?: ActivityWebhookEmitter,
 ): Promise<ApplyUnsubscribeResult> {
   const email = input.email.trim();
   const source = input.source ?? 'unsubscribe';
@@ -120,18 +121,26 @@ export async function applyUnsubscribe(
     if (add.created) {
       const nowIso = new Date().toISOString();
       for (const leadId of leadIds) {
-        await recordActivity(tx, {
-          leadId,
-          type: 'unsubscribed',
-          occurredAt: nowIso,
-          payload: { value: email },
-        });
-        await recordActivity(tx, {
-          leadId,
-          type: 'suppression_added',
-          occurredAt: nowIso,
-          payload: { suppressionId: add.suppressionId, kind: 'email', value: email, source },
-        });
+        await recordActivity(
+          tx,
+          {
+            leadId,
+            type: 'unsubscribed',
+            occurredAt: nowIso,
+            payload: { value: email },
+          },
+          emitter,
+        );
+        await recordActivity(
+          tx,
+          {
+            leadId,
+            type: 'suppression_added',
+            occurredAt: nowIso,
+            payload: { suppressionId: add.suppressionId, kind: 'email', value: email, source },
+          },
+          emitter,
+        );
       }
     }
 
@@ -141,6 +150,7 @@ export async function applyUnsubscribe(
         tx,
         { leadId: target.leadId, contactId: target.contactId },
         'unsubscribe',
+        emitter,
       );
       pausedEnrollmentIds.push(...ids);
     }
