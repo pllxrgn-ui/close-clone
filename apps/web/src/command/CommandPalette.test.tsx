@@ -7,10 +7,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import * as axe from 'axe-core';
 import { ThemeProvider } from '../theme/ThemeProvider.tsx';
-import { ToastProvider } from '../feedback/ToastProvider.tsx';
+import { AuthProvider } from '../auth/AuthProvider.tsx';
 import { ROUTER_FUTURE } from '../app/routerFuture.ts';
 import { db } from '../mocks/fixtures.ts';
-import { CommsProvider } from '../features/comms/index.ts';
+import { ShellFeatureProviders } from '../test/shellProviders.tsx';
 import { CommandPalette } from './CommandPalette.tsx';
 
 function makeClient(): QueryClient {
@@ -35,15 +35,15 @@ function Harness({
     <QueryClientProvider client={client}>
       <ThemeProvider>
         <MemoryRouter initialEntries={[initialPath]} future={ROUTER_FUTURE}>
-          <ToastProvider>
-            <CommsProvider>
+          <AuthProvider>
+            <ShellFeatureProviders>
               <button type="button" onClick={() => setOpen(true)}>
                 open palette
               </button>
               <CommandPalette open={open} onClose={() => setOpen(false)} />
               <LocationDisplay />
-            </CommsProvider>
-          </ToastProvider>
+            </ShellFeatureProviders>
+          </AuthProvider>
         </MemoryRouter>
       </ThemeProvider>
     </QueryClientProvider>

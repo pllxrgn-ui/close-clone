@@ -11,6 +11,10 @@ import { useCommsCommands } from '../features/comms/index.ts';
 import { useAdminCommands } from '../features/admin/index.ts';
 import { usePipelineCommands } from '../features/pipeline/index.ts';
 import { useInboxCommands } from '../features/inbox/index.ts';
+import { useCallingCommands } from '../features/calling/index.ts';
+import { useSmsCommands } from '../features/sms/index.ts';
+import { useAiCommands } from '../features/ai/index.ts';
+import { useImportCommands } from '../features/import/index.ts';
 
 interface OptionVM {
   command: Command;
@@ -85,12 +89,20 @@ export function CommandPalette({
   const adminCommands = useAdminCommands(onClose);
   const pipelineCommands = usePipelineCommands(onClose);
   const inboxCommands = useInboxCommands(onClose);
+  const callingCommands = useCallingCommands(onClose);
+  const smsCommands = useSmsCommands(onClose);
+  const aiCommands = useAiCommands(onClose);
+  const importCommands = useImportCommands(onClose);
   const staticCommands = [
     ...useStaticCommands(onClose),
     ...commsCommands,
     ...adminCommands,
     ...pipelineCommands,
     ...inboxCommands,
+    ...callingCommands,
+    ...smsCommands,
+    ...aiCommands,
+    ...importCommands,
   ];
   const leadCommands = useLeadCommands(debouncedQuery, onClose);
 

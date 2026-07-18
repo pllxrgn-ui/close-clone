@@ -8,6 +8,7 @@ import {
   useState,
 } from 'react';
 import type { JSX, ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../../auth/AuthProvider.tsx';
 import { useToast } from '../../../feedback/ToastProvider.tsx';
 import { ApiError } from '../../../api/errors.ts';
@@ -128,6 +129,7 @@ export function CallProvider({
 }: CallProviderProps): JSX.Element {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [session, setSession] = useState<CallSession | null>(null);
   const [focusTarget, setFocusTarget] = useState<CallTarget | null>(null);
   const timerRef = useRef<number | null>(null);
@@ -254,12 +256,18 @@ export function CallProvider({
   const saveOutcome = useCallback(
     async (input: { outcome: string; notes?: string }): Promise<boolean> => {
       if (session === null) return false;
+      const { leadId } = session;
       try {
         await patchCall(session.callId, {
           outcome: input.outcome,
           ...(input.notes && input.notes.trim().length > 0 ? { notes: input.notes } : {}),
           ...(user?.id ? { actorId: user.id } : {}),
         });
+        // The engine lands a call_logged activity — refresh the timeline, the lead,
+        // and the call-summaries rail so the logged call appears without a reload.
+        void queryClient.invalidateQueries({ queryKey: ['lead-timeline', leadId] });
+        void queryClient.invalidateQueries({ queryKey: ['lead', leadId] });
+        void queryClient.invalidateQueries({ queryKey: ['ai-lead-calls', leadId] });
         toast(`Call logged — ${input.outcome}`);
         closeSession();
         return true;
@@ -268,17 +276,23 @@ export function CallProvider({
         return false;
       }
     },
-    [session, user?.id, toast, closeSession],
+    [session, user?.id, toast, closeSession, queryClient],
   );
 
   const dropVoicemailAsset = useCallback(
     async (recordingRef: string): Promise<boolean> => {
       if (session === null) return false;
+      const { leadId } = session;
       try {
         await dropVoicemail(session.callId, {
           recordingRef,
           ...(user?.id ? { actorId: user.id } : {}),
         });
+        // Dropping voicemail finalizes the call with a call_logged activity — refresh
+        // the same surfaces so the timeline and summaries rail stay in sync.
+        void queryClient.invalidateQueries({ queryKey: ['lead-timeline', leadId] });
+        void queryClient.invalidateQueries({ queryKey: ['lead', leadId] });
+        void queryClient.invalidateQueries({ queryKey: ['ai-lead-calls', leadId] });
         clearTimer();
         toast('Voicemail dropped');
         closeSession();
@@ -288,7 +302,7 @@ export function CallProvider({
         return false;
       }
     },
-    [session, user?.id, toast, clearTimer, closeSession],
+    [session, user?.id, toast, clearTimer, closeSession, queryClient],
   );
 
   const value = useMemo<CallContextValue>(

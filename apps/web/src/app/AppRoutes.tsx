@@ -47,6 +47,12 @@ const ReportsPageReal = lazy(() =>
 const SettingsPageReal = lazy(() =>
   import('../features/admin/index.ts').then((m) => ({ default: m.AdminSettingsPage })),
 );
+const DialerPage = lazy(() =>
+  import('../features/calling/index.ts').then((m) => ({ default: m.DialerRoutePage })),
+);
+const ImportPage = lazy(() =>
+  import('../features/import/index.ts').then((m) => ({ default: m.ImportRoutePage })),
+);
 const WelcomePage = lazy(() =>
   import('../features/welcome/index.ts').then((m) => ({ default: m.WelcomePage })),
 );
@@ -85,6 +91,8 @@ export function AppRoutes(): JSX.Element {
             <Route path="reports" element={<ReportsPageReal />} />
             <Route path="help" element={<HelpPage />} />
             <Route path="settings" element={<SettingsPageReal />} />
+            <Route path="dialer" element={<DialerPage />} />
+            <Route path="import" element={<ImportPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Route>

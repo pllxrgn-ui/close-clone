@@ -4,7 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
 import { server } from '../../../mocks/server.ts';
-import { CommsProvider } from '../../comms/index.ts';
+import { AuthProvider } from '../../../auth/AuthProvider.tsx';
+import { ShellFeatureProviders } from '../../../test/shellProviders.tsx';
 import { LeadDetail } from './LeadDetail.tsx';
 import {
   makeActivity,
@@ -61,9 +62,11 @@ function renderDetail(leadId: string) {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[`/leads/${leadId}`]}>
-        <CommsProvider>
-          <LeadDetail leadId={leadId} />
-        </CommsProvider>
+        <AuthProvider>
+          <ShellFeatureProviders>
+            <LeadDetail leadId={leadId} />
+          </ShellFeatureProviders>
+        </AuthProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -85,14 +88,17 @@ describe('LeadDetail — header', () => {
     expect(within(header).getByText('Do not contact')).toBeInTheDocument();
   });
 
-  test('next-action bar: Email launches the composer, the rest stay Phase-4 placeholders', async () => {
+  test('next-action bar: Email + SMS are live launchers, Call is DNC-blocked, Task/Enroll stay Phase-4 placeholders', async () => {
     renderDetail(lead.id);
     const group = await screen.findByRole('group', { name: /Lead actions/ });
-    // Email is now the live composer launcher — an enabled control, not a stub.
-    expect(within(group).getByRole('button', { name: 'Email' })).toBeEnabled();
-    // Call/SMS/Task/Enroll remain disabled Phase-4 placeholders.
+    // Email + SMS are live launchers — the compliance gate fires at send / in-thread,
+    // not on the button, so they stay enabled even for this DNC lead. The launchers
+    // are lazy-loaded behind one Suspense boundary, so await the first to resolve it.
+    expect(await within(group).findByRole('button', { name: 'Email' })).toBeEnabled();
+    expect(within(group).getByRole('button', { name: /SMS/ })).toBeEnabled();
+    // This lead is do-not-contact → the Call launcher hard-disables (cannot dial).
     expect(within(group).getByRole('button', { name: /Call/ })).toBeDisabled();
-    expect(within(group).getByRole('button', { name: /SMS/ })).toBeDisabled();
+    // Task/Enroll remain disabled Phase-4 placeholders.
     expect(within(group).getByRole('button', { name: /Task/ })).toBeDisabled();
     expect(within(group).getByRole('button', { name: /Enroll/ })).toBeDisabled();
   });

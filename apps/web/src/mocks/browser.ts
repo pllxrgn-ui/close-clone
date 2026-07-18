@@ -5,6 +5,10 @@ import { viewBuilderHandlers } from '../features/view-builder/index.ts';
 import { leadDetailHandlers } from '../features/leads/mocks/leadHandlers.ts';
 import { pipelineHandlers } from '../features/pipeline/index.ts';
 import { commsHandlers } from '../features/comms/index.ts';
+import { callingHandlers } from '../features/calling/index.ts';
+import { smsHandlers } from '../features/sms/index.ts';
+import { aiHandlers } from '../features/ai/index.ts';
+import { importHandlers } from '../features/import/index.ts';
 import { reportsHandlers } from '../features/reports/index.ts';
 import { adminHandlers } from '../features/admin/index.ts';
 
@@ -26,6 +30,10 @@ export const worker = setupWorker(
   ...adminHandlers,
   ...reportsHandlers,
   ...commsHandlers,
+  ...callingHandlers,
+  ...smsHandlers,
+  ...aiHandlers,
+  ...importHandlers,
   ...viewBuilderHandlers,
   ...leadDetailHandlers,
 );

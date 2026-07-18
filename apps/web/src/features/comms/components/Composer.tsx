@@ -36,6 +36,7 @@ import {
 import { applySnippet, detectSlashToken, matchSnippets } from '../lib/snippets.ts';
 import { MergePreview } from './MergePreview.tsx';
 import { SnippetMenu } from './SnippetMenu.tsx';
+import { AiDraftControl } from '../../ai/index.ts';
 import {
   AlertTriangleIcon,
   BanIcon,
@@ -560,6 +561,16 @@ function ComposeForm({
           </span>
         )}
         <div className="comms-drawer__foot-actions">
+          <AiDraftControl
+            subject={subject}
+            body={body}
+            onApply={(draft) => {
+              if (draft.subject !== undefined) setSubject(draft.subject);
+              setBody(draft.body);
+              setSnipToken(null);
+            }}
+            disabled={isLoading || noContacts}
+          />
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>

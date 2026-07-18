@@ -6,6 +6,9 @@ import { KeyboardProvider, CheatSheet } from '../keyboard/index.ts';
 import { CommandPalette } from '../command/index.ts';
 import { ToastProvider } from '../feedback/index.ts';
 import { CommsProvider } from '../features/comms/index.ts';
+import { CallProvider } from '../features/calling/index.ts';
+import { SmsProvider } from '../features/sms/index.ts';
+import { AiProvider } from '../features/ai/index.ts';
 import { LeftRail } from './LeftRail.tsx';
 import { TopBar } from './TopBar.tsx';
 import { useRailCollapsed } from './railState.ts';
@@ -29,7 +32,13 @@ export function AppShell(): JSX.Element {
     <KeyboardProvider>
       <ToastProvider>
         <CommsProvider>
-          <ShellChrome />
+          <CallProvider>
+            <SmsProvider>
+              <AiProvider>
+                <ShellChrome />
+              </AiProvider>
+            </SmsProvider>
+          </CallProvider>
         </CommsProvider>
       </ToastProvider>
     </KeyboardProvider>

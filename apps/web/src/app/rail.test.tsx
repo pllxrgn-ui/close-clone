@@ -28,6 +28,7 @@ describe('LeftRail — structure', () => {
       'Pipeline',
       'Views',
       'Reports',
+      'Import',
       'Support & FAQs',
       'Settings',
     ]);

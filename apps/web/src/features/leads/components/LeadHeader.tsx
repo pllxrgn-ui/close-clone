@@ -10,22 +10,22 @@ import { Suspense, lazy } from 'react';
 const LeadComposerLauncher = lazy(() =>
   import('../../comms/index.ts').then((m) => ({ default: m.LeadComposerLauncher })),
 );
+const LeadCallLauncher = lazy(() =>
+  import('../../calling/index.ts').then((m) => ({ default: m.LeadCallLauncher })),
+);
+const LeadSmsLauncher = lazy(() =>
+  import('../../sms/index.ts').then((m) => ({ default: m.LeadSmsLauncher })),
+);
 import type { StatusTone } from '../../../ui/index.ts';
 import { initials } from '../../../lib/format.ts';
-import {
-  ArrowLeftIcon,
-  BranchIcon,
-  CircleDashedIcon,
-  ExternalLinkIcon,
-  MessageIcon,
-  PhoneIcon,
-} from '../icons.tsx';
+import { ArrowLeftIcon, BranchIcon, CircleDashedIcon, ExternalLinkIcon } from '../icons.tsx';
 
 /*
  * Lead-page header: identity + status + owner + a prominent DNC indicator, then a
- * next-action bar. Email is live (opens the compliance-gated composer); Call / SMS
- * / Task / Enroll are disabled stubs that land later. Nothing here can send, dial,
- * or bypass a compliance rail — the composer enforces DNC/suppression at send.
+ * next-action bar. Call / SMS / Email are live (each opens its compliance-gated
+ * surface); Task / Enroll remain disabled stubs that land later. Nothing here can
+ * send, dial, or bypass a compliance rail — the launchers enforce
+ * DNC/suppression/quiet-hours at send/dial inside the engine layer.
  */
 
 interface LeadHeaderProps {
@@ -45,8 +45,6 @@ const NEXT_ACTIONS: ReadonlyArray<{
   label: string;
   icon: (p: { size?: number }) => JSX.Element;
 }> = [
-  { id: 'call', label: 'Call', icon: PhoneIcon },
-  { id: 'sms', label: 'SMS', icon: MessageIcon },
   { id: 'task', label: 'Task', icon: CircleDashedIcon },
   { id: 'sequence', label: 'Enroll', icon: BranchIcon },
 ];
@@ -98,6 +96,8 @@ export function LeadHeader({ lead, statusLabel, ownerName }: LeadHeaderProps): J
 
       <div className="lead-header__actions" role="group" aria-label="Lead actions">
         <Suspense fallback={null}>
+          <LeadCallLauncher lead={lead} />
+          <LeadSmsLauncher leadId={lead.id} />
           <LeadComposerLauncher leadId={lead.id} />
         </Suspense>
         {NEXT_ACTIONS.map((action) => {

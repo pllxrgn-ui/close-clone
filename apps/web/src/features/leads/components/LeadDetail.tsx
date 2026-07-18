@@ -15,6 +15,7 @@ import { LeadHeader } from './LeadHeader.tsx';
 import { Timeline } from './Timeline.tsx';
 import { LeadContactsCard } from './LeadContactsCard.tsx';
 import { LeadOpportunitiesCard } from './LeadOpportunitiesCard.tsx';
+import { LeadCallSummaries } from '../../ai/index.ts';
 
 /*
  * The lead page: header (identity/status/owner/DNC/next-action placeholder), a
@@ -147,6 +148,7 @@ export function LeadDetail({ leadId }: LeadDetailProps): JSX.Element {
             isError={oppsQuery.isError}
             onRetry={() => void oppsQuery.refetch()}
           />
+          <LeadCallSummaries leadId={leadId} />
         </aside>
       </div>
     </div>

@@ -51,7 +51,10 @@ export const PRIMARY_NAV: readonly NavItem[] = [
  * About the tool, not the work — pinned to the bottom of the rail, under a
  * divider, so the daily surfaces stay at the top where the eye lands.
  */
+import { importNavItem } from '../features/import/index.ts';
+
 export const FOOTER_NAV: readonly NavItem[] = [
+  importNavItem,
   { to: '/help', label: 'Support & FAQs', key: 'h', icon: SupportIcon },
   { to: '/settings', label: 'Settings', key: 's', icon: SettingsIcon },
 ];
