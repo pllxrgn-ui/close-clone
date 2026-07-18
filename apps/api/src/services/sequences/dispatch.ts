@@ -21,7 +21,7 @@ import {
   users,
   type Db,
 } from '../../db/index.ts';
-import { recordActivity } from '../activity/index.ts';
+import { recordActivity, type ActivityWebhookEmitter } from '../activity/index.ts';
 import type { TokenCipher } from '../sync/token-cipher.ts';
 import { renderTemplate, type MergeContext } from '../email/merge.ts';
 import type { ProviderForAccount } from '../email/send.ts';
@@ -99,6 +99,8 @@ export interface DispatchDeps {
   unsubscribe: UnsubscribeHeaderConfig;
   /** Telephony wiring for `sms` steps (CONTRACTS §C6 I-QUIET/I-DNC). */
   sms: SmsDispatchConfig;
+  /** Fans the dispatch's activities (sequence_step_sent, …) onto webhooks. */
+  emitter?: ActivityWebhookEmitter;
 }
 
 export type DispatchResultKind =
@@ -187,6 +189,7 @@ async function finishIfComplete(
   leadId: string,
   contactId: string,
   nowIso: string,
+  emitter?: ActivityWebhookEmitter,
 ): Promise<void> {
   const remaining = await exec.execute(sql`
     SELECT 1 FROM send_intents
@@ -199,13 +202,17 @@ async function finishIfComplete(
     .update(sequenceEnrollments)
     .set({ state: 'finished', updatedAt: sql`now()` })
     .where(and(eq(sequenceEnrollments.id, enrollmentId), eq(sequenceEnrollments.state, 'active')));
-  await recordActivity(exec, {
-    leadId,
-    contactId,
-    type: 'sequence_finished',
-    occurredAt: nowIso,
-    payload: { enrollmentId },
-  });
+  await recordActivity(
+    exec,
+    {
+      leadId,
+      contactId,
+      type: 'sequence_finished',
+      occurredAt: nowIso,
+      payload: { enrollmentId },
+    },
+    emitter,
+  );
 }
 
 function deterministicMessageId(accountId: string, intentId: string, address: string): string {
@@ -322,7 +329,7 @@ export async function processIntent(deps: DispatchDeps, intentId: string): Promi
     if (claim.channel === 'call_task') {
       return {
         kind: 'terminal',
-        result: await materializeCallTask(tx, ctx, nowIso),
+        result: await materializeCallTask(tx, ctx, nowIso, deps.emitter),
       };
     }
 
@@ -577,24 +584,29 @@ export async function processIntent(deps: DispatchDeps, intentId: string): Promi
       .update(sendIntents)
       .set({ state: 'SENT', sentAt: nowIso, providerMessageId, updatedAt: sql`now()` })
       .where(eq(sendIntents.id, intentId));
-    await recordActivity(tx, {
-      leadId: phaseA.ctx.leadId,
-      contactId: phaseA.ctx.contactId,
-      ...(phaseA.ctx.enrolledBy !== null ? { userId: phaseA.ctx.enrolledBy } : {}),
-      type: 'sequence_step_sent',
-      occurredAt: nowIso,
-      payload: {
-        enrollmentId: phaseA.ctx.enrollmentId,
-        stepId: phaseA.ctx.stepId,
-        channel: 'email',
+    await recordActivity(
+      tx,
+      {
+        leadId: phaseA.ctx.leadId,
+        contactId: phaseA.ctx.contactId,
+        ...(phaseA.ctx.enrolledBy !== null ? { userId: phaseA.ctx.enrolledBy } : {}),
+        type: 'sequence_step_sent',
+        occurredAt: nowIso,
+        payload: {
+          enrollmentId: phaseA.ctx.enrollmentId,
+          stepId: phaseA.ctx.stepId,
+          channel: 'email',
+        },
       },
-    });
+      deps.emitter,
+    );
     await finishIfComplete(
       tx,
       phaseA.ctx.enrollmentId,
       phaseA.ctx.leadId,
       phaseA.ctx.contactId,
       nowIso,
+      deps.emitter,
     );
     return { kind: 'sent', intentId, providerMessageId };
   });
@@ -619,6 +631,7 @@ async function materializeCallTask(
   exec: Db,
   ctx: ClaimedContext,
   nowIso: string,
+  emitter?: ActivityWebhookEmitter,
 ): Promise<DispatchResult> {
   const seqRows = await exec
     .select({ name: sequences.name })
@@ -652,15 +665,19 @@ async function materializeCallTask(
     .set({ state: 'SENT', sentAt: nowIso, updatedAt: sql`now()` })
     .where(eq(sendIntents.id, ctx.intentId));
 
-  await recordActivity(exec, {
-    leadId: ctx.leadId,
-    contactId: ctx.contactId,
-    ...(ctx.enrolledBy !== null ? { userId: ctx.enrolledBy } : {}),
-    type: 'task_created',
-    occurredAt: nowIso,
-    payload: { taskId, dueAt: nowIso, title: `${seqName}: call ${leadRows[0].name}` },
-  });
-  await finishIfComplete(exec, ctx.enrollmentId, ctx.leadId, ctx.contactId, nowIso);
+  await recordActivity(
+    exec,
+    {
+      leadId: ctx.leadId,
+      contactId: ctx.contactId,
+      ...(ctx.enrolledBy !== null ? { userId: ctx.enrolledBy } : {}),
+      type: 'task_created',
+      occurredAt: nowIso,
+      payload: { taskId, dueAt: nowIso, title: `${seqName}: call ${leadRows[0].name}` },
+    },
+    emitter,
+  );
+  await finishIfComplete(exec, ctx.enrollmentId, ctx.leadId, ctx.contactId, nowIso, emitter);
   return { kind: 'sent', intentId: ctx.intentId };
 }
 
@@ -946,25 +963,30 @@ async function finishSmsSend(
       .update(sendIntents)
       .set({ state: 'SENT', sentAt: nowIso, providerMessageId: providerSid, updatedAt: sql`now()` })
       .where(eq(sendIntents.id, intentId));
-    await recordActivity(tx, {
-      leadId: phaseA.ctx.leadId,
-      contactId: phaseA.ctx.contactId,
-      ...(phaseA.ctx.enrolledBy !== null ? { userId: phaseA.ctx.enrolledBy } : {}),
-      type: 'sequence_step_sent',
-      occurredAt: nowIso,
-      payload: {
-        enrollmentId: phaseA.ctx.enrollmentId,
-        stepId: phaseA.ctx.stepId,
-        channel: 'sms',
-        ...(smsMessageId !== null ? { smsMessageId } : {}),
+    await recordActivity(
+      tx,
+      {
+        leadId: phaseA.ctx.leadId,
+        contactId: phaseA.ctx.contactId,
+        ...(phaseA.ctx.enrolledBy !== null ? { userId: phaseA.ctx.enrolledBy } : {}),
+        type: 'sequence_step_sent',
+        occurredAt: nowIso,
+        payload: {
+          enrollmentId: phaseA.ctx.enrollmentId,
+          stepId: phaseA.ctx.stepId,
+          channel: 'sms',
+          ...(smsMessageId !== null ? { smsMessageId } : {}),
+        },
       },
-    });
+      deps.emitter,
+    );
     await finishIfComplete(
       tx,
       phaseA.ctx.enrollmentId,
       phaseA.ctx.leadId,
       phaseA.ctx.contactId,
       nowIso,
+      deps.emitter,
     );
     return { kind: 'sent', intentId, providerMessageId: providerSid };
   });

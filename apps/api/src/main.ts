@@ -307,6 +307,11 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
     });
   }
 
+  // One shared activity→webhook emitter for every producer (routes + the
+  // sequence dispatch worker below), so a subscriber sees activity.recorded for
+  // rep CRUD AND for sequence-driven outbound.
+  const activityEmitter = createActivityWebhookEmitter(queue);
+
   registerRoutes(app, {
     db,
     emailSend: { providerFor: senderRegistry.providerFor, cipher },
@@ -343,7 +348,7 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
     // through this queue-backed emitter (createWebhookDeliveryProcessor above
     // delivers them). Wired for the notes surface; other activity producers
     // adopt the same one-param pattern.
-    activityEmitter: createActivityWebhookEmitter(queue),
+    activityEmitter,
     // Telephony (click-to-call, /wh/twilio ingress) + AI (summaries, drafting,
     // NL→Smart View) mount only when their providers exist — mock now; the real
     // Twilio/Deepgram/Haiku adapters + accounts are HUMAN_TODO (WIRING.md §5),
@@ -401,6 +406,7 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
     workerId: `${env['HOSTNAME'] ?? 'api'}:${process.pid}`,
     now: () => new Date(),
     unsubscribe: unsubscribeConfig,
+    emitter: activityEmitter,
     sms: {
       // No telephony account (HUMAN_TODO: TWILIO_*) → no fromNumber either, so
       // dispatch SKIPs sms steps with `no_sms_from_number` before ever touching
