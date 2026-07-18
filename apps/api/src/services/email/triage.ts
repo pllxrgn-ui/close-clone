@@ -1,6 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { auditLog, emailThreads, leads, users, type Db } from '../../db/index.ts';
 import { materializeThreadActivities } from './activities.ts';
+import type { ActivityWebhookEmitter } from '../activity/index.ts';
 import { findCandidateLeadIds } from './matching.ts';
 
 /**
@@ -286,7 +287,11 @@ export interface ResolveResult {
  * Refuses to re-point a thread already matched to a different lead. Idempotent
  * for a re-resolve to the same lead. Everything commits in one transaction.
  */
-export async function resolveThreadToLead(db: Db, input: ResolveInput): Promise<ResolveResult> {
+export async function resolveThreadToLead(
+  db: Db,
+  input: ResolveInput,
+  emitter?: ActivityWebhookEmitter,
+): Promise<ResolveResult> {
   return db.transaction(async (txRaw) => {
     const tx = txRaw as Db;
     await assertActiveActor(tx, input.actorId);
@@ -296,7 +301,12 @@ export async function resolveThreadToLead(db: Db, input: ResolveInput): Promise<
     if (thread.triageStatus === 'matched') {
       if (thread.leadId === input.leadId) {
         // Idempotent: ensure activities exist (they will), change nothing else.
-        const written = await materializeThreadActivities(tx, input.threadId, input.leadId);
+        const written = await materializeThreadActivities(
+          tx,
+          input.threadId,
+          input.leadId,
+          emitter,
+        );
         return {
           threadId: input.threadId,
           leadId: input.leadId,
@@ -319,7 +329,7 @@ export async function resolveThreadToLead(db: Db, input: ResolveInput): Promise<
       .set({ triageStatus: 'matched', leadId: input.leadId, updatedAt: sql`now()` })
       .where(eq(emailThreads.id, input.threadId));
 
-    const written = await materializeThreadActivities(tx, input.threadId, input.leadId);
+    const written = await materializeThreadActivities(tx, input.threadId, input.leadId, emitter);
 
     await writeAudit(tx, {
       actorId: input.actorId,

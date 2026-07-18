@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import type { RawEmail } from '@switchboard/shared/providers';
 import { emailMessages, type Db } from '../../db/index.ts';
 import { materializeThreadActivities } from '../email/activities.ts';
+import type { ActivityWebhookEmitter } from '../activity/index.ts';
 import { refreshThreadMatch } from '../email/matching.ts';
 import {
   normalizeSubject,
@@ -40,6 +41,8 @@ export interface IngestDeps {
    * caller's `exec` so the pause commits atomically with the inbound write.
    */
   onInboundMatched?: (exec: Db, ctx: { leadId: string; threadId: string }) => Promise<void>;
+  /** Fans email_received onto activity.recorded webhooks (wired with Gmail sync). */
+  emitter?: ActivityWebhookEmitter;
 }
 
 export interface IngestResult {
@@ -106,7 +109,7 @@ export async function ingestMessage(
   // emits the just-inserted message's activity and backfills any prior messages
   // that were ambiguous at their own ingest and are now covered by a lead.
   if (decision.leadId !== null) {
-    await materializeThreadActivities(exec, threadId, decision.leadId);
+    await materializeThreadActivities(exec, threadId, decision.leadId, deps.emitter);
     // Reply seam (task 2e): a human inbound reply pauses the lead's sequences.
     if (raw.direction === 'in' && deps.onInboundMatched !== undefined) {
       await deps.onInboundMatched(exec, { leadId: decision.leadId, threadId });
