@@ -8,6 +8,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    // Allow Cloudflare quick-tunnel hosts so the dev server can be shared over a
+    // tunnel for a live demo (Vite blocks unknown Host headers by default). Scoped
+    // to *.trycloudflare.com — not a blanket allow.
+    allowedHosts: ['.trycloudflare.com'],
     // Real-API mode (VITE_API_MODE=real): the PGlite dev server owns /api + /healthz.
     proxy: {
       '/api': { target: 'http://localhost:3000', changeOrigin: false },
