@@ -948,6 +948,18 @@
   font-weight: var(--fw-display-strong);
   color: var(--ink-0);
 }
+/* Quick due-date chips — quiet, right under the date field. */
+.lead-newtask__presets {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-top: calc(-1 * var(--space-2));
+}
+.lead-newtask__presets [aria-pressed='true'] {
+  border-color: var(--accent-strong);
+  color: var(--accent-strong);
+}
+
 .lead-newtask__foot {
   display: flex;
   justify-content: flex-end;

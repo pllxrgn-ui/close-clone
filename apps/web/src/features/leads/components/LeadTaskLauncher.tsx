@@ -17,6 +17,21 @@ import { CircleDashedIcon } from '../icons.tsx';
  * lead's next-task column refresh in place.
  */
 
+const DUE_PRESETS = [
+  { label: 'Today', days: 0 },
+  { label: 'Tomorrow', days: 1 },
+  { label: 'Next week', days: 7 },
+] as const;
+
+/** Local calendar date `days` from now, in the date-input's YYYY-MM-DD form. */
+function presetDate(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${dd}`;
+}
+
 export function LeadTaskLauncher({ lead }: { lead: Lead }): JSX.Element {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -99,6 +114,23 @@ export function LeadTaskLauncher({ lead }: { lead: Lead }): JSX.Element {
           <Field label="Due date" hint={user ? `Assigned to ${user.name}` : undefined}>
             <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} />
           </Field>
+          <div className="lead-newtask__presets" role="group" aria-label="Due date presets">
+            {DUE_PRESETS.map((preset) => {
+              const value = presetDate(preset.days);
+              return (
+                <Button
+                  key={preset.label}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-pressed={due === value}
+                  onClick={() => setDue(value)}
+                >
+                  {preset.label}
+                </Button>
+              );
+            })}
+          </div>
 
           <footer className="lead-newtask__foot">
             <Button type="button" variant="ghost" onClick={close}>

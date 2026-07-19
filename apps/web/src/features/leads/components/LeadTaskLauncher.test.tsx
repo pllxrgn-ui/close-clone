@@ -62,6 +62,32 @@ describe('LeadTaskLauncher', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
+  test('due-date presets fill the date field with the matching local day', async () => {
+    render(
+      <Harness>
+        <LeadTaskLauncher lead={LEAD} />
+      </Harness>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /Task/ }));
+    await screen.findByRole('dialog');
+
+    const expected = (() => {
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${d.getFullYear()}-${m}-${dd}`;
+    })();
+    await userEvent.click(screen.getByRole('button', { name: 'Tomorrow' }));
+    expect(screen.getByLabelText('Due date')).toHaveValue(expected);
+    expect(screen.getByRole('button', { name: 'Tomorrow' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    // Presets alone never enable Create — a title is still required.
+    expect(screen.getByRole('button', { name: 'Create task' })).toBeDisabled();
+  });
+
   test('a failed create surfaces the API error and keeps the modal open', async () => {
     server.use(
       http.post(api('/tasks'), () =>

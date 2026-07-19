@@ -13,9 +13,32 @@ import {
 } from '../../../ui/index.ts';
 import { ApiError } from '../../../api/errors.ts';
 import { useToast } from '../../../feedback/index.ts';
-import { enrollInSequence, listLeadContacts, listSequences } from '../api/comms.ts';
+import {
+  enrollInSequence,
+  listLeadContacts,
+  listSequences,
+  listSequenceSteps,
+} from '../api/comms.ts';
 import { primaryEmail } from '../lib/mergeTags.ts';
 import { BranchIcon } from '../icons.tsx';
+
+const STEP_TYPE_LABEL = { email: 'email', sms: 'SMS', call_task: 'call' } as const;
+
+/** "5 steps · email + SMS · first sends immediately" from the step ladder. */
+function cadenceSummary(
+  steps: { type: keyof typeof STEP_TYPE_LABEL; delayHours: number }[],
+): string {
+  if (steps.length === 0) return 'No steps yet — enrolling sends nothing.';
+  const channels = [...new Set(steps.map((s) => STEP_TYPE_LABEL[s.type]))].join(' + ');
+  const firstDelay = Math.min(...steps.map((s) => s.delayHours));
+  const first =
+    firstDelay === 0
+      ? 'first sends immediately'
+      : firstDelay % 24 === 0
+        ? `first after ${firstDelay / 24}d`
+        : `first after ${firstDelay}h`;
+  return `${steps.length} step${steps.length === 1 ? '' : 's'} · ${channels} · ${first}`;
+}
 
 /*
  * The lead-page "Enroll" next-action (replaces the last disabled stub): pick one
@@ -45,6 +68,12 @@ export function LeadEnrollLauncher({ lead }: { lead: Lead }): JSX.Element {
     queryKey: ['lead-contacts', lead.id],
     queryFn: () => listLeadContacts(lead.id),
     enabled: open,
+  });
+  // Cadence context for the SELECTED sequence only — one lazy fetch, on demand.
+  const stepsQuery = useQuery({
+    queryKey: ['comms', 'sequence-steps', sequenceId],
+    queryFn: () => listSequenceSteps(sequenceId as string),
+    enabled: open && sequenceId !== null,
   });
 
   const active = useMemo(
@@ -167,6 +196,16 @@ export function LeadEnrollLauncher({ lead }: { lead: Lead }): JSX.Element {
                   </button>
                 ))}
               </div>
+
+              {sequenceId !== null ? (
+                <p className="comms-enroll-lead__hint" aria-live="polite">
+                  {stepsQuery.isLoading
+                    ? 'Loading cadence…'
+                    : stepsQuery.isError
+                      ? 'Cadence unavailable.'
+                      : cadenceSummary(stepsQuery.data ?? [])}
+                </p>
+              ) : null}
 
               {lead.dnc || selectedContact?.dnc ? (
                 <p className="comms-enroll-lead__dnc">

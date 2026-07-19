@@ -764,6 +764,14 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Cadence context for the selected sequence — informative, not a warning. */
+.comms-enroll-lead__hint {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
 .comms-enroll-lead__dnc {
   margin: 0;
   color: var(--state-dnc);

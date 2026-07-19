@@ -30,8 +30,12 @@ Every push to `main` redeploys automatically once the project is connected.
 
 ## Vercel demo (stable public URL, no laptop required)
 
-The mock demo is deployed to Vercel as project `switchboard-demo` (account
-`pdvillorente12-1736`): **https://switchboard-demo-three.vercel.app**
+The mock demo is deployed to Vercel (account `pdvillorente12-1736`) under two
+projects serving the same build:
+
+- **https://switchboard-crm-demo.vercel.app** — the primary, clean address
+- https://switchboard-demo-three.vercel.app — the original link, kept alive
+  so anything already shared keeps working
 
 Static hosting of `apps/web/dist` (mock mode, MSW in-browser) with one SPA
 rewrite so deep links (`/inbox`, `/leads/:id`) serve `index.html`. To redeploy
@@ -43,6 +47,7 @@ STAGE=$(mktemp -d)/switchboard-demo && mkdir -p "$STAGE"
 cp -r apps/web/dist/. "$STAGE/"
 printf '{ "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }' > "$STAGE/vercel.json"
 (cd "$STAGE" && npx vercel deploy --prod --yes)
+# Repeat from a dir named switchboard-crm-demo to update the primary URL.
 ```
 
 GitHub Pages remains the auto-deploying mirror (every push to main):

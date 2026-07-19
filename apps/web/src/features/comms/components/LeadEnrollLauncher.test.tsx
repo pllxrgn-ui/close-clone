@@ -61,6 +61,21 @@ describe('LeadEnrollLauncher', () => {
     }
   });
 
+  test('selecting a sequence surfaces its cadence (steps + channels + first send)', async () => {
+    render(
+      <Harness>
+        <LeadEnrollLauncher lead={LEAD} />
+      </Harness>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /Enroll/ }));
+    const group = await screen.findByRole('radiogroup', { name: 'Sequence' });
+    const first = within(group).getAllByRole('radio')[0];
+    if (!first) throw new Error('expected an active sequence');
+    await userEvent.click(first);
+    // "N steps · <channels> · first …" from the real step-ladder handler.
+    expect(await screen.findByText(/\d+ steps? · .+ · first/)).toBeVisible();
+  });
+
   test('enrolls this lead through the real bulk route, then reports a duplicate on retry', async () => {
     render(
       <Harness>
