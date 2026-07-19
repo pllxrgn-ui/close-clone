@@ -42,11 +42,15 @@ rewrite so deep links (`/inbox`, `/leads/:id`) serve `index.html`. To redeploy
 after changes:
 
 ```bash
-pnpm --filter @switchboard/web build
+rm -rf apps/web/dist                      # dist accumulates otherwise
+pnpm --filter @switchboard/web build      # must print "built in ..." (a tsc error = stale dist!)
 STAGE=$(mktemp -d)/switchboard-demo && mkdir -p "$STAGE"
 cp -r apps/web/dist/. "$STAGE/"
 printf '{ "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }' > "$STAGE/vercel.json"
-(cd "$STAGE" && npx vercel deploy --prod --yes)
+(cd "$STAGE" \n  && DEPLOY=$(npx vercel deploy --prod --yes 2>&1 | grep -oE 'https://[a-z0-9.-]+vercel\.app' | tail -1) \n  && npx vercel alias set "$DEPLOY" switchboard-demo-three.vercel.app)
+# The alias is PINNED (a manual alias set detached auto-promotion) — the
+# explicit alias set above is REQUIRED, and the edge may serve the previous
+# HTML for a couple of minutes.
 # Repeat from a dir named switchboard-crm-demo to update the primary URL.
 ```
 
