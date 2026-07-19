@@ -128,3 +128,60 @@ describe('fixtures under workspace modes', () => {
     expect(db.leads.some((l) => l.name === 'Should not appear')).toBe(false);
   });
 });
+
+describe('personal-account workspace owners', () => {
+  test('an owner forces blank mode and isolates snapshots per account', async () => {
+    const { setWorkspaceOwner, clearWorkspaceOwner, getWorkspaceOwner } =
+      await import('./workspace.ts');
+    const userA = { id: 'a', name: 'A' } as never;
+
+    setWorkspaceOwner({ username: 'alice', user: userA });
+    expect(getWorkspaceOwner()?.username).toBe('alice');
+    expect(workspaceMode()).toBe('blank');
+    saveBlankSnapshot({
+      v: 1,
+      leads: [makeLead({ name: 'Alice Lead' })],
+      contacts: [],
+      opportunities: [],
+      activities: [],
+      smartViews: [],
+    });
+    expect(loadBlankSnapshot()?.leads[0]?.name).toBe('Alice Lead');
+
+    // Switch owner: bob sees NOTHING of alice's workspace.
+    setWorkspaceOwner({ username: 'bob', user: userA });
+    expect(loadBlankSnapshot()).toBeNull();
+
+    // Anonymous blank picker is a third, separate space.
+    clearWorkspaceOwner();
+    expect(loadBlankSnapshot()).toBeNull();
+
+    // Alice's data is still there when she signs back in.
+    setWorkspaceOwner({ username: 'alice', user: userA });
+    expect(loadBlankSnapshot()?.leads[0]?.name).toBe('Alice Lead');
+  });
+
+  test('fixtures under an owner: solo org — the user list is just the owner', async () => {
+    const { setWorkspaceOwner } = await import('./workspace.ts');
+    setWorkspaceOwner({
+      username: 'pol',
+      user: {
+        id: '99999999-9999-4999-8999-999999999999',
+        email: 'pol@switchboard.local',
+        name: 'Pol V',
+        role: 'admin',
+        idpSubject: 'demo:pol',
+        isActive: true,
+        timezone: 'America/Los_Angeles',
+        createdAt: '2026-07-19T00:00:00.000Z',
+        updatedAt: '2026-07-19T00:00:00.000Z',
+      },
+    });
+    vi.resetModules();
+    const { db } = await import('./fixtures.ts');
+    expect(db.leads).toHaveLength(0);
+    expect(db.users).toHaveLength(1);
+    expect(db.users[0]?.name).toBe('Pol V');
+    expect(db.leadStatuses.length).toBeGreaterThan(0);
+  });
+});

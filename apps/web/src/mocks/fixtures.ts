@@ -22,7 +22,7 @@ import type {
 import { parse } from '@switchboard/shared';
 import type { SearchHit } from '../api/types.ts';
 import { chance, int, mulberry32, pick, uuidFrom } from './seed.ts';
-import { loadBlankSnapshot, workspaceMode } from './workspace.ts';
+import { getWorkspaceOwner, loadBlankSnapshot, workspaceMode } from './workspace.ts';
 import type { BlankSnapshot } from './workspace.ts';
 
 const SEED = 0x5b0a2d;
@@ -505,6 +505,10 @@ function applyWorkspace(built: MockDb): MockDb {
   built.activitiesByLead = new Map(snapshot?.activities ?? []);
   if (snapshot && snapshot.smartViews.length > 0) built.smartViews = snapshot.smartViews;
   built.searchIndex = buildSearchIndex(built.leads, built.contacts, built.leadStatuses);
+  // A personal account owns a SOLO org — the user list is just them, so owner
+  // dropdowns, actor names, and task assignment all resolve to the real person.
+  const owner = getWorkspaceOwner();
+  if (owner) built.users = [owner.user];
   return built;
 }
 

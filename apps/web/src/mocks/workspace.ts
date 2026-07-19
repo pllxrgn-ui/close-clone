@@ -1,4 +1,4 @@
-import type { Activity, Contact, Lead, Opportunity, SmartView } from '@switchboard/shared';
+import type { Activity, Contact, Lead, Opportunity, SmartView, User } from '@switchboard/shared';
 
 /*
  * Workspace mode for the mock demo. `sample` (default) boots the full seeded
@@ -16,6 +16,57 @@ export type WorkspaceMode = 'sample' | 'blank';
 
 export const WORKSPACE_KEY = 'sb-workspace';
 const BLANK_DB_KEY = 'sb-blank-db-v1';
+const OWNER_KEY = 'sb-workspace-owner';
+
+/**
+ * A personal demo account signed into ITS OWN workspace (see auth/accounts.ts).
+ * When an owner is set the workspace is always blank-mode, its data persists
+ * under a per-account key, and the org's user list is just the owner.
+ */
+export interface WorkspaceOwner {
+  username: string;
+  user: User;
+}
+
+export function getWorkspaceOwner(): WorkspaceOwner | null {
+  try {
+    const raw = localStorage.getItem(OWNER_KEY);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      typeof (parsed as { username?: unknown }).username === 'string'
+    ) {
+      return parsed as WorkspaceOwner;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function setWorkspaceOwner(owner: WorkspaceOwner): void {
+  try {
+    localStorage.setItem(OWNER_KEY, JSON.stringify(owner));
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+export function clearWorkspaceOwner(): void {
+  try {
+    localStorage.removeItem(OWNER_KEY);
+  } catch {
+    /* nothing to clear */
+  }
+}
+
+/** The active blank-db storage key — per-account when an owner is signed in. */
+function blankDbKey(): string {
+  const owner = getWorkspaceOwner();
+  return owner ? `${BLANK_DB_KEY}:u:${owner.username}` : BLANK_DB_KEY;
+}
 
 export interface BlankSnapshot {
   v: 1;
@@ -28,6 +79,7 @@ export interface BlankSnapshot {
 }
 
 export function workspaceMode(): WorkspaceMode {
+  if (getWorkspaceOwner() !== null) return 'blank';
   try {
     return localStorage.getItem(WORKSPACE_KEY) === 'blank' ? 'blank' : 'sample';
   } catch {
@@ -46,7 +98,7 @@ export function setWorkspaceMode(mode: WorkspaceMode): void {
 
 export function loadBlankSnapshot(): BlankSnapshot | null {
   try {
-    const raw = localStorage.getItem(BLANK_DB_KEY);
+    const raw = localStorage.getItem(blankDbKey());
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
     if (
@@ -65,7 +117,7 @@ export function loadBlankSnapshot(): BlankSnapshot | null {
 
 export function saveBlankSnapshot(snapshot: BlankSnapshot): void {
   try {
-    localStorage.setItem(BLANK_DB_KEY, JSON.stringify(snapshot));
+    localStorage.setItem(blankDbKey(), JSON.stringify(snapshot));
   } catch {
     /* quota / private mode — the session still works, it just won't survive */
   }
@@ -73,7 +125,7 @@ export function saveBlankSnapshot(snapshot: BlankSnapshot): void {
 
 export function hasBlankSnapshot(): boolean {
   try {
-    return localStorage.getItem(BLANK_DB_KEY) !== null;
+    return localStorage.getItem(blankDbKey()) !== null;
   } catch {
     return false;
   }
@@ -82,7 +134,7 @@ export function hasBlankSnapshot(): boolean {
 /** Drop the persisted blank-workspace data (the workspace boots empty again). */
 export function clearBlankWorkspace(): void {
   try {
-    localStorage.removeItem(BLANK_DB_KEY);
+    localStorage.removeItem(blankDbKey());
   } catch {
     /* nothing to clear */
   }

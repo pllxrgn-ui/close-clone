@@ -71,7 +71,19 @@ export function TopBar({ searchRef, onOpenPalette }: TopBarProps): JSX.Element {
             user={user}
             onSignOut={() => {
               logout();
-              navigate('/login');
+              // A personal-account session also releases its workspace: the
+              // owner key drops (data stays persisted under the account's own
+              // key) and a full load reboots the neutral demo db at /login.
+              void import('../mocks/workspace.ts').then(
+                ({ getWorkspaceOwner, clearWorkspaceOwner }) => {
+                  if (getWorkspaceOwner()) {
+                    clearWorkspaceOwner();
+                    window.location.assign('/login');
+                  } else {
+                    navigate('/login');
+                  }
+                },
+              );
             }}
           />
         ) : null}
