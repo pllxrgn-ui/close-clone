@@ -3,6 +3,7 @@ import type { JSX } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Spinner } from '../ui/index.ts';
 import { RequireAuth } from '../auth/RequireAuth.tsx';
+import { useAuth } from '../auth/AuthProvider.tsx';
 import { AppShell } from './AppShell.tsx';
 
 /*
@@ -69,15 +70,25 @@ function BootFallback(): JSX.Element {
   );
 }
 
+/**
+ * Bare `/` is the front door: visitors (signed out) get the Welcome landing;
+ * signed-in reps skip the marketing and land in their inbox. Deep links are
+ * unaffected — RequireAuth still sends them through /login with a return path.
+ */
+function RootGate(): JSX.Element {
+  const { user } = useAuth();
+  return <Navigate to={user ? '/inbox' : '/welcome'} replace />;
+}
+
 export function AppRoutes(): JSX.Element {
   return (
     <Suspense fallback={<BootFallback />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/welcome" element={<WelcomePage />} />
-        <Route path="/" element={<RequireAuth />}>
+        <Route path="/" element={<RootGate />} />
+        <Route element={<RequireAuth />}>
           <Route element={<AppShell />}>
-            <Route index element={<Navigate to="/inbox" replace />} />
             <Route path="inbox" element={<InboxPage />} />
             <Route path="leads" element={<LeadsPage />} />
             <Route path="leads/:id" element={<LeadDetailPage />} />
