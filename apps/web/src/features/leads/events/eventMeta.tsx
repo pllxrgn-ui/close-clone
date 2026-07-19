@@ -244,6 +244,43 @@ export function isKnownEventType(type: string): type is ActivityType {
   return Object.prototype.hasOwnProperty.call(EVENT_META, type);
 }
 
+/**
+ * Ordered, defensive payload → rows for the EXPANDED event panel. Only known
+ * keys render (an unknown payload member never leaks raw into the UI), so the
+ * same builder serves seeded fixtures and runtime-created activities alike.
+ */
+export function expandedRows(payload: Payload): Array<{ label: string; value: string }> {
+  const rows: Array<{ label: string; value: string }> = [];
+  const push = (label: string, value: string | null): void => {
+    if (value !== null) rows.push({ label, value });
+  };
+  push('Subject', str(payload, 'subject'));
+  push('Preview', str(payload, 'snippet'));
+  push('Message', str(payload, 'body'));
+  push('Task', str(payload, 'title'));
+  const outcome = str(payload, 'outcome');
+  push('Outcome', outcome === null ? null : outcome.replaceAll('_', ' '));
+  const durationS = num(payload, 'durationS');
+  push(
+    'Duration',
+    durationS === null
+      ? null
+      : `${Math.floor(durationS / 60)}m ${String(durationS % 60).padStart(2, '0')}s`,
+  );
+  push('Notes', str(payload, 'notes'));
+  push('Sequence', str(payload, 'sequence'));
+  const step = num(payload, 'step');
+  push('Step', step === null ? null : `Step ${step}`);
+  push('Change', fromTo(payload));
+  push('Field', str(payload, 'field'));
+  push('Reason', str(payload, 'reason'));
+  push('Keyword', str(payload, 'keyword'));
+  push('Value', str(payload, 'value'));
+  const rowCount = num(payload, 'rowCount');
+  push('Rows', rowCount === null ? null : rowCount.toLocaleString('en-US'));
+  return rows;
+}
+
 /** Resolve rendering meta for an activity type, falling back defensively. */
 export function resolveEventMeta(type: string): EventMeta {
   return isKnownEventType(type) ? EVENT_META[type] : FALLBACK_EVENT_META;

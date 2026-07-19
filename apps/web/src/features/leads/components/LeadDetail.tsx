@@ -73,6 +73,10 @@ export function LeadDetail({ leadId }: LeadDetailProps): JSX.Element {
     const byId = new Map((stagesQuery.data ?? []).map((s) => [s.id, s.label]));
     return (id: string | null): string => (id ? (byId.get(id) ?? '—') : '—');
   }, [stagesQuery.data]);
+  const contactNameOf = useMemo(() => {
+    const byId = new Map((contactsQuery.data ?? []).map((c) => [c.id, c.name]));
+    return (id: string | null): string => (id ? (byId.get(id) ?? '—') : '—');
+  }, [contactsQuery.data]);
 
   if (leadQuery.isLoading) {
     return (
@@ -123,6 +127,7 @@ export function LeadDetail({ leadId }: LeadDetailProps): JSX.Element {
           <Timeline
             events={events}
             userName={userName}
+            contactName={contactNameOf}
             now={now}
             isLoading={timelineQuery.isLoading}
             isError={timelineQuery.isError}

@@ -36,6 +36,7 @@ export function groupEventsByDay(events: Activity[], now: Date): DayGroup[] {
 interface TimelineProps {
   events: Activity[];
   userName: (id: string | null) => string;
+  contactName?: (id: string | null) => string;
   now: Date;
   isLoading: boolean;
   isError: boolean;
@@ -49,6 +50,7 @@ interface TimelineProps {
 export function Timeline({
   events,
   userName,
+  contactName,
   now,
   isLoading,
   isError,
@@ -98,7 +100,13 @@ export function Timeline({
             </div>
             <ol className="tl-day__events">
               {group.events.map((event) => (
-                <TimelineEvent key={event.id} activity={event} userName={userName} now={now} />
+                <TimelineEvent
+                  key={event.id}
+                  activity={event}
+                  userName={userName}
+                  {...(contactName ? { contactName } : {})}
+                  now={now}
+                />
               ))}
             </ol>
           </li>

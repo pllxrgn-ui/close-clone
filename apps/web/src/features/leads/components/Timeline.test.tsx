@@ -103,3 +103,52 @@ describe('Timeline — states', () => {
     expect(onLoadMore).toHaveBeenCalledOnce();
   });
 });
+
+describe('Timeline — expandable rows', () => {
+  test('a row is a disclosure: click reveals payload facts + absolute time, click again collapses', async () => {
+    const events = [
+      makeActivity({
+        type: 'email_received',
+        occurredAt: hoursAgo(2),
+        payload: { subject: 'Re: pilot rollout', snippet: 'Thursday works — send the order form.' },
+      }),
+    ];
+    render(<Timeline {...baseProps()} events={events} />);
+
+    const row = screen.getByRole('button', { name: /Email received/ });
+    expect(row).toHaveAttribute('aria-expanded', 'false');
+
+    await userEvent.click(row);
+    expect(row).toHaveAttribute('aria-expanded', 'true');
+    // Per-type payload facts…
+    expect(screen.getByText('Subject')).toBeInTheDocument();
+    expect(screen.getByText('Thursday works — send the order form.')).toBeInTheDocument();
+    // …plus the absolute timestamp that used to hide in a tooltip.
+    expect(screen.getByText('When')).toBeInTheDocument();
+
+    await userEvent.click(row);
+    expect(row).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('When')).not.toBeInTheDocument();
+  });
+
+  test('the contact resolves by id in the expanded facts', async () => {
+    const events = [
+      makeActivity({
+        type: 'sequence_enrolled',
+        contactId: 'c9',
+        userId: 'u1',
+        payload: { sequence: 'Onboarding' },
+      }),
+    ];
+    render(
+      <Timeline
+        {...baseProps()}
+        contactName={(id) => (id === 'c9' ? 'Quinn Larsen' : '—')}
+        events={events}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /Enrolled in sequence/ }));
+    expect(screen.getByText('Onboarding')).toBeInTheDocument();
+    expect(screen.getByText('Quinn Larsen')).toBeInTheDocument();
+  });
+});

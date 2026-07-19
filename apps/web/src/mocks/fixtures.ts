@@ -160,6 +160,87 @@ const TIMELINE_TYPES = [
   'sms_sent',
 ] as const;
 
+// Deterministic per-type payload content (picked with the seeded rng) so every
+// timeline row carries something real to expand — operator voice, no lorem.
+const TL_EMAIL_SUBJECTS = [
+  'Re: pilot rollout',
+  'Quick question about pricing',
+  'Renewal timeline',
+  'Intro — Switchboard',
+  'Re: security review',
+] as const;
+const TL_EMAIL_SNIPPETS = [
+  'Thursday works — send the order form over.',
+  'Can you loop in our CFO on the numbers?',
+  'We are comparing two vendors this quarter.',
+  'Let me check with procurement and get back to you.',
+] as const;
+const TL_SMS_BODIES = [
+  'Confirming our call at 2pm — reply STOP to opt out.',
+  'Got the deck, thanks!',
+  'Can we push to Thursday?',
+  'Works for me — talk then.',
+] as const;
+const TL_TASK_TITLES = [
+  'Send the revised quote',
+  'Schedule the technical review',
+  'Follow up on the pilot',
+  'Loop in the exec sponsor',
+  'Confirm seat count',
+] as const;
+const TL_NOTE_BODIES = [
+  'Champion is happy with the demo but needs internal sign-off.',
+  'Budget confirmed for Q3; procurement wants two references.',
+  'Asked for the SOC 2 report and a sandbox account.',
+] as const;
+const TL_CALL_OUTCOMES = ['connected', 'left_voicemail', 'no_answer', 'meeting_booked'] as const;
+// Mirrors the sequence names the comms store seeds (kept literal: fixtures must
+// not import feature stores).
+const TL_SEQUENCES = [
+  'Onboarding',
+  'Outbound — Enterprise',
+  'Re-engagement',
+  'Trial nurture',
+] as const;
+
+function timelinePayload(
+  rng: () => number,
+  type: (typeof TIMELINE_TYPES)[number],
+  statusLabels: readonly string[],
+): Record<string, unknown> {
+  switch (type) {
+    case 'email_sent':
+    case 'email_received':
+      return { subject: pick(rng, TL_EMAIL_SUBJECTS), snippet: pick(rng, TL_EMAIL_SNIPPETS) };
+    case 'sms_sent':
+      return { body: pick(rng, TL_SMS_BODIES) };
+    case 'call_logged': {
+      const outcome = pick(rng, TL_CALL_OUTCOMES);
+      return {
+        outcome,
+        durationS: int(rng, 40, 1400),
+        ...(chance(rng, 0.5) ? { notes: pick(rng, TL_NOTE_BODIES) } : {}),
+      };
+    }
+    case 'note_added':
+      return { body: pick(rng, TL_NOTE_BODIES) };
+    case 'task_created':
+    case 'task_completed':
+      return { title: pick(rng, TL_TASK_TITLES) };
+    case 'status_changed': {
+      const from = pick(rng, statusLabels);
+      const to = statusLabels.find((label) => label !== from) ?? from;
+      return { from, to };
+    }
+    case 'sequence_enrolled':
+      return { sequence: pick(rng, TL_SEQUENCES) };
+    case 'sequence_step_sent':
+      return { sequence: pick(rng, TL_SEQUENCES), step: int(rng, 1, 5) };
+    case 'lead_created':
+      return {};
+  }
+}
+
 function buildDb(): MockDb {
   const rng = mulberry32(SEED);
 
@@ -317,7 +398,7 @@ function buildDb(): MockDb {
         userId: type === 'email_received' || type === 'lead_created' ? null : owner.id,
         type,
         occurredAt: hoursAgo(int(rng, 1, 24 * 80)),
-        payload: { channel: 'mock' },
+        payload: timelinePayload(rng, type, STATUS_LABELS),
         createdAt: daysAgo(createdDays),
         updatedAt: daysAgo(createdDays),
       });
