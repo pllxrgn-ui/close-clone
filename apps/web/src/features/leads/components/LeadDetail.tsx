@@ -15,6 +15,7 @@ import { LeadHeader } from './LeadHeader.tsx';
 import { Timeline } from './Timeline.tsx';
 import { LeadContactsCard } from './LeadContactsCard.tsx';
 import { LeadOpportunitiesCard } from './LeadOpportunitiesCard.tsx';
+import { SimulateReplyButton } from './SimulateReplyButton.tsx';
 import { LeadCallSummaries } from '../../ai/index.ts';
 
 /*
@@ -124,6 +125,9 @@ export function LeadDetail({ leadId }: LeadDetailProps): JSX.Element {
 
       <div className="lead-detail__body">
         <main className="lead-detail__center" aria-label="Activity timeline">
+          <div className="lead-detail__tl-tools">
+            <SimulateReplyButton lead={lead} />
+          </div>
           <Timeline
             events={events}
             userName={userName}

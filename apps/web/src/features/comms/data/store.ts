@@ -30,6 +30,7 @@ import type {
   Template,
 } from '@switchboard/shared';
 import { db } from '../../../mocks/fixtures.ts';
+import { workspaceMode } from '../../../mocks/workspace.ts';
 import { mulberry32, uuidFrom } from '../../../mocks/seed.ts';
 import { adminStore } from '../../admin/mocks/adminStore.ts';
 
@@ -253,7 +254,10 @@ function buildInitialState(): CommsState {
   const sequences: Sequence[] = [];
   const steps: SequenceStep[] = [];
   const enrollments: SequenceEnrollment[] = [];
-  const candidates = enrollmentCandidates();
+  // Blank workspace: scaffolding only (sequences + steps + library) — NEVER
+  // fabricate enrollments/suppressions onto the user's own leads. Without this
+  // gate, a reload after an import seeded sample rosters on imported contacts.
+  const candidates = workspaceMode() === 'blank' ? [] : enrollmentCandidates();
   const owner = db.users[0]?.id ?? null;
   let candidateCursor = 0;
 

@@ -185,3 +185,54 @@ describe('personal-account workspace owners', () => {
     expect(db.leadStatuses.length).toBeGreaterThan(0);
   });
 });
+
+describe('blank mode: feature stores seed NO fabricated history', () => {
+  test('with hydrated user data present, comms/sms/calls stores stay clean', async () => {
+    // Regression: after a reload, sample seeding used the USER's imported
+    // leads/contacts as candidates — phantom enrollments, threads, and even a
+    // suppression on the user's first phone number.
+    const lead = makeLead({ name: 'My Real Company', dnc: false });
+    setWorkspaceMode('blank');
+    saveBlankSnapshot({
+      v: 1,
+      leads: [lead],
+      contacts: [
+        {
+          id: '22222222-2222-4222-8222-222222222222',
+          leadId: lead.id,
+          name: 'Real Contact',
+          title: null,
+          emails: [{ email: 'real@example.com', label: 'work' }],
+          phones: [{ phone: '+12065550000', label: 'work' }],
+          dnc: false,
+          createdAt: lead.createdAt,
+          updatedAt: lead.createdAt,
+          deletedAt: null,
+        },
+      ],
+      opportunities: [],
+      activities: [],
+      smartViews: [],
+    });
+    vi.resetModules();
+    const { db } = await import('./fixtures.ts');
+    expect(db.contacts).toHaveLength(1);
+
+    const { commsStore } = await import('../features/comms/data/store.ts');
+    expect(commsStore.enrollments).toHaveLength(0);
+    expect(commsStore.suppressedEmails.size).toBe(0);
+    // Scaffolding survives: sequences + steps exist to enroll into.
+    expect(commsStore.sequences.length).toBeGreaterThan(0);
+    expect(commsStore.steps.length).toBeGreaterThan(0);
+
+    const { smsStore } = await import('../features/sms/data/store.ts');
+    expect(smsStore.messages).toHaveLength(0);
+    expect(smsStore.suppressedNumbers.size).toBe(0);
+
+    const { callsStore } = await import('../features/calling/data/callsStore.ts');
+    expect(callsStore.suppressedPhones.size).toBe(0);
+
+    const { aiStore } = await import('../features/ai/data/store.ts');
+    expect(aiStore.calls).toHaveLength(0);
+  });
+});

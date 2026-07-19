@@ -16,6 +16,7 @@
  */
 import type { Call } from '@switchboard/shared';
 import { db } from '../../../mocks/fixtures.ts';
+import { workspaceMode } from '../../../mocks/workspace.ts';
 import { chance, int, mulberry32, pick, uuidFrom } from '../../../mocks/seed.ts';
 
 /** An AI-generated call-summary note as tracked by the demo (draft → final). */
@@ -71,6 +72,11 @@ function firstContactByLead(): Map<string, string> {
 }
 
 function buildInitialState(): AiState {
+  // Blank workspace: no fabricated calls/transcripts on the user's own leads —
+  // Call Summaries shows its honest empty state until real calls exist.
+  if (workspaceMode() === 'blank') {
+    return { calls: [], transcripts: new Map(), notes: [] };
+  }
   const rng = mulberry32(SEED);
   const contactByLead = firstContactByLead();
   const calls: Call[] = [];

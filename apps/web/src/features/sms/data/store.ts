@@ -18,6 +18,7 @@
  */
 import type { SmsMessage } from '@switchboard/shared';
 import { db } from '../../../mocks/fixtures.ts';
+import { workspaceMode } from '../../../mocks/workspace.ts';
 import { mulberry32, uuidFrom } from '../../../mocks/seed.ts';
 import { phoneMatchKey } from '../lib/sms.ts';
 
@@ -160,7 +161,9 @@ function buildInitialState(): SmsState {
   const messages: SmsMessage[] = [];
   const suppressedNumbers = new Set<string>();
 
-  const phoneLeads = db.leads
+  // Blank workspace: no fabricated threads/opt-outs on the user's own leads.
+  const blank = workspaceMode() === 'blank';
+  const phoneLeads = (blank ? [] : db.leads)
     .filter((l) => l.deletedAt === null && !l.dnc)
     .map((l) => ({ lead: l, contact: firstPhoneContact(l.id) }))
     .filter(
@@ -199,7 +202,7 @@ function buildInitialState(): SmsState {
 
   // A DNC lead: seed a short prior thread so the drawer is not empty; the composer
   // blocks on the lead's dnc flag regardless of the number.
-  const dncLead = db.leads.find((l) => l.deletedAt === null && l.dnc);
+  const dncLead = blank ? undefined : db.leads.find((l) => l.deletedAt === null && l.dnc);
   if (dncLead) {
     const contact = firstPhoneContact(dncLead.id);
     if (contact) {

@@ -13,6 +13,7 @@
  */
 import type { Call } from '@switchboard/shared';
 import { db } from '../../../mocks/fixtures.ts';
+import { workspaceMode } from '../../../mocks/workspace.ts';
 import { phoneMatchKey } from '../lib/presets.ts';
 
 /** Statuses that mean a call is still on the wire (mirrors dialer.ACTIVE_CALL_STATUSES). */
@@ -50,7 +51,9 @@ function seedSuppressedPhone(): Set<string> {
 function buildInitialState(): CallsState {
   return {
     calls: [],
-    suppressedPhones: seedSuppressedPhone(),
+    // Blank workspace: a personal org starts with NO suppressions — the sample
+    // seed would otherwise block dialing the user's own first imported contact.
+    suppressedPhones: workspaceMode() === 'blank' ? new Set<string>() : seedSuppressedPhone(),
     recordingEnabled: true,
   };
 }

@@ -72,11 +72,78 @@ function toStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
 }
 
+/** Canned inbound-reply content for the demo simulator (operator voice). */
+const DEMO_REPLY_SUBJECTS = [
+  'Re: Pricing for the annual plan',
+  'Re: Pilot rollout timeline',
+  'Question about the security review',
+  'Can we move the call to Thursday?',
+] as const;
+const DEMO_REPLY_SNIPPETS = [
+  'Thanks — this looks close. Two questions on the annual terms before we sign.',
+  'Looping in our VP of Eng. Can you send the SOC 2 report?',
+  'We are ready to move forward. What do you need from us?',
+  'Could we push kickoff a week? Quarter-end crunch on our side.',
+] as const;
+
 export const commsHandlers = [
   // Templates + snippets are OWNED by the admin feature (`GET /templates`,
   // `GET /snippets`) — the composer library reads the admin store. Those handlers
   // register before comms in production order, so a duplicate here was always
   // shadowed; it is removed to keep one owner per route (no MSW collision).
+
+  // ── DEMO ONLY: simulate an inbound reply (NOT a C7 route — /demo/*) ────────
+  // The static demo has no Gmail/Twilio, so nothing can arrive on its own. This
+  // route stands in for the sync engine's ingest: it lands a real
+  // email_received on the timeline, flips the lead's unanswered-inbound signal
+  // (NEW REPLY lamp + inbox reply queue on next boot), and — the §4.3 story —
+  // reply-pauses any ACTIVE enrollment for that contact, landing the
+  // sequence_paused activity exactly like the engine's reply-pause path.
+  http.post(api('/demo/inbound-reply'), async ({ request }) => {
+    const body = await readJson(request);
+    const leadId = body && typeof body.leadId === 'string' ? body.leadId : '';
+    if (leadId === '') return errorJson(400, 'VALIDATION_FAILED', 'leadId is required');
+    const lead = db.leads.find((l) => l.id === leadId && l.deletedAt === null);
+    if (!lead) return errorJson(404, 'NOT_FOUND', 'Lead not found');
+    const contact = db.contacts.find((c) => c.leadId === leadId && c.deletedAt === null);
+    if (!contact) {
+      return errorJson(422, 'VALIDATION_FAILED', 'This lead has no contact to reply from');
+    }
+
+    // Rotate content by timeline length — deterministic per state, varied in use.
+    const pickIndex = (db.activitiesByLead.get(leadId)?.length ?? 0) % DEMO_REPLY_SUBJECTS.length;
+    const subject = DEMO_REPLY_SUBJECTS[pickIndex] ?? DEMO_REPLY_SUBJECTS[0];
+    const snippet = DEMO_REPLY_SNIPPETS[pickIndex] ?? DEMO_REPLY_SNIPPETS[0];
+    const activity = appendActivity({
+      leadId,
+      contactId: contact.id,
+      type: 'email_received',
+      payload: { subject, snippet },
+    });
+    lead.lastInboundAt = activity.occurredAt;
+    lead.updatedAt = activity.occurredAt;
+
+    // Reply ends the cadence (I-SEND-2 semantics, demo edition): pause every
+    // live enrollment for this contact before its next send could claim.
+    let paused = 0;
+    for (const enrollment of commsStore.enrollments) {
+      if (enrollment.contactId !== contact.id || enrollment.state !== 'active') continue;
+      enrollment.state = 'paused';
+      enrollment.pausedReason = 'reply';
+      enrollment.updatedAt = activity.occurredAt;
+      const sequenceName =
+        commsStore.sequences.find((s) => s.id === enrollment.sequenceId)?.name ?? 'sequence';
+      appendActivity({
+        leadId,
+        contactId: contact.id,
+        type: 'sequence_paused',
+        payload: { reason: 'reply', sequence: sequenceName },
+      });
+      paused += 1;
+    }
+
+    return HttpResponse.json({ activity, contactName: contact.name, subject, paused });
+  }),
 
   // ── Suppressed recipients for a lead (rep-facing rail signal) ──────────────
   // Minimal, lead-scoped read: which of this lead's contact emails are globally

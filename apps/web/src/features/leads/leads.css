@@ -1096,3 +1096,20 @@
     border-bottom: 1px solid var(--border-0);
   }
 }
+
+/* ── Demo tools row above the timeline (mock mode only) ────────────────────── */
+.lead-detail__tl-tools {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-2);
+}
+.lead-demo-reply {
+  border: 1px dashed var(--border-1);
+  color: var(--ink-2);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.04em;
+}
+.lead-demo-reply:hover {
+  color: var(--state-seq);
+  border-color: var(--state-seq);
+}

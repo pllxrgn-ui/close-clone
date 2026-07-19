@@ -312,3 +312,55 @@ describe('GET /emails/suppressed-recipients', () => {
     expect(errorCode(await res.json())).toBe('VALIDATION_FAILED');
   });
 });
+
+describe('POST /demo/inbound-reply (demo simulator — not a C7 route)', () => {
+  test('lands email_received newest-first, flips the unanswered-inbound signal, reply-pauses live enrollments', async () => {
+    // A contact with an ACTIVE enrollment — the §4.3 reply-pause story.
+    const enrollment = commsStore.enrollments.find((e) => e.state === 'active');
+    if (!enrollment) throw new Error('store must seed an active enrollment');
+    const lead = db.leads.find((l) => l.id === enrollment.leadId && l.deletedAt === null);
+    if (!lead) throw new Error('enrollment lead missing from fixtures');
+    const before = db.activitiesByLead.get(lead.id)?.length ?? 0;
+
+    const res = await fetch('/api/v1/demo/inbound-reply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ leadId: lead.id }),
+    });
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as { subject: string; paused: number };
+    expect(json.subject.length).toBeGreaterThan(0);
+    expect(json.paused).toBeGreaterThanOrEqual(1);
+
+    const events = db.activitiesByLead.get(lead.id) ?? [];
+    // Newest-first: sequence_paused was appended after the email_received.
+    expect(events.length).toBeGreaterThanOrEqual(before + 2);
+    expect(events.some((e) => e.type === 'email_received')).toBe(true);
+    expect(events.some((e) => e.type === 'sequence_paused' && e.payload.reason === 'reply')).toBe(
+      true,
+    );
+    // The lead now reads as an unanswered inbound (NEW REPLY signal).
+    expect(lead.lastInboundAt).not.toBeNull();
+    expect(enrollment.state).toBe('paused');
+    expect(enrollment.pausedReason).toBe('reply');
+
+    // Restore the shared store for the rest of this file.
+    enrollment.state = 'active';
+    enrollment.pausedReason = null;
+  });
+
+  test('validates: missing leadId 400, unknown lead 404', async () => {
+    const bad = await fetch('/api/v1/demo/inbound-reply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    expect(bad.status).toBe(400);
+    const missing = await fetch('/api/v1/demo/inbound-reply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ leadId: '00000000-0000-4000-8000-000000000000' }),
+    });
+    expect(missing.status).toBe(404);
+  });
+});
