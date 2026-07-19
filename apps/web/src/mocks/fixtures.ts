@@ -22,6 +22,8 @@ import type {
 import { parse } from '@switchboard/shared';
 import type { SearchHit } from '../api/types.ts';
 import { chance, int, mulberry32, pick, uuidFrom } from './seed.ts';
+import { loadBlankSnapshot, workspaceMode } from './workspace.ts';
+import type { BlankSnapshot } from './workspace.ts';
 
 const SEED = 0x5b0a2d;
 
@@ -488,5 +490,35 @@ function buildSearchIndex(leads: Lead[], contacts: Contact[], statuses: LeadStat
   return hits;
 }
 
+/**
+ * Blank workspace (see mocks/workspace.ts): keep the org scaffolding — users,
+ * statuses, stages, the shipped smart views — but empty the user-owned core,
+ * then hydrate whatever this device persisted (typed-in leads, CSV imports,
+ * their timelines). The search index is rebuilt over the hydrated rows.
+ */
+function applyWorkspace(built: MockDb): MockDb {
+  if (workspaceMode() !== 'blank') return built;
+  const snapshot = loadBlankSnapshot();
+  built.leads = snapshot?.leads ?? [];
+  built.contacts = snapshot?.contacts ?? [];
+  built.opportunities = snapshot?.opportunities ?? [];
+  built.activitiesByLead = new Map(snapshot?.activities ?? []);
+  if (snapshot && snapshot.smartViews.length > 0) built.smartViews = snapshot.smartViews;
+  built.searchIndex = buildSearchIndex(built.leads, built.contacts, built.leadStatuses);
+  return built;
+}
+
 /** The single, deterministic in-memory database backing every MSW handler. */
-export const db: MockDb = buildDb();
+export const db: MockDb = applyWorkspace(buildDb());
+
+/** Serializable snapshot of the user-owned core (blank-workspace persistence). */
+export function snapshotDb(): BlankSnapshot {
+  return {
+    v: 1,
+    leads: db.leads,
+    contacts: db.contacts,
+    opportunities: db.opportunities,
+    activities: [...db.activitiesByLead.entries()],
+    smartViews: db.smartViews,
+  };
+}

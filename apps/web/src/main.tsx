@@ -6,6 +6,7 @@ import './ui/primitives.css';
 import './app/shell.css';
 import './styles/overlays.css';
 import App from './App.tsx';
+import { ErrorBoundary } from './app/ErrorBoundary.tsx';
 
 /*
  * API mode (VITE_API_MODE): "real" talks to the local API through the Vite /api
@@ -19,6 +20,14 @@ async function enableMocking(): Promise<void> {
     onUnhandledRequest: 'bypass',
     serviceWorker: { url: `${import.meta.env.BASE_URL}mockServiceWorker.js` },
   });
+  // Blank workspace: persist the user-owned core on a heartbeat + tab-hide so
+  // typed-in leads and CSV imports survive reloads on this device. No-op in
+  // sample mode; started here (never at module scope — tests import the mocks).
+  const [{ startWorkspacePersistence }, { snapshotDb }] = await Promise.all([
+    import('./mocks/workspace.ts'),
+    import('./mocks/fixtures.ts'),
+  ]);
+  startWorkspacePersistence(snapshotDb);
 }
 
 const rootElement = document.getElementById('root');
@@ -26,10 +35,17 @@ if (!rootElement) {
   throw new Error('Root element #root not found');
 }
 
-void enableMocking().then(() => {
-  createRoot(rootElement).render(
-    <StrictMode>
-      <App />
-    </StrictMode>,
-  );
-});
+// A failed mock-worker start (stale service worker mid-deploy, private mode)
+// must not leave a blank page: render anyway — the C8 error states cover a dead
+// API far better than nothing at all.
+void enableMocking()
+  .catch((err: unknown) => console.error('[sb] mock worker failed to start', err))
+  .then(() => {
+    createRoot(rootElement).render(
+      <StrictMode>
+        <ErrorBoundary>
+          <App />
+        </ErrorBoundary>
+      </StrictMode>,
+    );
+  });

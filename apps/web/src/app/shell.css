@@ -809,3 +809,102 @@
     display: none;
   }
 }
+
+/* ── Login: workspace picker (sample vs blank) ─────────────────────────────── */
+.sb-login__ws {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 var(--space-2);
+}
+.sb-login__ws-option {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-0);
+  border-radius: var(--radius-1);
+  background: var(--surface-1);
+  color: var(--ink-1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.sb-login__ws-option:hover {
+  background: var(--surface-2);
+  color: var(--ink-0);
+}
+.sb-login__ws-option.is-selected {
+  border-color: var(--focus);
+  color: var(--ink-0);
+}
+.sb-login__ws-option:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus);
+  outline-offset: 2px;
+}
+.sb-login__ws-label {
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-sm);
+}
+.sb-login__ws-hint {
+  font-size: var(--fs-micro);
+  color: var(--ink-2);
+  line-height: var(--lh-loose);
+}
+.sb-login__ws-reset {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--state-dnc);
+  font: inherit;
+  font-size: var(--fs-micro);
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.sb-login__ws-reset:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus);
+  outline-offset: 2px;
+}
+@media (max-width: 480px) {
+  .sb-login__ws {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Crash armor: the ErrorBoundary fallback (must not depend on app css) ──── */
+.sb-crash {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: var(--space-6);
+  background: var(--surface-0);
+}
+.sb-crash__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 420px;
+  padding: var(--space-6);
+  border: 1px solid var(--border-0);
+  background: var(--surface-1);
+}
+.sb-crash__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-display-strong);
+  color: var(--ink-0);
+}
+.sb-crash__hint {
+  margin: 0;
+  color: var(--ink-1);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-loose);
+}
+.sb-crash__actions {
+  display: flex;
+  justify-content: flex-end;
+}
