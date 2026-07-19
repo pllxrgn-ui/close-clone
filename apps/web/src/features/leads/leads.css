@@ -302,6 +302,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+  min-height: 24px; /* WCAG 2.5.8 target size; the head row absorbs the height */
   border: none;
   background: transparent;
   color: inherit;
@@ -365,6 +366,14 @@
 .lead-row:focus-visible {
   outline: var(--focus-ring-width) solid var(--focus-ring);
   outline-offset: calc(-1 * var(--focus-ring-width));
+}
+/* The label is the tap target (>=24px, WCAG 2.5.8); the glyph stays dense. */
+.lead-check-hit {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
 }
 .lead-check {
   width: 14px;

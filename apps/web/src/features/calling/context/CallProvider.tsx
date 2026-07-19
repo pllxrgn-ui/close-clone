@@ -213,7 +213,9 @@ export function CallProvider({
       } catch (err) {
         if (err instanceof ApiError) {
           if (err.code === 'SUPPRESSED') {
-            toast(`Blocked — ${target.leadName} is on the do-not-contact list`);
+            // The block toast is the ONLY explanation for the refused dial —
+            // give it time to be read (audit: 4s was missable).
+            toast(`Blocked — ${target.leadName} is on the do-not-contact list`, { ttl: 8000 });
             return { ok: false, reason: 'blocked' };
           }
           if (err.code === 'CONFLICT') {

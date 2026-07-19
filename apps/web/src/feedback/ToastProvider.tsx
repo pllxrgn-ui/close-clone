@@ -16,8 +16,12 @@ interface ToastItem {
 }
 
 interface ToastContextValue {
-  /** Show a transient status message. */
-  toast: (message: string) => void;
+  /**
+   * Show a transient status message. `opts.ttl` overrides the provider default
+   * for THIS toast — compliance blocks use a longer TTL (the toast is the only
+   * explanation for "why did nothing happen", so it must not evaporate).
+   */
+  toast: (message: string, opts?: { ttl?: number }) => void;
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -49,13 +53,14 @@ export function ToastProvider({
   }, []);
 
   const toast = useCallback(
-    (message: string) => {
+    (message: string, opts?: { ttl?: number }) => {
       const id = crypto.randomUUID();
+      const effectiveTtl = opts?.ttl ?? ttl;
       setItems((prev) => [...prev, { id, message }]);
-      if (ttl > 0) {
+      if (effectiveTtl > 0) {
         timers.current.set(
           id,
-          setTimeout(() => dismiss(id), ttl),
+          setTimeout(() => dismiss(id), effectiveTtl),
         );
       }
     },

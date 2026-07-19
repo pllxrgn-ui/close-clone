@@ -175,6 +175,9 @@
   list-style: none;
 }
 .sb-welcome__nav-link {
+  /* 25px hit box (WCAG 2.5.8) with zero visual shift. */
+  padding-block: 6px;
+  margin-block: -6px;
   color: var(--ink-dim);
   font-size: 13px;
   font-weight: 500;

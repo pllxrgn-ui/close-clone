@@ -36,7 +36,10 @@
  *   ink-1 (mid) / bg            10.67  AAA        |  8.70  AAA
  *   ink-2 (dim) / bg             5.86  AA         |  5.43  AA
  *   ink-2 (dim) / panel-raised   4.90  AA         |  6.37  AA
- *   ink-3 (faint) / bg  (UI)     4.13  AA-UI      |  3.79  AA-UI
+ *   ink-3 (faint) / bg           5.14  AA         |  4.79  AA
+ *   ink-3 (faint) / panel        4.74  AA         |  5.25  AA
+ *     (faint became TEXT-GRADE in D-051 — the audit found it carrying
+ *      real text app-wide. On raised/hover surfaces still prefer ink-2.)
  *   focus / bg          (UI)     9.52  AA-UI      |  3.69  AA-UI
  *   link (accent-strong) / bg    9.52  AA         |  4.93  AA
  *   reply  lamp / panel (UI)    10.26             |  4.97
@@ -157,7 +160,7 @@
   --ink: #e8ebec;
   --ink-mid: #c2c8ce;
   --ink-dim: #8c949c;
-  --ink-faint: #727a82;
+  --ink-faint: #828a92;
 
   --focus: #56c8ff;
   --link: #56c8ff;
@@ -245,7 +248,7 @@
     --ink: #1b1e20;
     --ink-mid: #3b4247;
     --ink-dim: #5a6065;
-    --ink-faint: #727880;
+    --ink-faint: #62686f;
 
     --focus: #0b7fc4;
     --link: #0a6aa6;
@@ -289,7 +292,7 @@
   --ink: #e8ebec;
   --ink-mid: #c2c8ce;
   --ink-dim: #8c949c;
-  --ink-faint: #727a82;
+  --ink-faint: #828a92;
 
   --focus: #56c8ff;
   --link: #56c8ff;
@@ -331,7 +334,7 @@
   --ink: #1b1e20;
   --ink-mid: #3b4247;
   --ink-dim: #5a6065;
-  --ink-faint: #727880;
+  --ink-faint: #62686f;
 
   --focus: #0b7fc4;
   --link: #0a6aa6;

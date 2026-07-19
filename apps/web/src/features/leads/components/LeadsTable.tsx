@@ -158,14 +158,17 @@ export function LeadsTable({
         <div className="lead-table__head" role="rowgroup">
           <div className="lead-table__row lead-table__row--head" role="row" aria-rowindex={1}>
             <span className="lead-cell lead-cell--select" role="columnheader">
-              <input
-                ref={selectAllRef}
-                type="checkbox"
-                className="lead-check"
-                aria-label="Select all loaded leads"
-                checked={selectAllState === 'all'}
-                onChange={onToggleSelectAll}
-              />
+              {/* The label is the 24px hit area (WCAG 2.5.8); the glyph stays dense. */}
+              <label className="lead-check-hit">
+                <input
+                  ref={selectAllRef}
+                  type="checkbox"
+                  className="lead-check"
+                  aria-label="Select all loaded leads"
+                  checked={selectAllState === 'all'}
+                  onChange={onToggleSelectAll}
+                />
+              </label>
             </span>
             {columns.map((col) => {
               const active = sort?.key === col.key;
@@ -244,14 +247,17 @@ export function LeadsTable({
                 >
                   <Rail state={primary} className="lead-row__rail" />
                   <span className="lead-cell lead-cell--select" role="gridcell">
-                    <input
-                      type="checkbox"
-                      className="lead-check"
-                      aria-label={`Select ${lead.name}`}
-                      checked={selected}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={() => onToggleSelect(lead.id)}
-                    />
+                    {/* stopPropagation lives on the LABEL: a click in its padded
+                        hit area must toggle without also opening the row. */}
+                    <label className="lead-check-hit" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        className="lead-check"
+                        aria-label={`Select ${lead.name}`}
+                        checked={selected}
+                        onChange={() => onToggleSelect(lead.id)}
+                      />
+                    </label>
                   </span>
                   {columns.map((col) => (
                     <span

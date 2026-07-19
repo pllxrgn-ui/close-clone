@@ -50,6 +50,32 @@ describe('ToastProvider', () => {
     await waitForElementToBeRemoved(() => screen.queryByText('fleeting'));
   });
 
+  test('a per-toast ttl outlives the provider default (compliance blocks)', async () => {
+    function TwoSpeeds(): ReactNode {
+      const { toast } = useToast();
+      return (
+        <button
+          type="button"
+          onClick={() => {
+            toast('quick note');
+            toast('dial blocked — read me', { ttl: 60_000 });
+          }}
+        >
+          fire both
+        </button>
+      );
+    }
+    render(
+      <ToastProvider ttl={40}>
+        <TwoSpeeds />
+      </ToastProvider>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'fire both' }));
+    // The default-ttl toast goes; the long-ttl block explanation stays.
+    await waitForElementToBeRemoved(() => screen.queryByText('quick note'));
+    expect(screen.getByText('dial blocked — read me')).toBeInTheDocument();
+  });
+
   test('throws when used outside a provider', () => {
     function Bare(): ReactNode {
       useToast();
