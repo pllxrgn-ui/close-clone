@@ -30,11 +30,11 @@ Every push to `main` redeploys automatically once the project is connected.
 
 ## Vercel demo (stable public URL, no laptop required)
 
-The mock demo is deployed to Vercel (account `pdvillorente12-1736`) under two
+The mock demo is deployed to Vercel (account `pllxrgn-ui` (GitHub-linked)) under two
 projects serving the same build:
 
-- **https://switchboard-crm-demo.vercel.app** — the primary, clean address
-- https://switchboard-demo-three.vercel.app — the original link, kept alive
+- **https://switchboard-demo-omega.vercel.app** — the primary, clean address
+- https://switchboard-demo-omega.vercel.app — the original link, kept alive
   so anything already shared keeps working
 
 Static hosting of `apps/web/dist` (mock mode, MSW in-browser) with one SPA
@@ -47,12 +47,16 @@ pnpm --filter @switchboard/web build      # must print "built in ..." (a tsc err
 STAGE=$(mktemp -d)/switchboard-demo && mkdir -p "$STAGE"
 cp -r apps/web/dist/. "$STAGE/"
 printf '{ "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }' > "$STAGE/vercel.json"
-(cd "$STAGE" \n  && DEPLOY=$(npx vercel deploy --prod --yes 2>&1 | grep -oE 'https://[a-z0-9.-]+vercel\.app' | tail -1) \n  && npx vercel alias set "$DEPLOY" switchboard-demo-three.vercel.app)
-# The alias is PINNED (a manual alias set detached auto-promotion) — the
-# explicit alias set above is REQUIRED, and the edge may serve the previous
-# HTML for a couple of minutes.
+(cd "$STAGE" \n  && DEPLOY=$(npx vercel deploy --prod --yes 2>&1 | grep -oE 'https://[a-z0-9.-]+vercel\.app' | tail -1) \n  && npx vercel alias set "$DEPLOY" switchboard-demo-omega.vercel.app)
+# Fresh project under pllxrgn-ui: `--prod` auto-updates the production
+# alias; the explicit alias set is a harmless belt-and-braces. The edge may
+# serve the previous HTML for a couple of minutes after a deploy.
 # Repeat from a dir named switchboard-crm-demo to update the primary URL.
 ```
+
+Two stale projects remain on the FORMER account (`pdvillorente12-1736`):
+`switchboard-demo` + `switchboard-crm-demo` — delete via that account's
+dashboard when convenient (Settings → Delete Project).
 
 GitHub Pages remains the auto-deploying mirror (every push to main):
 https://pllxrgn-ui.github.io/close-clone/
