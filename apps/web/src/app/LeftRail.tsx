@@ -51,10 +51,16 @@ function RailLink({ item, collapsed }: RailLinkProps): JSX.Element {
 
 interface LeftRailProps {
   collapsed: boolean;
+  /** Viewport-forced collapse — hides the toggle (the state is not a preference). */
+  forcedCollapsed?: boolean;
   onToggleCollapse: () => void;
 }
 
-export function LeftRail({ collapsed, onToggleCollapse }: LeftRailProps): JSX.Element {
+export function LeftRail({
+  collapsed,
+  forcedCollapsed = false,
+  onToggleCollapse,
+}: LeftRailProps): JSX.Element {
   return (
     <nav className="sb-rail" aria-label="Primary" data-collapsed={collapsed || undefined}>
       <ul className="sb-rail__list">
@@ -74,20 +80,22 @@ export function LeftRail({ collapsed, onToggleCollapse }: LeftRailProps): JSX.El
           ))}
         </ul>
 
-        <button
-          type="button"
-          className="sb-rail__collapse"
-          onClick={onToggleCollapse}
-          aria-expanded={!collapsed}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {collapsed ? (
-            <PanelLeftOpenIcon size={16} className="sb-rail__icon" />
-          ) : (
-            <PanelLeftCloseIcon size={16} className="sb-rail__icon" />
-          )}
-          {collapsed ? null : <span className="sb-rail__label">Collapse</span>}
-        </button>
+        {forcedCollapsed ? null : (
+          <button
+            type="button"
+            className="sb-rail__collapse"
+            onClick={onToggleCollapse}
+            aria-expanded={!collapsed}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? (
+              <PanelLeftOpenIcon size={16} className="sb-rail__icon" />
+            ) : (
+              <PanelLeftCloseIcon size={16} className="sb-rail__icon" />
+            )}
+            {collapsed ? null : <span className="sb-rail__label">Collapse</span>}
+          </button>
+        )}
       </div>
     </nav>
   );

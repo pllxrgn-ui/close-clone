@@ -74,7 +74,11 @@ function ShellChrome(): JSX.Element {
         Skip to content
       </a>
       <TopBar searchRef={searchRef} onOpenPalette={openPalette} />
-      <LeftRail collapsed={rail.collapsed} onToggleCollapse={rail.toggle} />
+      <LeftRail
+        collapsed={rail.collapsed}
+        forcedCollapsed={rail.forced}
+        onToggleCollapse={rail.toggle}
+      />
       <main className="sb-main" id="main-content" tabIndex={-1}>
         <Suspense fallback={<PageLoading />}>
           <Outlet />

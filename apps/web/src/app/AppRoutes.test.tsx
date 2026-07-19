@@ -41,9 +41,10 @@ describe('app shell + routing (authenticated)', () => {
 
     // The Inbox landing now fetches (React Query) before this navigates away, so
     // under full-suite parallel load the lazy Leads chunk can render just past the
-    // 1s findBy default. Give it headroom; the app itself navigates instantly.
+    // 1s findBy default. Give it real headroom — measured 3.95s under a full
+    // parallel run, so 4s sat on the cliff. The app itself navigates instantly.
     expect(
-      await screen.findByRole('heading', { name: 'All leads', level: 1 }, { timeout: 4000 }),
+      await screen.findByRole('heading', { name: 'All leads', level: 1 }, { timeout: 10_000 }),
     ).toBeInTheDocument();
     expect(leadsLink).toHaveAttribute('aria-current', 'page');
   });

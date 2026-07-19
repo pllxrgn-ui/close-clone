@@ -343,3 +343,17 @@
   display: flex;
   gap: var(--space-3);
 }
+
+/* ── Narrow viewports (≤900px): actions wrap to their own line, right-aligned,
+ * instead of clipping past the viewport edge (audit: Complete/Snooze rects at
+ * 528px in a 493px viewport). Wrap order keeps lamp → content → time intact. */
+@media (max-width: 900px) {
+  .sb-inbox__row {
+    flex-wrap: wrap;
+    row-gap: var(--space-1);
+  }
+  .sb-inbox__row-actions {
+    margin-left: auto;
+    padding-bottom: var(--space-2);
+  }
+}

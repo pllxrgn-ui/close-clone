@@ -945,3 +945,34 @@
   gap: var(--space-3);
   margin-top: var(--space-2);
 }
+
+/* ── Narrow viewports (≤900px) ──────────────────────────────────────────────
+ * Lead page: the 320px right rail stacks under the timeline; the dense lead
+ * grid keeps its columns and scrolls INSIDE its own container (the page never
+ * scrolls sideways). */
+@media (max-width: 900px) {
+  .lead-detail__body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5);
+    padding: var(--space-5) var(--space-4);
+  }
+  .lead-table__grid {
+    overflow-x: auto;
+  }
+  .lead-table__row,
+  .lead-row {
+    min-width: 720px;
+  }
+  /* The Smart-Views sub-rail stops being a fixed column (it left the grid
+   * 95px of visible width on a phone) and becomes a capped, scrollable band
+   * above the full-width list. */
+  .leads-surface {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .sv-rail {
+    max-height: 200px;
+    border-right: none;
+    border-bottom: 1px solid var(--border-0);
+  }
+}

@@ -776,3 +776,36 @@
     border-color: var(--border-1);
   }
 }
+
+/* ── Narrow viewports (≤900px) ──────────────────────────────────────────────
+ * The rail is FORCED icon-only here (railState.ts owns that), and the top bar
+ * sheds optional chrome so global search keeps a usable width. Breakpoint =
+ * where the expanded rail starts crushing `main` below readable line lengths.
+ */
+@media (max-width: 900px) {
+  .sb-topbar {
+    gap: var(--space-3);
+  }
+  .sb-topbar__brand {
+    min-width: 0;
+  }
+  /* Glyph + demo ribbon stay; the wordmark goes. */
+  .sb-topbar__org {
+    display: none;
+  }
+  /* Ctrl+K still opens the palette — the labelled button is redundant chrome. */
+  .sb-topbar__cmdk {
+    display: none;
+  }
+  .sb-topbar__search {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .sb-topbar__search-input {
+    min-width: 96px;
+  }
+  /* The avatar alone is the account chip. */
+  .sb-usermenu__name {
+    display: none;
+  }
+}

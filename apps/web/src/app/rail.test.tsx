@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import * as axe from 'axe-core';
 import { db } from '../mocks/fixtures.ts';
 import { renderRoutes } from '../test/renderRoutes.tsx';
-import { RAIL_STORAGE_KEY } from './railState.ts';
+import { RAIL_NARROW_QUERY, RAIL_STORAGE_KEY } from './railState.ts';
 
 const [USER] = db.users;
 if (!USER) throw new Error('fixtures must include at least one user');
@@ -98,6 +98,38 @@ describe('LeftRail — collapse', () => {
 
     expect(within(rail()).getByRole('link', { name: /Inbox/ })).toHaveTextContent('Inbox');
     expect(localStorage.getItem(RAIL_STORAGE_KEY)).toBeNull();
+  });
+
+  test('a narrow viewport FORCES icon-only and removes the toggle (preference untouched)', async () => {
+    // Make the shim report a narrow viewport for the rail's media query only.
+    const original = window.matchMedia;
+    window.matchMedia = (query: string): MediaQueryList =>
+      ({
+        matches: query === RAIL_NARROW_QUERY,
+        media: query,
+        onchange: null,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        dispatchEvent: () => false,
+      }) as MediaQueryList;
+    try {
+      renderRoutes('/inbox', { user: USER });
+      await screen.findByRole('heading', { name: 'Inbox', level: 1 });
+
+      // Icon-only: the link keeps its accessible name but shows no label text.
+      const inbox = within(rail()).getByRole('link', { name: 'Inbox' });
+      expect(inbox).toHaveTextContent('');
+
+      // The collapse control is gone — this state is the viewport's, not a
+      // preference the rep can (uselessly) fight.
+      expect(screen.queryByRole('button', { name: /sidebar/ })).not.toBeInTheDocument();
+      // And nothing was written to the stored preference.
+      expect(localStorage.getItem(RAIL_STORAGE_KEY)).toBeNull();
+    } finally {
+      window.matchMedia = original;
+    }
   });
 
   test('a collapsed rail has no serious/critical axe violations', async () => {
