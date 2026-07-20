@@ -49,7 +49,7 @@ describe('keyboard layer wired into the shell', () => {
     expect(screen.queryByRole('dialog', { name: 'Command palette' })).not.toBeInTheDocument();
   });
 
-  test('the Views demo list has a working roving tabindex (useListNav)', async () => {
+  test('the Saved Views list has a working roving tabindex (useListNav)', async () => {
     renderRoutes('/views', { user: USER });
     const options = await screen.findAllByRole('option');
     expect(options.length).toBeGreaterThan(1);

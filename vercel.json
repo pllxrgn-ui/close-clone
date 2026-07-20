@@ -4,5 +4,19 @@
   "buildCommand": "pnpm --filter @switchboard/shared build || true && pnpm --filter @switchboard/web build",
   "outputDirectory": "apps/web/dist",
   "framework": null,
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    {
+      "source": "/api/v1/:path*",
+      "destination": "https://switchboard-api-pllxrgn.onrender.com/api/v1/:path*"
+    },
+    {
+      "source": "/wh/:path*",
+      "destination": "https://switchboard-api-pllxrgn.onrender.com/wh/:path*"
+    },
+    {
+      "source": "/healthz",
+      "destination": "https://switchboard-api-pllxrgn.onrender.com/healthz"
+    },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }

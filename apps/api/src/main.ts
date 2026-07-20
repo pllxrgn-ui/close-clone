@@ -15,7 +15,8 @@ import { createProviderRegistry, createEmailSenderRegistry } from './providers/r
 import { createBullmqQueueDriver } from './queue/index.ts';
 import type { QueueDriver } from './queue/index.ts';
 import { TokenCipher } from './services/sync/token-cipher.ts';
-import { MockGmailPushVerifier } from './services/sync/index.ts';
+import { GooglePubSubPushVerifier, MockGmailPushVerifier } from './services/sync/index.ts';
+import { createFetchTransport } from './auth/oidc/transport.ts';
 import { ImportStorage } from './services/imports/storage.ts';
 import { sweepDueIntents } from './services/sequences/sweeper.ts';
 import { processIntent } from './services/sequences/dispatch.ts';
@@ -142,13 +143,31 @@ function buildSessionReader(config: AppConfig): SessionReader {
  */
 export function assertRealModeConfig(config: AppConfig, env: NodeJS.ProcessEnv): void {
   if (config.mockMode) return;
-  const missing = ['OIDC_ISSUER', 'OIDC_CLIENT_ID', 'OIDC_CLIENT_SECRET'].filter(
-    (key) => (env[key] ?? '').trim() === '',
-  );
+  const requiredProductionKeys = [
+    'OIDC_ISSUER',
+    'OIDC_CLIENT_ID',
+    'OIDC_CLIENT_SECRET',
+    'WEB_ORIGIN',
+    'PUBLIC_WEBHOOK_URL',
+    'GOOGLE_CLIENT_ID',
+    'GOOGLE_CLIENT_SECRET',
+    'GMAIL_SENDER_ADDRESS',
+    'GMAIL_PUSH_AUDIENCE',
+    'GMAIL_PUSH_SERVICE_ACCOUNT_EMAIL',
+    'TWILIO_ACCOUNT_SID',
+    'TWILIO_AUTH_TOKEN',
+    'TWILIO_API_KEY_SID',
+    'TWILIO_API_KEY_SECRET',
+    'TWILIO_TWIML_APP_SID',
+    'TWILIO_PHONE_NUMBER',
+    'DEEPGRAM_API_KEY',
+    'ANTHROPIC_API_KEY',
+  ] as const;
+  const missing = requiredProductionKeys.filter((key) => (env[key] ?? '').trim() === '');
   if (missing.length > 0) {
     throw new Error(
-      `MOCK_MODE=0 requires company IdP config: ${missing.join(', ')} unset. ` +
-        'Set them (HUMAN_TODO.md → "Company IdP OIDC app") or run MOCK_MODE=1.',
+      `MOCK_MODE=0 requires every production integration: ${missing.join(', ')} unset. ` +
+        'Configure them before launch; production does not silently disable features.',
     );
   }
 }
@@ -194,10 +213,35 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
           address: env['GMAIL_SENDER_ADDRESS'] ?? '',
         }
       : undefined;
-  const registry = gmailConfigured
-    ? createProviderRegistry({ mockMode: config.mockMode, ...(gmail ? { gmail } : {}) })
-    : null;
-  const senderRegistry = createEmailSenderRegistry({ mockMode: config.mockMode });
+  const publicBaseUrl = env['PUBLIC_WEBHOOK_URL'] ?? `http://localhost:${config.port}`;
+  const twilioConfigured =
+    !config.mockMode &&
+    (env['TWILIO_ACCOUNT_SID'] ?? '') !== '' &&
+    (env['TWILIO_AUTH_TOKEN'] ?? '') !== '';
+  const registry = createProviderRegistry({
+    mockMode: config.mockMode,
+    ...(gmail ? { gmail } : {}),
+    ...(twilioConfigured
+      ? {
+          twilio: {
+            accountSid: env['TWILIO_ACCOUNT_SID']!,
+            authToken: env['TWILIO_AUTH_TOKEN']!,
+            ...(env['TWILIO_API_KEY_SID'] ? { apiKeySid: env['TWILIO_API_KEY_SID'] } : {}),
+            ...(env['TWILIO_API_KEY_SECRET'] ? { apiKeySecret: env['TWILIO_API_KEY_SECRET'] } : {}),
+            ...(env['TWILIO_TWIML_APP_SID'] ? { twimlAppSid: env['TWILIO_TWIML_APP_SID'] } : {}),
+            voiceUrl: `${publicBaseUrl}/wh/twilio/voice`,
+            statusCallbackUrl: `${publicBaseUrl}/wh/twilio/status`,
+            smsStatusCallbackUrl: `${publicBaseUrl}/wh/twilio/status`,
+          },
+        }
+      : {}),
+    ...(env['DEEPGRAM_API_KEY'] ? { deepgramApiKey: env['DEEPGRAM_API_KEY'] } : {}),
+    ...(env['ANTHROPIC_API_KEY'] ? { anthropicApiKey: env['ANTHROPIC_API_KEY'] } : {}),
+  });
+  const senderRegistry = createEmailSenderRegistry({
+    mockMode: config.mockMode,
+    ...(gmail ? { gmail } : {}),
+  });
   const cipher = new TokenCipher(config.sessionSecret);
 
   // buildLoggerOptions (not `logger: true`): it carries the req/res/err
@@ -295,14 +339,14 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
       clientId: env['OIDC_CLIENT_ID']!,
       clientSecret: env['OIDC_CLIENT_SECRET']!,
     });
-    const webOrigin = env['WEB_ORIGIN'] ?? env['PUBLIC_WEBHOOK_URL'] ?? '';
+    const webOrigin = env['WEB_ORIGIN']!;
     registerOidcAuthRoutes(app, {
       db,
       client: oidcClient,
       session: new SessionCodec({ secret: config.sessionSecret }),
       txn: new OidcTxnCodec({ secret: config.sessionSecret }),
       redirectUri: `${webOrigin}/api/v1/auth/callback`,
-      postLoginRedirect: `${webOrigin}/inbox`,
+      postLoginRedirect: `${webOrigin}/overview`,
       loginErrorRedirect: `${webOrigin}/login`,
     });
   }
@@ -320,14 +364,20 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
     // Email sync routes only when a provider exists (mock, or real + Gmail
     // configured). Absent → the routes are simply not mounted; the rest of the
     // API is unaffected.
-    ...(registry !== null
+    ...(registry.email !== undefined
       ? {
           email: {
             db,
             provider: registry.email,
             cipher,
-            verifier: new MockGmailPushVerifier(),
-            redirectUri: `${env['PUBLIC_WEBHOOK_URL'] ?? ''}/api/v1/oauth/gmail/callback`,
+            verifier: config.mockMode
+              ? new MockGmailPushVerifier()
+              : new GooglePubSubPushVerifier({
+                  audience: env['GMAIL_PUSH_AUDIENCE']!,
+                  serviceAccountEmail: env['GMAIL_PUSH_SERVICE_ACCOUNT_EMAIL']!,
+                  transport: createFetchTransport(),
+                }),
+            redirectUri: `${env['WEB_ORIGIN'] ?? ''}/api/v1/oauth/gmail/callback`,
             providerName: config.mockMode ? 'mock' : 'gmail',
           },
         }
@@ -363,7 +413,7 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
             ),
             dialProvider: registry.telephony,
             now: () => new Date(),
-            publicBaseUrl: env['PUBLIC_WEBHOOK_URL'] ?? `http://localhost:${config.port}`,
+            publicBaseUrl,
             queue,
             ...(env['TWILIO_PHONE_NUMBER'] !== undefined
               ? { callerId: env['TWILIO_PHONE_NUMBER'] }

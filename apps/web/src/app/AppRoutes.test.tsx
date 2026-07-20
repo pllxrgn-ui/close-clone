@@ -27,9 +27,9 @@ describe('app shell + routing (authenticated)', () => {
     expect(screen.getAllByText(USER.name).length).toBeGreaterThan(0);
   });
 
-  test('the index route redirects to /inbox', async () => {
+  test('the index route redirects to /overview', async () => {
     renderRoutes('/', { user: USER });
-    expect(await screen.findByRole('heading', { name: 'Inbox', level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Overview', level: 1 })).toBeInTheDocument();
   });
 
   test('clicking a rail link navigates and marks aria-current', async () => {

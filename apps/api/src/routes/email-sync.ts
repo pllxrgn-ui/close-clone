@@ -146,7 +146,7 @@ export function registerEmailSyncRoutes(app: FastifyInstance, deps: EmailRouteDe
     const rawBody = typeof request.body === 'string' ? request.body : JSON.stringify(request.body);
     const headers = normalizeHeaders(request.headers);
 
-    if (!deps.verifier.verify(headers, rawBody)) {
+    if (!(await deps.verifier.verify(headers, rawBody))) {
       return sendError(reply, 'UNAUTHENTICATED', 'push verification failed');
     }
     let parsed;

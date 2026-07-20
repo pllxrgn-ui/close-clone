@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { JSX } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -20,6 +20,10 @@ const SAMPLE: User = {
 
 beforeEach(() => {
   localStorage.clear();
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
 });
 
 describe('auth storage', () => {
@@ -53,7 +57,7 @@ function Probe(): JSX.Element {
       <button type="button" onClick={() => login(SAMPLE)}>
         sign in
       </button>
-      <button type="button" onClick={logout}>
+      <button type="button" onClick={() => void logout()}>
         sign out
       </button>
     </div>
@@ -86,6 +90,23 @@ describe('AuthProvider', () => {
       </AuthProvider>,
     );
     expect(screen.getByRole('status')).toHaveTextContent('Ada Okafor:true');
+  });
+
+  test('real mode restores the server cookie session instead of local storage', async () => {
+    vi.stubEnv('VITE_API_MODE', 'real');
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(SAMPLE)));
+    vi.stubGlobal('fetch', fetchMock);
+    storeUser({ ...SAMPLE, name: 'Stale demo user' });
+
+    render(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>,
+    );
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Ada Okafor:true');
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain('/api/v1/auth/me');
+    expect(readStoredUser()?.name).toBe('Stale demo user');
   });
 
   // failure path: the hook guards against use outside its provider

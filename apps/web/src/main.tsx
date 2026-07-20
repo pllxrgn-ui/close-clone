@@ -38,14 +38,20 @@ if (!rootElement) {
 // A failed mock-worker start (stale service worker mid-deploy, private mode)
 // must not leave a blank page: render anyway — the C8 error states cover a dead
 // API far better than nothing at all.
-void enableMocking()
-  .catch((err: unknown) => console.error('[sb] mock worker failed to start', err))
-  .then(() => {
-    createRoot(rootElement).render(
-      <StrictMode>
-        <ErrorBoundary>
-          <App />
-        </ErrorBoundary>
-      </StrictMode>,
-    );
-  });
+function renderApp(container: HTMLElement): void {
+  createRoot(container).render(
+    <StrictMode>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </StrictMode>,
+  );
+}
+
+if (import.meta.env.VITE_API_MODE === 'real') {
+  renderApp(rootElement);
+} else {
+  void enableMocking()
+    .catch((err: unknown) => console.error('[sb] mock worker failed to start', err))
+    .then(() => renderApp(rootElement));
+}

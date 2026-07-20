@@ -8,7 +8,7 @@ import type { JSX } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { EmptyState, StatusPill } from '../../../ui/index.ts';
 import { ApiError } from '../../../api/errors.ts';
-import { fetchSequencesReport } from '../api/reports.ts';
+import { fetchCompleteSequencesReport } from '../api/reports.ts';
 import { formatInt, formatPercent, meterTone, replyRatePercent } from '../lib/format.ts';
 import { MeterBar } from './charts.tsx';
 import { ReportError, RowsSkeleton } from './states.tsx';
@@ -16,7 +16,7 @@ import { ReportError, RowsSkeleton } from './states.tsx';
 export function SequencesReport(): JSX.Element {
   const q = useQuery({
     queryKey: ['reports', 'sequences'],
-    queryFn: ({ signal }) => fetchSequencesReport({ limit: 500 }, signal),
+    queryFn: ({ signal }) => fetchCompleteSequencesReport({}, signal),
   });
 
   if (q.isLoading) {

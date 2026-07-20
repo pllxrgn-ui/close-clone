@@ -49,6 +49,7 @@ export {
   processGmailInboxRow,
   gmailPushSchema,
   gmailNotificationSchema,
+  GooglePubSubPushVerifier,
   MockGmailPushVerifier,
   InvalidPushError,
   type GmailPush,

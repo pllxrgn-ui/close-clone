@@ -6,10 +6,12 @@ import '@fontsource/inter/600.css';
 import '@fontsource/inter/700.css';
 import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/500.css';
+import 'lenis/dist/lenis.css';
 import './welcome-tokens.css';
 import './welcome.css';
 
 import type { JSX } from 'react';
+import { ReactLenis } from 'lenis/react';
 import { WelcomeNav } from './WelcomeNav.tsx';
 import { Hero } from './Hero.tsx';
 import { AccountsBand } from './AccountsBand.tsx';
@@ -18,6 +20,12 @@ import { KeyboardStrip } from './KeyboardStrip.tsx';
 import { TrustLine } from './TrustLine.tsx';
 import { FooterCta } from './FooterCta.tsx';
 import { useIgnition } from './useIgnition.ts';
+import { prefersReducedMotion } from './useIgnition.ts';
+
+function WelcomeMotion(): JSX.Element | null {
+  if (prefersReducedMotion() || typeof ResizeObserver === 'undefined') return null;
+  return <ReactLenis root options={{ autoRaf: true, duration: 0.9 }} />;
+}
 
 /*
  * Switchboard's front door at /welcome (unauthenticated). Both CTAs and the nav
@@ -29,6 +37,7 @@ export function WelcomePage(): JSX.Element {
   const ignition = useIgnition();
   return (
     <div className="sb-welcome">
+      <WelcomeMotion />
       <a className="sb-welcome__skip" href="#welcome-main">
         Skip to content
       </a>

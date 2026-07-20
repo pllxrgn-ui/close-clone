@@ -12,50 +12,62 @@ import { AppShell } from './AppShell.tsx';
  * the chrome visible); the login screen suspends against the boot fallback here.
  * Named exports are adapted to lazy()'s default-export contract.
  */
-const LoginPage = lazy(() =>
-  import('../auth/LoginPage.tsx').then((m) => ({ default: m.LoginPage })),
-);
+const LoginPage =
+  import.meta.env.VITE_API_MODE === 'real'
+    ? lazy(() =>
+        import('../auth/ProductionLoginPage.tsx').then((m) => ({ default: m.ProductionLoginPage })),
+      )
+    : lazy(() => import('../auth/LoginPage.tsx').then((m) => ({ default: m.LoginPage })));
 const InboxPage = lazy(() =>
-  import('../features/inbox/index.ts').then((m) => ({ default: m.InboxRoutePage })),
+  import('../features/inbox/pages/routes.tsx').then((m) => ({ default: m.InboxRoutePage })),
+);
+const OverviewPage = lazy(() =>
+  import('../features/overview/OverviewPage.tsx').then((m) => ({ default: m.OverviewPage })),
 );
 const LeadsPage = lazy(() =>
-  import('../features/leads/index.ts').then((m) => ({ default: m.LeadsRoutePage })),
+  import('../features/leads/pages/routes.tsx').then((m) => ({ default: m.LeadsRoutePage })),
 );
 const LeadDetailPage = lazy(() =>
-  import('../features/leads/index.ts').then((m) => ({ default: m.LeadDetailRoutePage })),
+  import('../features/leads/pages/routes.tsx').then((m) => ({ default: m.LeadDetailRoutePage })),
 );
 const ViewsPage = lazy(() =>
   import('../pages/ViewsPage.tsx').then((m) => ({ default: m.ViewsPage })),
 );
 const ViewDetailPage = lazy(() =>
-  import('../features/leads/index.ts').then((m) => ({ default: m.ViewRoutePage })),
+  import('../features/leads/pages/routes.tsx').then((m) => ({ default: m.ViewRoutePage })),
 );
 const ViewBuilderPage = lazy(() =>
-  import('../features/view-builder/index.ts').then((m) => ({ default: m.ViewBuilderPage })),
+  import('../features/view-builder/ViewBuilderPage.tsx').then((m) => ({
+    default: m.ViewBuilderPage,
+  })),
 );
 const PipelinePage = lazy(() =>
-  import('../features/pipeline/index.ts').then((m) => ({ default: m.PipelineRoutePage })),
+  import('../features/pipeline/pages/routes.tsx').then((m) => ({ default: m.PipelineRoutePage })),
 );
 const SequencesPage = lazy(() =>
-  import('../features/comms/index.ts').then((m) => ({ default: m.SequencesRoutePage })),
+  import('../features/comms/pages/routes.tsx').then((m) => ({ default: m.SequencesRoutePage })),
 );
 const SequenceDetailPage = lazy(() =>
-  import('../features/comms/index.ts').then((m) => ({ default: m.SequenceDetailRoutePage })),
+  import('../features/comms/pages/routes.tsx').then((m) => ({
+    default: m.SequenceDetailRoutePage,
+  })),
 );
 const ReportsPageReal = lazy(() =>
-  import('../features/reports/index.ts').then((m) => ({ default: m.ReportsRoutePage })),
+  import('../features/reports/pages/routes.tsx').then((m) => ({ default: m.ReportsRoutePage })),
 );
 const SettingsPageReal = lazy(() =>
-  import('../features/admin/index.ts').then((m) => ({ default: m.AdminSettingsPage })),
+  import('../features/admin/settings/AdminSettingsPage.tsx').then((m) => ({
+    default: m.AdminSettingsPage,
+  })),
 );
 const DialerPage = lazy(() =>
-  import('../features/calling/index.ts').then((m) => ({ default: m.DialerRoutePage })),
+  import('../features/calling/pages/routes.tsx').then((m) => ({ default: m.DialerRoutePage })),
 );
 const ImportPage = lazy(() =>
-  import('../features/import/index.ts').then((m) => ({ default: m.ImportRoutePage })),
+  import('../features/import/pages/routes.tsx').then((m) => ({ default: m.ImportRoutePage })),
 );
 const WelcomePage = lazy(() =>
-  import('../features/welcome/index.ts').then((m) => ({ default: m.WelcomePage })),
+  import('../features/welcome/WelcomePage.tsx').then((m) => ({ default: m.WelcomePage })),
 );
 const HelpPage = lazy(() => import('../pages/HelpPage.tsx').then((m) => ({ default: m.HelpPage })));
 const NotFoundPage = lazy(() =>
@@ -76,8 +88,9 @@ function BootFallback(): JSX.Element {
  * unaffected — RequireAuth still sends them through /login with a return path.
  */
 function RootGate(): JSX.Element {
-  const { user } = useAuth();
-  return <Navigate to={user ? '/inbox' : '/welcome'} replace />;
+  const { user, isLoading } = useAuth();
+  if (isLoading) return <BootFallback />;
+  return <Navigate to={user ? '/overview' : '/welcome'} replace />;
 }
 
 export function AppRoutes(): JSX.Element {
@@ -89,6 +102,7 @@ export function AppRoutes(): JSX.Element {
         <Route path="/" element={<RootGate />} />
         <Route element={<RequireAuth />}>
           <Route element={<AppShell />}>
+            <Route path="overview" element={<OverviewPage />} />
             <Route path="inbox" element={<InboxPage />} />
             <Route path="leads" element={<LeadsPage />} />
             <Route path="leads/:id" element={<LeadDetailPage />} />

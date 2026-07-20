@@ -23,6 +23,11 @@ export const MAX_RANGE_DAYS = 366;
  */
 export const REPORT_NOW = new Date('2026-07-15T12:00:00.000Z');
 
+/** Production follows the wall clock; deterministic mock tests keep the seed anchor. */
+export function reportNow(): Date {
+  return import.meta.env.VITE_API_MODE === 'real' ? new Date() : REPORT_NOW;
+}
+
 export interface RangePreset {
   key: '7d' | '30d' | '90d';
   /** Number of calendar days the window spans, inclusive of `to`. */

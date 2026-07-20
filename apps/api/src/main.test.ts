@@ -15,6 +15,27 @@ import { loadConfig } from './config.ts';
  */
 
 const REAL = { MOCK_MODE: '0', SESSION_SECRET: 'x'.repeat(40) } as const;
+const COMPLETE_PRODUCTION_ENV = {
+  ...REAL,
+  OIDC_ISSUER: 'https://accounts.example.com',
+  OIDC_CLIENT_ID: 'switchboard',
+  OIDC_CLIENT_SECRET: 'oidc-secret',
+  WEB_ORIGIN: 'https://switchboard.example.com',
+  PUBLIC_WEBHOOK_URL: 'https://switchboard-api.example.com',
+  GOOGLE_CLIENT_ID: 'google-client',
+  GOOGLE_CLIENT_SECRET: 'google-secret',
+  GMAIL_SENDER_ADDRESS: 'sales@example.com',
+  GMAIL_PUSH_AUDIENCE: 'https://switchboard.example.com/wh/gmail',
+  GMAIL_PUSH_SERVICE_ACCOUNT_EMAIL: 'pubsub@project.iam.gserviceaccount.com',
+  TWILIO_ACCOUNT_SID: 'AC123',
+  TWILIO_AUTH_TOKEN: 'twilio-secret',
+  TWILIO_API_KEY_SID: 'SK123',
+  TWILIO_API_KEY_SECRET: 'twilio-api-secret',
+  TWILIO_TWIML_APP_SID: 'AP123',
+  TWILIO_PHONE_NUMBER: '+12065550100',
+  DEEPGRAM_API_KEY: 'deepgram-secret',
+  ANTHROPIC_API_KEY: 'anthropic-secret',
+} as const;
 
 describe('assertRealModeConfig — fail closed without an IdP', () => {
   test('MOCK_MODE=1 needs no OIDC config (the zero-account path, guide §4.6)', () => {
@@ -49,13 +70,13 @@ describe('assertRealModeConfig — fail closed without an IdP', () => {
     expect(() => assertRealModeConfig(loadConfig(env), env)).toThrow(/OIDC_ISSUER/);
   });
 
-  test('a fully configured IdP passes the gate', () => {
-    const env = {
-      ...REAL,
-      OIDC_ISSUER: 'https://accounts.example.com',
-      OIDC_CLIENT_ID: 'switchboard',
-      OIDC_CLIENT_SECRET: 'shh',
-    } as NodeJS.ProcessEnv;
+  test('a fully configured production stack passes the gate', () => {
+    const env = { ...COMPLETE_PRODUCTION_ENV } as NodeJS.ProcessEnv;
     expect(() => assertRealModeConfig(loadConfig(env), env)).not.toThrow();
+  });
+
+  test('a partially configured provider refuses to boot instead of disabling a feature', () => {
+    const env = { ...COMPLETE_PRODUCTION_ENV, TWILIO_API_KEY_SECRET: '' } as NodeJS.ProcessEnv;
+    expect(() => assertRealModeConfig(loadConfig(env), env)).toThrow(/TWILIO_API_KEY_SECRET/);
   });
 });

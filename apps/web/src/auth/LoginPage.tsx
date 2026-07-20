@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthProvider.tsx';
 import { DevLoginPage } from './DevLoginPage.tsx';
 import { SsoLoginPage } from './SsoLoginPage.tsx';
+import { Spinner } from '../ui/index.ts';
 
 interface LocationState {
   from?: string;
@@ -20,9 +21,11 @@ interface LocationState {
  * post-login redirect and carries no router state — see DECISIONS/report.
  */
 export function LoginPage(): JSX.Element {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
-  const from = (location.state as LocationState | null)?.from ?? '/inbox';
+  const from = (location.state as LocationState | null)?.from ?? '/overview';
+
+  if (isLoading) return <Spinner size="lg" label="Checking your session" />;
 
   if (isAuthenticated) {
     return <Navigate to={from} replace />;

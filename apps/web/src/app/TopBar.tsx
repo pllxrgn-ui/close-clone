@@ -25,12 +25,14 @@ export function TopBar({ searchRef, onOpenPalette }: TopBarProps): JSX.Element {
       <div className="sb-topbar__brand">
         <BoardMark size={18} />
         <span className="sb-topbar__org">Switchboard</span>
-        <span
-          className="sb-topbar__demo"
-          title="This is a demo build backed by synthetic sample data — no real accounts or messages."
-        >
-          Demo · sample data
-        </span>
+        {import.meta.env.VITE_API_MODE === 'real' ? null : (
+          <span
+            className="sb-topbar__demo"
+            title="This is a demo build backed by synthetic sample data — no real accounts or messages."
+          >
+            Demo · sample data
+          </span>
+        )}
       </div>
 
       <form
@@ -69,21 +71,9 @@ export function TopBar({ searchRef, onOpenPalette }: TopBarProps): JSX.Element {
         {user ? (
           <UserMenu
             user={user}
-            onSignOut={() => {
-              logout();
-              // A personal-account session also releases its workspace: the
-              // owner key drops (data stays persisted under the account's own
-              // key) and a full load reboots the neutral demo db at /login.
-              void import('../mocks/workspace.ts').then(
-                ({ getWorkspaceOwner, clearWorkspaceOwner }) => {
-                  if (getWorkspaceOwner()) {
-                    clearWorkspaceOwner();
-                    window.location.assign('/login');
-                  } else {
-                    navigate('/login');
-                  }
-                },
-              );
+            onSignOut={async () => {
+              await logout();
+              navigate('/login');
             }}
           />
         ) : null}
@@ -92,7 +82,13 @@ export function TopBar({ searchRef, onOpenPalette }: TopBarProps): JSX.Element {
   );
 }
 
-function UserMenu({ user, onSignOut }: { user: User; onSignOut: () => void }): JSX.Element {
+function UserMenu({
+  user,
+  onSignOut,
+}: {
+  user: User;
+  onSignOut: () => Promise<void>;
+}): JSX.Element {
   return (
     <details className="sb-usermenu">
       <summary className="sb-usermenu__chip" aria-label={`Account: ${user.name}`}>
@@ -109,7 +105,7 @@ function UserMenu({ user, onSignOut }: { user: User; onSignOut: () => void }): J
         <button
           type="button"
           className="sb-btn sb-btn--ghost sb-usermenu__signout"
-          onClick={onSignOut}
+          onClick={() => void onSignOut()}
         >
           Sign out
         </button>

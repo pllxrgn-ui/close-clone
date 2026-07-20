@@ -6,7 +6,7 @@ import { Button, Kbd, Select, StatusPill, Textarea } from '../../../ui/index.ts'
 import { ApiError } from '../../../api/index.ts';
 import { useToast } from '../../../feedback/index.ts';
 import { useAuth } from '../../../auth/AuthProvider.tsx';
-import { COMPANY_TIMEZONE } from '../data/store.ts';
+import { COMPANY_TIMEZONE } from '../lib/config.ts';
 import { SMS_TEMPLATES } from '../data/templates.ts';
 import { sendSms } from '../api/sms.ts';
 import {

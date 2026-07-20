@@ -132,6 +132,7 @@ export async function buildDevServer(opts: BuildDevServerOptions = {}): Promise<
   // would collide with the real routes); seedDevSmartViews still seeds the demo
   // views into the real `smart_views` table that the real route reads.
   const registry = createProviderRegistry({ mockMode: true });
+  if (registry.email === undefined) throw new Error('mock provider registry requires email');
   const senderRegistry = createEmailSenderRegistry({ mockMode: true });
   const cipher = new TokenCipher(config.sessionSecret);
   const verifier = new MockGmailPushVerifier();

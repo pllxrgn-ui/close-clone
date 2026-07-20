@@ -1,5 +1,8 @@
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
+import { JwksCache } from '../../auth/oidc/jwks.ts';
+import { decodeJwt, isSupportedAlg, verifyJwsSignature } from '../../auth/oidc/jwt.ts';
+import type { HttpTransport } from '../../auth/oidc/transport.ts';
 import { emailAccounts, webhookInbox, type Db } from '../../db/index.ts';
 import { incrementalPull } from './incremental.ts';
 import type { SyncEngineDeps } from './engine-deps.ts';
@@ -94,7 +97,79 @@ export function parseGmailPush(rawBody: string): ParsedGmailPush {
  * seam lets the route verify without a compile-time branch on the adapter.
  */
 export interface GmailPushVerifier {
-  verify(headers: Record<string, string>, rawBody: string): boolean;
+  verify(headers: Record<string, string>, rawBody: string): boolean | Promise<boolean>;
+}
+
+const googlePushClaimsSchema = z.object({
+  iss: z.enum(['accounts.google.com', 'https://accounts.google.com']),
+  sub: z.string().min(1),
+  aud: z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]),
+  exp: z.number(),
+  iat: z.number(),
+  email: z.string().email(),
+  email_verified: z.literal(true),
+});
+
+const GOOGLE_JWKS_URI = 'https://www.googleapis.com/oauth2/v3/certs';
+const GOOGLE_TOKEN_CLOCK_SKEW_SEC = 60;
+
+/**
+ * Verifies authenticated Google Cloud Pub/Sub push requests offline against
+ * Google's cached signing keys. The signed audience and service-account email
+ * must exactly match the subscription configuration.
+ */
+export class GooglePubSubPushVerifier implements GmailPushVerifier {
+  private readonly audience: string;
+  private readonly serviceAccountEmail: string;
+  private readonly jwks: JwksCache;
+  private readonly now: () => Date;
+
+  constructor(options: {
+    audience: string;
+    serviceAccountEmail: string;
+    transport: HttpTransport;
+    now?: () => Date;
+  }) {
+    this.audience = options.audience;
+    this.serviceAccountEmail = options.serviceAccountEmail.toLowerCase();
+    this.now = options.now ?? (() => new Date());
+    this.jwks = new JwksCache(GOOGLE_JWKS_URI, {
+      transport: options.transport,
+      ...(options.now ? { now: options.now } : {}),
+    });
+  }
+
+  async verify(headers: Record<string, string>, rawBody: string): Promise<boolean> {
+    try {
+      parseGmailPush(rawBody);
+      const lowerHeaders = Object.fromEntries(
+        Object.entries(headers).map(([key, value]) => [key.toLowerCase(), value]),
+      );
+      const match = /^Bearer\s+(.+)$/i.exec(lowerHeaders['authorization'] ?? '');
+      if (!match?.[1]) return false;
+
+      const decoded = decodeJwt(match[1]);
+      if (!isSupportedAlg(decoded.header.alg) || decoded.header.kid === undefined) return false;
+      const key = await this.jwks.getKey(decoded.header.kid);
+      if (!verifyJwsSignature(decoded, key)) return false;
+
+      const parsed = googlePushClaimsSchema.safeParse(decoded.payload);
+      if (!parsed.success) return false;
+      const claims = parsed.data;
+      const audienceMatches = Array.isArray(claims.aud)
+        ? claims.aud.includes(this.audience)
+        : claims.aud === this.audience;
+      if (!audienceMatches || claims.email.toLowerCase() !== this.serviceAccountEmail) return false;
+
+      const nowSec = Math.floor(this.now().getTime() / 1000);
+      return (
+        nowSec <= claims.exp + GOOGLE_TOKEN_CLOCK_SKEW_SEC &&
+        claims.iat <= nowSec + GOOGLE_TOKEN_CLOCK_SKEW_SEC
+      );
+    } catch {
+      return false;
+    }
+  }
 }
 
 /**

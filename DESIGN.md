@@ -65,6 +65,8 @@ Normative, from emil-design-eng — violations are review-blockers:
 
 One signature entrance, not scattered reveals: the board lights up — grid fades in, lamps ignite in a 30–80ms stagger, the headline sets. 500–800ms total, once. No scroll-fade-on-every-section; scroll motion only where it explains the product (e.g. the lead-row → timeline morph demo). Everything else per product register.
 
+Lenis smooth scrolling is scoped to `/welcome` only and is disabled for reduced-motion or unsupported browsers. Authenticated product routes retain native scrolling.
+
 ## 6. Craft bar (from impeccable — definition of done for every web task)
 
 Real content, never lorem · semantic HTML first · full state coverage (default/hover/focus-visible/active/disabled/loading/error/empty/overflow/long-text) · keyboard path for everything, visible focus (`--focus` ring, 2px offset) · one icon set (lucide-react, stroke 1.5) · tabular-nums for data · deliberate spacing from the scale, no arbitrary margins · no console errors, no layout shift · screenshot + honest critique + patch before presenting.

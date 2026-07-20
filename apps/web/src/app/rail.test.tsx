@@ -23,6 +23,7 @@ describe('LeftRail — structure', () => {
       (el) => el.textContent,
     );
     expect(labels).toEqual([
+      'Overview',
       'Inbox',
       'Leads',
       'Pipeline',

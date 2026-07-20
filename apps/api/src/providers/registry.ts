@@ -7,8 +7,21 @@ import type {
 import { MockEmailProvider } from './mock/mock-email-provider.ts';
 import { GmailEmailProvider } from './email/gmail-email-provider.ts';
 import { createMockTelephonyProvider } from './telephony/index.ts';
-import { createMockASRProvider } from './asr/index.ts';
-import { createMockAIProvider } from './ai/index.ts';
+import {
+  createTwilioTelephonyProvider,
+  FetchTwilioTransport,
+  type TwilioTelephonyConfig,
+} from './telephony/twilio-telephony-provider.ts';
+import {
+  createDeepgramASRProvider,
+  createMockASRProvider,
+  FetchDeepgramTransport,
+} from './asr/index.ts';
+import {
+  createHaikuAIProvider,
+  createMockAIProvider,
+  FetchAnthropicTransport,
+} from './ai/index.ts';
 import type { Clock, IdSource } from './mock/clock.ts';
 
 /**
@@ -40,7 +53,7 @@ export interface GmailBindingConfig {
 }
 
 export interface ProviderRegistry {
-  email: EmailProvider;
+  email?: EmailProvider;
   /** All bound under mockMode; the real Twilio/Deepgram/Haiku adapters are wired
    *  at the deploy composition root (they need accounts — see deploy/WIRING.md). */
   telephony?: TelephonyProvider;
@@ -52,6 +65,9 @@ export interface RegistryConfig {
   mockMode: boolean;
   /** Required for the real (non-mock) branch; ignored under `mockMode`. */
   gmail?: GmailBindingConfig;
+  twilio?: Omit<TwilioTelephonyConfig, 'transport'>;
+  deepgramApiKey?: string;
+  anthropicApiKey?: string;
 }
 
 export interface MockRegistryOverrides {
@@ -75,19 +91,41 @@ export function createProviderRegistry(
       ai: createMockAIProvider(),
     };
   }
-  if (config.gmail === undefined) {
-    throw new Error(
-      'real email provider requires gmail OAuth config (clientId/clientSecret/address); ' +
-        'set MOCK_MODE=1 to use the in-memory provider',
-    );
-  }
   return {
-    email: new GmailEmailProvider({
-      clientId: config.gmail.clientId,
-      clientSecret: config.gmail.clientSecret,
-      address: config.gmail.address,
-      ...(config.gmail.scopes !== undefined ? { scopes: config.gmail.scopes } : {}),
-    }),
+    ...(config.gmail
+      ? {
+          email: new GmailEmailProvider({
+            clientId: config.gmail.clientId,
+            clientSecret: config.gmail.clientSecret,
+            address: config.gmail.address,
+            ...(config.gmail.scopes !== undefined ? { scopes: config.gmail.scopes } : {}),
+          }),
+        }
+      : {}),
+    ...(config.twilio
+      ? {
+          telephony: createTwilioTelephonyProvider({
+            ...config.twilio,
+            transport: new FetchTwilioTransport(),
+          }),
+        }
+      : {}),
+    ...(config.deepgramApiKey
+      ? {
+          asr: createDeepgramASRProvider({
+            apiKey: config.deepgramApiKey,
+            transport: new FetchDeepgramTransport(),
+          }),
+        }
+      : {}),
+    ...(config.anthropicApiKey
+      ? {
+          ai: createHaikuAIProvider({
+            apiKey: config.anthropicApiKey,
+            transport: new FetchAnthropicTransport(),
+          }),
+        }
+      : {}),
   };
 }
 

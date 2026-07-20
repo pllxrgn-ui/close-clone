@@ -8,13 +8,8 @@ import {
   isWithinQuietWindow,
   timeZoneForNumber,
 } from '../lib/sms.ts';
-import {
-  COMPANY_TIMEZONE,
-  ORG_SMS_NUMBER,
-  isNumberSuppressed,
-  messagesForLead,
-  smsStore,
-} from '../data/store.ts';
+import { ORG_SMS_NUMBER, isNumberSuppressed, messagesForLead, smsStore } from '../data/store.ts';
+import { COMPANY_TIMEZONE } from '../lib/config.ts';
 
 /*
  * Additive MSW handlers for the two-way SMS surface. They match the real routes so
