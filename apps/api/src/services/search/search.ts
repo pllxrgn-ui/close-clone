@@ -129,14 +129,14 @@ function ftsMatch(cols: Cols, q: string): SQL {
 
 /** Integer relevance score for one candidate row. */
 function scoreExpr(cols: Cols, q: string, qLower: string, likePat: string, prefixPat: string): SQL {
-  return sql`(
-      CASE WHEN lower(${raw(cols.name)}) = ${qLower} THEN 1000000 ELSE 0 END
-    + CASE WHEN ${ftsMatch(cols, q)} THEN 300000 ELSE 0 END
-    + CASE WHEN ${raw(cols.name)} ILIKE ${prefixPat} ESCAPE '\\' THEN 200000 ELSE 0 END
-    + CASE WHEN ${raw(cols.text)} LIKE ${likePat} ESCAPE '\\' THEN 100000 ELSE 0 END
-    + round(ts_rank(${raw(cols.tsv)}, websearch_to_tsquery('english', ${q})) * 50000)::int
-    + round(similarity(${raw(cols.name)}, ${qLower}) * 150000)::int
-    )::int`;
+  return sql`(CASE
+    WHEN lower(${raw(cols.name)}) = ${qLower} THEN 1000000
+    WHEN ${ftsMatch(cols, q)}
+      THEN 600000 + round(ts_rank(${raw(cols.tsv)}, websearch_to_tsquery('english', ${q})) * 50000)::int
+    WHEN ${raw(cols.name)} ILIKE ${prefixPat} ESCAPE '\\' THEN 400000
+    WHEN ${raw(cols.text)} LIKE ${likePat} ESCAPE '\\' THEN 200000
+    ELSE round(similarity(${raw(cols.name)}, ${qLower}) * 150000)::int
+  END)::int`;
 }
 
 /** Row qualifies when any signal fires. */
