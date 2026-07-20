@@ -765,3 +765,83 @@ a.sb-row {
     transition: none;
   }
 }
+
+/* ── Combobox (searchable single-select) — control box ────────────────────── */
+/* The input is borderless and fills the box; the box carries the border + ring
+ * (via :has(:focus-visible)) so it reads as one control. The portalled listbox
+ * panel lives in styles/overlays.css alongside the other floating surfaces. */
+.sb-combobox {
+  position: relative;
+  display: block;
+}
+.sb-combobox__control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--control-h);
+  padding: 0 var(--space-2) 0 var(--space-3);
+  background: var(--surface-inset);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-1);
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+.sb-combobox__control:focus-within {
+  border-color: var(--focus);
+}
+.sb-combobox__control:has(.sb-combobox__input:focus-visible) {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+.sb-combobox__control[data-invalid] {
+  border-color: var(--state-dnc-solid);
+}
+.sb-combobox__lead {
+  flex: none;
+  color: var(--ink-3);
+}
+.sb-combobox__input {
+  flex: 1;
+  min-width: 0; /* let a long value ellipsize instead of pushing the chevron out */
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--ink-0);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  text-overflow: ellipsis;
+}
+.sb-combobox__input::placeholder {
+  color: var(--ink-3);
+}
+.sb-combobox__input:focus-visible {
+  outline: none; /* the ring rides the control box, not the bare field */
+}
+.sb-combobox__control:has(.sb-combobox__input:disabled) {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--surface-1);
+}
+.sb-combobox__clear {
+  flex: none;
+}
+.sb-combobox__chevron {
+  flex: none;
+  color: var(--ink-2);
+  transition: transform var(--dur) var(--ease-out);
+}
+.sb-combobox[data-open] .sb-combobox__chevron {
+  transform: rotate(180deg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sb-combobox__control:hover:not(:has(.sb-combobox__input:disabled)) {
+    border-color: var(--ink-3);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sb-combobox__chevron {
+    transition: none;
+  }
+}

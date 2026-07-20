@@ -24,7 +24,28 @@ test('loadConfig fails closed in production when SESSION_SECRET is absent (dev d
 test('loadConfig fails closed in production when SESSION_SECRET is the dev default', () => {
   expect(() =>
     loadConfig({ NODE_ENV: 'production', SESSION_SECRET: 'dev-insecure-session-secret' }),
-  ).toThrow(/dev default is insecure/);
+  ).toThrow(/insecure/);
+});
+
+test('loadConfig fails closed in production when SESSION_SECRET is the public .env.example placeholder', () => {
+  // The placeholder is >=32 chars so it clears the length floor — it must still be
+  // rejected because it ships in git/docs (KNOWN_INSECURE_SECRETS).
+  expect(() =>
+    loadConfig({
+      NODE_ENV: 'production',
+      MOCK_MODE: '0',
+      SESSION_SECRET: 'change-me-to-a-64-char-random-hex-string',
+    }),
+  ).toThrow(/placeholder are insecure/);
+});
+
+test('loadConfig fails closed on the deploy template SESSION_SECRET', () => {
+  expect(() =>
+    loadConfig({
+      NODE_ENV: 'production',
+      SESSION_SECRET: 'change-me-32-chars-minimum-000000',
+    }),
+  ).toThrow(/placeholder are insecure/);
 });
 
 test('loadConfig fails closed in production when SESSION_SECRET is shorter than 32 chars', () => {
@@ -36,6 +57,7 @@ test('loadConfig fails closed in production when SESSION_SECRET is shorter than 
 test('loadConfig succeeds in production with a strong unique SESSION_SECRET', () => {
   const config = loadConfig({ NODE_ENV: 'production', SESSION_SECRET: STRONG_SECRET });
   expect(config.nodeEnv).toBe('production');
+  expect(config.mockMode).toBe(true);
   expect(config.sessionSecret).toBe(STRONG_SECRET);
 });
 

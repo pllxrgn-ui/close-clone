@@ -35,11 +35,17 @@ export interface SweeperDeps {
 export async function sweepDueIntents(deps: SweeperDeps): Promise<number> {
   const nowIso = deps.now().toISOString();
   const due = await deps.db
-    .select({ id: sendIntents.id })
+    .select({ id: sendIntents.id, dueAt: sendIntents.dueAt })
     .from(sendIntents)
     .where(and(eq(sendIntents.state, 'SCHEDULED'), lte(sendIntents.dueAt, nowIso)));
   for (const row of due) {
-    await deps.queue.enqueue(SEND_JOB_NAME, { intentId: row.id }, { jobId: wakeupJobId(row.id) });
+    // Same (id, due_at) as the enroller's wake-up → dedupes; a deferred intent's
+    // advanced due_at yields a fresh id (see wakeupJobId).
+    await deps.queue.enqueue(
+      SEND_JOB_NAME,
+      { intentId: row.id },
+      { jobId: wakeupJobId(row.id, new Date(row.dueAt).getTime()) },
+    );
   }
   return due.length;
 }

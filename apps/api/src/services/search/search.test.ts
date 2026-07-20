@@ -65,8 +65,9 @@ describe('migration / extension', () => {
     const migs = await ctx.client.query<{ n: number }>(
       `SELECT count(*)::int AS n FROM drizzle.__drizzle_migrations`,
     );
-    // Bumped 4 → 5 by Task 5b's migration 0011 (audit_log append-only trigger).
-    expect(migs.rows[0]?.n).toBe(6);
+    // Bumped 4 → 5 by Task 5b's migration 0011 (audit_log append-only trigger),
+    // → 7 by migration 0012 (per-lead + keyset perf indexes, D-037).
+    expect(migs.rows[0]?.n).toBe(7);
     const ext = await ctx.client.query<{ extname: string }>(
       `SELECT extname FROM pg_extension WHERE extname = 'pg_trgm'`,
     );

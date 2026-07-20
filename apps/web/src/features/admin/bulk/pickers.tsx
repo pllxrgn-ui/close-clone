@@ -1,107 +1,16 @@
-import { useId, useMemo, useRef, useState } from 'react';
+import { useId, useState } from 'react';
 import type { JSX } from 'react';
-import { Button, Input, ListRow } from '../../../ui/index.ts';
+import { Button, Input } from '../../../ui/index.ts';
 import { Modal } from '../../../ui/Modal.tsx';
 import { DNC_REASONS } from '../types.ts';
 import { WarnIcon } from '../icons.tsx';
 
 /*
- * Bulk-bar dialogs. All compose the shared Modal primitive (portal, focus trap,
- * Escape, focus restore) so they open instantly (0ms) — safe for keyboard-first
- * use, per the motion law. Every control is reachable and operable by keyboard.
+ * Bulk-bar DNC dialog. Composes the shared Modal primitive (portal, focus trap,
+ * Escape, focus restore) so it opens instantly (0ms) — safe for keyboard-first
+ * use, per the motion law. The owner/status/sequence pickers are inline
+ * Comboboxes in LeadBulkActions; only the required-reason DNC gate stays a modal.
  */
-
-export interface SelectOption {
-  id: string;
-  label: string;
-  sublabel?: string;
-  /** CSS color for the row's leading state bar (e.g. a status/DNC tone). */
-  accent?: string;
-}
-
-interface SelectDialogProps {
-  open: boolean;
-  title: string;
-  options: readonly SelectOption[];
-  onSelect: (id: string) => void;
-  onClose: () => void;
-  emptyLabel?: string;
-}
-
-/** A filterable single-select dialog used for owner / status / sequence pickers. */
-export function SelectDialog({
-  open,
-  title,
-  options,
-  onSelect,
-  onClose,
-  emptyLabel = 'Nothing to choose from.',
-}: SelectDialogProps): JSX.Element | null {
-  const headingId = useId();
-  const filterRef = useRef<HTMLInputElement | null>(null);
-  const [filter, setFilter] = useState('');
-  const showFilter = options.length > 7;
-
-  const shown = useMemo(() => {
-    const term = filter.trim().toLowerCase();
-    if (!term) return options;
-    return options.filter(
-      (o) =>
-        o.label.toLowerCase().includes(term) || (o.sublabel?.toLowerCase().includes(term) ?? false),
-    );
-  }, [options, filter]);
-
-  if (!open) return null;
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      labelledBy={headingId}
-      className="admin-dialog"
-      backdropClassName="sb-overlay--center"
-      {...(showFilter ? { initialFocusRef: filterRef } : {})}
-    >
-      <div className="admin-dialog__head">
-        <h2 id={headingId} className="admin-dialog__title">
-          {title}
-        </h2>
-      </div>
-      {showFilter ? (
-        <div className="admin-dialog__filter">
-          <Input
-            ref={filterRef}
-            type="search"
-            aria-label={`Filter ${title.toLowerCase()}`}
-            placeholder="Filter…"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-          />
-        </div>
-      ) : null}
-      <div className="admin-dialog__list" role="list">
-        {shown.length === 0 ? (
-          <p className="admin-dialog__empty">{emptyLabel}</p>
-        ) : (
-          shown.map((option) => (
-            <ListRow
-              key={option.id}
-              {...(option.accent ? { accent: option.accent } : {})}
-              onSelect={() => onSelect(option.id)}
-              ariaLabel={option.sublabel ? `${option.label}, ${option.sublabel}` : option.label}
-              className="admin-pick-row"
-            >
-              <span className="admin-pick-row__label">{option.label}</span>
-              {option.sublabel ? (
-                <span className="admin-pick-row__sub">{option.sublabel}</span>
-              ) : null}
-            </ListRow>
-          ))
-        )}
-      </div>
-    </Modal>
-  );
-}
 
 interface DncReasonDialogProps {
   open: boolean;

@@ -1001,6 +1001,13 @@ export async function requeueDeferred(deps: DispatchDeps, intentId: string): Pro
     .limit(1);
   const row = rows[0];
   if (row === undefined || row.state !== 'SCHEDULED') return;
-  const delayMs = Math.max(0, new Date(row.dueAt).getTime() - deps.now().getTime());
-  await deps.queue.enqueue(SEND_JOB_NAME, { intentId }, { delayMs, jobId: wakeupJobId(intentId) });
+  const dueAtMs = new Date(row.dueAt).getTime();
+  const delayMs = Math.max(0, dueAtMs - deps.now().getTime());
+  // The advanced due_at gives this a fresh id, so the re-enqueue is not swallowed
+  // by the still-active job on BullMQ (see wakeupJobId).
+  await deps.queue.enqueue(
+    SEND_JOB_NAME,
+    { intentId },
+    { delayMs, jobId: wakeupJobId(intentId, dueAtMs) },
+  );
 }

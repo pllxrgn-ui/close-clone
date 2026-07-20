@@ -188,6 +188,11 @@ export const leads = pgTable(
     // substring (`search_text LIKE '%q%'`) path — both index-backed via pg_trgm.
     index('leads_name_trgm_idx').using('gin', t.name.op('gin_trgm_ops')),
     index('leads_search_text_trgm_idx').using('gin', t.searchText.op('gin_trgm_ops')),
+    // Keyset list default sort (GET /leads) + the DSL compiler's default
+    // ORDER BY (created_at DESC, id DESC); partial on the live set (migration 0012).
+    index('leads_created_id_live_idx')
+      .on(t.createdAt.desc(), t.id.desc())
+      .where(sql`${t.deletedAt} IS NULL`),
   ],
 );
 
@@ -229,22 +234,30 @@ export const contacts = pgTable(
   ],
 );
 
-export const opportunities = pgTable('opportunities', {
-  id: id(),
-  leadId: uuid('lead_id')
-    .notNull()
-    .references(() => leads.id, { onDelete: 'restrict' }),
-  contactId: uuid('contact_id').references(() => contacts.id, { onDelete: 'restrict' }),
-  valueCents: bigint('value_cents', { mode: 'number' }).notNull().default(0),
-  currency: char('currency', { length: 3 }).notNull().default('USD'),
-  stageId: uuid('stage_id').references(() => opportunityStages.id, { onDelete: 'restrict' }),
-  confidence: integer('confidence').notNull().default(0),
-  closeDate: date('close_date'),
-  ownerId: uuid('owner_id').references(() => users.id, { onDelete: 'restrict' }),
-  status: text('status', { enum: opportunityStatusValues }).notNull().default('active'),
-  note: text('note'),
-  ...timestamps(),
-});
+export const opportunities = pgTable(
+  'opportunities',
+  {
+    id: id(),
+    leadId: uuid('lead_id')
+      .notNull()
+      .references(() => leads.id, { onDelete: 'restrict' }),
+    contactId: uuid('contact_id').references(() => contacts.id, { onDelete: 'restrict' }),
+    valueCents: bigint('value_cents', { mode: 'number' }).notNull().default(0),
+    currency: char('currency', { length: 3 }).notNull().default('USD'),
+    stageId: uuid('stage_id').references(() => opportunityStages.id, { onDelete: 'restrict' }),
+    confidence: integer('confidence').notNull().default(0),
+    closeDate: date('close_date'),
+    ownerId: uuid('owner_id').references(() => users.id, { onDelete: 'restrict' }),
+    status: text('status', { enum: opportunityStatusValues }).notNull().default('active'),
+    note: text('note'),
+    ...timestamps(),
+  },
+  (t) => [
+    // listOpportunitiesByLead filters WHERE lead_id = ? on every lead-detail /
+    // pipeline load; without this it seq-scans the whole table (migration 0012).
+    index('opportunities_lead_id_idx').on(t.leadId),
+  ],
+);
 
 export const customFieldDefs = pgTable(
   'custom_field_defs',
@@ -315,17 +328,24 @@ export const tasks = pgTable(
   ],
 );
 
-export const notes = pgTable('notes', {
-  id: id(),
-  leadId: uuid('lead_id')
-    .notNull()
-    .references(() => leads.id, { onDelete: 'restrict' }),
-  authorId: uuid('author_id').references(() => users.id, { onDelete: 'restrict' }),
-  bodyMd: text('body_md').notNull().default(''),
-  status: text('status', { enum: noteStatusValues }).notNull().default('draft'),
-  aiGenerated: boolean('ai_generated').notNull().default(false),
-  ...timestamps(),
-});
+export const notes = pgTable(
+  'notes',
+  {
+    id: id(),
+    leadId: uuid('lead_id')
+      .notNull()
+      .references(() => leads.id, { onDelete: 'restrict' }),
+    authorId: uuid('author_id').references(() => users.id, { onDelete: 'restrict' }),
+    bodyMd: text('body_md').notNull().default(''),
+    status: text('status', { enum: noteStatusValues }).notNull().default('draft'),
+    aiGenerated: boolean('ai_generated').notNull().default(false),
+    ...timestamps(),
+  },
+  (t) => [
+    // listNotesByLead filters WHERE lead_id = ? per lead-detail load (migration 0012).
+    index('notes_lead_id_idx').on(t.leadId),
+  ],
+);
 
 // --- Email -----------------------------------------------------------------
 
@@ -364,6 +384,10 @@ export const emailThreads = pgTable(
     index('email_threads_triage_idx')
       .on(t.triageStatus, t.leadId)
       .where(sql`${t.triageStatus} = 'ambiguous'`),
+    // Per-lead thread reads + the inbox's lead-matched thread join (migration 0012).
+    index('email_threads_lead_id_idx')
+      .on(t.leadId)
+      .where(sql`${t.leadId} IS NOT NULL`),
   ],
 );
 
@@ -393,6 +417,9 @@ export const emailMessages = pgTable(
     // The dedupe backstop (CONTRACTS §C1) + per-account provider id uniqueness.
     uniqueIndex('email_messages_account_rfc_key').on(t.accountId, t.rfcMessageId),
     uniqueIndex('email_messages_account_provider_key').on(t.accountId, t.providerMessageId),
+    // Backs the inbox's per-thread LATERAL top-1/aggregate scans exactly:
+    // WHERE thread_id = ? AND direction = ? ORDER BY sent_at DESC (migration 0012).
+    index('email_messages_thread_dir_sent_idx').on(t.threadId, t.direction, t.sentAt.desc()),
   ],
 );
 

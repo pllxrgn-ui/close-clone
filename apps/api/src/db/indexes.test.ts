@@ -48,12 +48,50 @@ afterAll(async () => {
 });
 
 describe('migration chain 0000→0003', () => {
-  test('all six migrations are journaled as applied', async () => {
+  test('all seven migrations are journaled as applied', async () => {
     const { rows } = await ctx.client.query<{ n: number }>(
       `SELECT count(*)::int AS n FROM drizzle.__drizzle_migrations`,
     );
-    // 0000-0003 (core) + 0010 (imports, Task 4f) + 0011 (audit append-only, Task 5b).
-    expect(rows[0]?.n).toBe(6);
+    // 0000-0003 (core) + 0010 (imports, Task 4f) + 0011 (audit append-only, Task 5b)
+    // + 0012 (per-lead / keyset read-path indexes, perf hardening).
+    expect(rows[0]?.n).toBe(7);
+  });
+});
+
+describe('per-lead + keyset read-path indexes (migration 0012)', () => {
+  test('opportunities has a btree on lead_id', async () => {
+    const d = def(await indexesOf('opportunities'), 'opportunities_lead_id_idx');
+    expect(d).toContain('USING btree');
+    expect(d).toContain('lead_id');
+  });
+
+  test('notes has a btree on lead_id', async () => {
+    const d = def(await indexesOf('notes'), 'notes_lead_id_idx');
+    expect(d).toContain('USING btree');
+    expect(d).toContain('lead_id');
+  });
+
+  test('email_threads has a partial btree on lead_id WHERE lead_id IS NOT NULL', async () => {
+    const d = def(await indexesOf('email_threads'), 'email_threads_lead_id_idx');
+    expect(d).toContain('USING btree');
+    expect(d).toContain('lead_id');
+    expect(d.toLowerCase()).toContain('where (lead_id is not null)');
+  });
+
+  test('email_messages has a btree on (thread_id, direction, sent_at DESC)', async () => {
+    const d = def(await indexesOf('email_messages'), 'email_messages_thread_dir_sent_idx');
+    expect(d).toContain('USING btree');
+    expect(d).toContain('thread_id');
+    expect(d).toContain('direction');
+    expect(d).toContain('sent_at DESC');
+  });
+
+  test('leads has a partial keyset index (created_at DESC, id DESC) WHERE deleted_at IS NULL', async () => {
+    const d = def(await indexesOf('leads'), 'leads_created_id_live_idx');
+    expect(d).toContain('USING btree');
+    expect(d).toContain('created_at DESC');
+    expect(d).toContain('id DESC');
+    expect(d.toLowerCase()).toContain('where (deleted_at is null)');
   });
 });
 

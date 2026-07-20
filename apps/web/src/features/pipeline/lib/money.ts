@@ -43,6 +43,28 @@ export interface FormatMoneyOptions {
   compact?: boolean;
 }
 
+// Intl.NumberFormat construction is expensive; the pipeline board formats every
+// card's value on every render (thousands of calls). Formatters are pure for a
+// given (currency, compact) pair, so cache and reuse them — identical output, far
+// fewer allocations.
+const formatterCache = new Map<string, Intl.NumberFormat>();
+
+function moneyFormatter(currency: string, compact: boolean): Intl.NumberFormat {
+  const key = `${currency}:${compact ? 'c' : 's'}`;
+  let fmt = formatterCache.get(key);
+  if (fmt === undefined) {
+    fmt = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      notation: compact ? 'compact' : 'standard',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: compact ? 1 : 0,
+    });
+    formatterCache.set(key, fmt);
+  }
+  return fmt;
+}
+
 /** Format integer cents as localized currency. Compact by default for the grid. */
 export function formatMoney(
   cents: number,
@@ -50,11 +72,5 @@ export function formatMoney(
   opts: FormatMoneyOptions = {},
 ): string {
   const compact = opts.compact ?? true;
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    notation: compact ? 'compact' : 'standard',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: compact ? 1 : 0,
-  }).format(cents / 100);
+  return moneyFormatter(currency, compact).format(cents / 100);
 }

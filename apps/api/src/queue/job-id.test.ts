@@ -15,7 +15,7 @@ describe('custom BullMQ job ids are valid (no colon — real-Redis constraint)',
   const id = '11111111-2222-3333-4444-555555555555';
 
   test('sequence wake-up job id has no colon', () => {
-    const jobId = wakeupJobId(id);
+    const jobId = wakeupJobId(id, 1_700_000_000_000);
     expect(jobId).not.toContain(':');
     expect(jobId).toMatch(BULLMQ_SAFE);
   });

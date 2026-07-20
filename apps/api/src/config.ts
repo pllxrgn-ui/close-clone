@@ -16,6 +16,18 @@ const boolFlag = z.enum(['0', '1']).transform((v) => v === '1');
  */
 const DEV_SESSION_SECRET = 'dev-insecure-session-secret';
 
+/**
+ * Publicly-known placeholder secrets that MUST be rejected in production even
+ * though they satisfy the length floor — they ship in `.env.example`, git, and
+ * docs, so treating them as valid would hand every reader a working key. Keep in
+ * sync with `.env.example`.
+ */
+const KNOWN_INSECURE_SECRETS: ReadonlySet<string> = new Set([
+  DEV_SESSION_SECRET,
+  'change-me-to-a-64-char-random-hex-string',
+  'change-me-32-chars-minimum-000000',
+]);
+
 /** Minimum acceptable SESSION_SECRET length in production. */
 const MIN_PROD_SESSION_SECRET_LEN = 32;
 
@@ -46,16 +58,17 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     REDIS_URL: env.REDIS_URL,
     SESSION_SECRET: env.SESSION_SECRET,
   });
-  // Fail closed in production: an unset (→ dev default), default, or too-short
-  // SESSION_SECRET would let an attacker forge session cookies and decrypt stored
-  // OAuth tokens. Dev/test keep the weak default so MOCK_MODE runs with no config.
+  // Fail closed in production: an unset (→ dev default), publicly-known
+  // placeholder, or too-short SESSION_SECRET would let an attacker forge session
+  // cookies and decrypt stored OAuth tokens. Dev/test keep the weak default so
+  // MOCK_MODE runs with no config.
   if (
     parsed.NODE_ENV === 'production' &&
-    (parsed.SESSION_SECRET === DEV_SESSION_SECRET ||
+    (KNOWN_INSECURE_SECRETS.has(parsed.SESSION_SECRET) ||
       parsed.SESSION_SECRET.length < MIN_PROD_SESSION_SECRET_LEN)
   ) {
     throw new Error(
-      'SESSION_SECRET must be set to a strong unique value in production (>=32 chars); the dev default is insecure.',
+      'SESSION_SECRET must be set to a strong unique value in production (>=32 chars); the dev default and .env.example placeholder are insecure.',
     );
   }
   return {

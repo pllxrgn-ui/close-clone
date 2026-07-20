@@ -1,5 +1,15 @@
 # STATUS — Switchboard build
 
+## AUDIT FINISH PASS (2026-07-20, D-057)
+
+The stale `feat/ui-combobox` work was audited against current `origin/main` (the old branch was 97 upstream commits behind), preserved, and replayed without committing onto `finish/audit-combobox` at `87e5d2e`. The affected scope is now code-complete: the shared Combobox is keyboard/APG hardened and live in lead bulk actions; queue wake-ups are attempt-scoped and BullMQ-safe; provider calls compose caller cancellation with native timeouts; high-traffic indexes and cached money formatting are in place; insecure example-secret placeholders fail closed; deploy restart/capability checks and the stale DNC E2E fixture are repaired; the web shell now serves a favicon without a console 404. Existing untracked UI proposals were preserved.
+
+Security and dependency readiness are clean: `drizzle-orm`/`drizzle-kit` were upgraded past the SQL-identifier and esbuild advisories, the remaining transitive esbuild was safely overridden to the patched line, `pnpm audit` reports no known vulnerabilities, Drizzle migration consistency passes, the changed-source secret-pattern scan is clean, and `docker compose config --quiet` passes from a disposable validation environment.
+
+Verification: formatting, lint, full workspace typecheck, and full production build pass; focused regression gates pass 76 API + 35 web + 54 schema/index/search + 53 deploy tests (3 Bash-parser checks correctly skipped because this Windows host has no runnable Bash); Playwright passes 13/13 production-build E2E flows; a separate real-browser affected-flow pass verified lead selection → owner Combobox → filtering/live result count → keyboard commit → visible owner update. One saturated all-at-once API run was non-authoritative (1,667 passed, 51 unrelated timeout/performance failures plus Vitest worker-RPC timeouts); every changed surface was rerun isolated and passed. The host is Node 22.14 while the repo requires Node >=24, so a Node-24 CI/release runner remains the final environment-parity check.
+
+This is **code-complete and verified for the audited scope**, not a production launch. Real Gmail/Twilio/Deepgram/Haiku/OIDC credentials, a production Docker host, backups/monitoring ownership, and the actual deploy remain human/infrastructure gates already documented below.
+
 ## ✅ BUILD COMPLETE (2026-07-16)
 
 Every phase of the guide is built, merged to `main`, and green. **~4,000 tests** (1,481 api · ~1,100 web · 85 shared · 13 Playwright E2E executed), two phase gates, a whole-codebase security review (no critical), and a final coherence pass (no blocking incoherence — every compliance invariant verified enforced + tested). CONTRACTS at v1.3.1; DECISIONS D-001..D-034.

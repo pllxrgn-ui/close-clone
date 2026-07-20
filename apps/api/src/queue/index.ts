@@ -41,7 +41,15 @@ export function createBullmqQueueDriver(options: CreateBullmqOptions): BullmqQue
   const { connection } = options;
   return new BullmqQueueDriver({
     ...(options.queueName !== undefined ? { queueName: options.queueName } : {}),
-    queueFactory: (name): QueueLike => new Queue(name, { connection }),
+    queueFactory: (name): QueueLike =>
+      new Queue(name, {
+        connection,
+        // Match InProcessQueueDriver's fire-then-free semantics and bound Redis
+        // growth: a completed wake-up must not linger under its jobId (it would
+        // block a later same-id enqueue) and the queue must not accumulate every
+        // job forever. Failures keep a bounded tail for observability.
+        defaultJobOptions: { removeOnComplete: true, removeOnFail: 5000 },
+      }),
     workerFactory: (name, processor): WorkerLike =>
       new Worker(
         name,

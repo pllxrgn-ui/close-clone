@@ -15,12 +15,12 @@ export const ADMIN_USER = {
 } as const;
 
 /**
- * A lead flagged do-not-contact in the frozen fixture (Quantum Robotics). Used
+ * A lead flagged do-not-contact in the frozen fixture (Harbor Cloud). Used
  * by the composer compliance test. If the fixture ever changes, the guard
  * assertion on the "Do not contact" header pill fails loudly rather than silently
  * passing.
  */
-export const DNC_LEAD_ID = '48ac4060-9058-4141-8ca9-9bfd084815bb';
+export const DNC_LEAD_ID = 'e1834476-227f-4747-81b1-2985fef9ff8d';
 
 /** The Onboarding sequence (deterministic id/name; roster starts at 8). */
 export const ONBOARDING = { id: 'seq-onboarding', name: 'Onboarding' } as const;

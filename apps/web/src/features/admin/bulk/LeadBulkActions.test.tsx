@@ -71,7 +71,7 @@ describe('assign owner', () => {
     const { qc, onDone } = renderBar([a, b]);
 
     await user.click(await screen.findByRole('button', { name: 'Assign owner' }));
-    await user.click(await screen.findByRole('button', { name: new RegExp(owner.name) }));
+    await user.click(await screen.findByRole('option', { name: new RegExp(owner.name) }));
 
     await screen.findByText(`2 leads assigned to ${owner.name}`);
     expect(db.leads.find((l) => l.id === a.id)?.ownerId).toBe(owner.id);
@@ -89,7 +89,7 @@ describe('edit status', () => {
     const { qc } = renderBar([a]);
 
     await user.click(await screen.findByRole('button', { name: 'Edit status' }));
-    await user.click(await screen.findByRole('button', { name: 'Qualified' }));
+    await user.click(await screen.findByRole('option', { name: 'Qualified' }));
 
     await screen.findByText('1 lead set to Qualified');
     expect(db.leads.find((l) => l.id === a.id)?.statusId).toBe(status.id);
@@ -107,7 +107,7 @@ describe('enroll in sequence (I-DNC split)', () => {
       adminStore.sequences.find((s) => s.id === 'seq-onboarding')?.activeEnrollments ?? 0;
 
     await user.click(await screen.findByRole('button', { name: 'Enroll in sequence' }));
-    await user.click(await screen.findByRole('button', { name: /Onboarding/ }));
+    await user.click(await screen.findByRole('option', { name: /Onboarding/ }));
 
     await screen.findByText('1 lead enrolled in Onboarding · 1 skipped (DNC)');
     expect(adminStore.sequences.find((s) => s.id === 'seq-onboarding')?.activeEnrollments).toBe(
@@ -178,7 +178,7 @@ describe('failure path', () => {
     const { qc } = renderBar([a]);
 
     await user.click(await screen.findByRole('button', { name: 'Assign owner' }));
-    await user.click(await screen.findByRole('button', { name: new RegExp(owner.name) }));
+    await user.click(await screen.findByRole('option', { name: new RegExp(owner.name) }));
 
     await screen.findByText(/Couldn’t assign/);
     await waitFor(() => expect(cachedLead(qc, a.id)?.ownerId).toBe(originalOwner)); // rolled back

@@ -398,42 +398,12 @@
   font-size: var(--fs-sm);
   line-height: var(--lh-base);
 }
-.admin-dialog__filter {
-  padding: var(--space-3) var(--space-4) 0;
-}
-.admin-dialog__list {
-  overflow-y: auto;
-  padding: var(--space-3) var(--space-3) var(--space-4);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.admin-dialog__empty {
-  color: var(--ink-3);
-  font-size: var(--fs-sm);
-  padding: var(--space-4);
-  margin: 0;
-}
 .admin-dialog__actions {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);
   padding: var(--space-4) var(--space-5);
   border-top: 1px solid var(--line);
-}
-.admin-pick-row {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-3);
-}
-.admin-pick-row__label {
-  color: var(--ink-0);
-}
-.admin-pick-row__sub {
-  color: var(--ink-3);
-  font-size: var(--fs-sm);
-  margin-left: auto;
-  font-family: var(--font-mono);
 }
 
 /* DNC reason radios */

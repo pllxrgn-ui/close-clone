@@ -84,7 +84,7 @@ export async function approveReview(
     await deps.queue.enqueue(
       SEND_JOB_NAME,
       { intentId },
-      { delayMs: 0, jobId: wakeupJobId(intentId) },
+      { delayMs: 0, jobId: wakeupJobId(intentId, new Date(nowIso).getTime()) },
     );
   }
 

@@ -8,6 +8,8 @@
  * No enums / namespaces / parameter properties (host type-stripping constraint).
  */
 
+import { fetchWithTimeout } from '../../lib/fetch-with-timeout.ts';
+
 export interface GmailHttpRequest {
   method: 'GET' | 'POST';
   url: string;
@@ -22,11 +24,11 @@ export interface GmailHttpResponse {
 
 export type GmailTransport = (req: GmailHttpRequest) => Promise<GmailHttpResponse>;
 
-/** Production transport backed by global `fetch` (Node 22). */
+/** Production transport backed by global `fetch`, with a hard timeout. */
 export const fetchTransport: GmailTransport = async (req) => {
   const init: RequestInit = { method: req.method, headers: req.headers };
   if (req.body !== undefined) init.body = req.body;
-  const res = await fetch(req.url, init);
+  const res = await fetchWithTimeout(req.url, init);
   const bodyText = await res.text();
   return { status: res.status, bodyText };
 };

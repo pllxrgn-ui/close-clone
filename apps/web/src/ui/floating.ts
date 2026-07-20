@@ -18,6 +18,7 @@ export interface FloatingOptions {
 
 export interface FloatingPosition {
   style: CSSProperties;
+  anchorWidth: number;
   /** Side actually used after flipping — drives transform-origin via data-side. */
   side: 'top' | 'bottom';
 }
@@ -55,6 +56,7 @@ function compute(
 
   return {
     style: { position: 'fixed', top: Math.round(clampedTop), left: Math.round(left) },
+    anchorWidth: Math.round(a.width),
     side: actualSide,
   };
 }
@@ -73,6 +75,7 @@ export function useFloatingPosition(
   const { side = 'bottom', align = 'start', offset = 4 } = options;
   const [position, setPosition] = useState<FloatingPosition>({
     style: { position: 'fixed', top: 0, left: 0 },
+    anchorWidth: 0,
     side,
   });
 

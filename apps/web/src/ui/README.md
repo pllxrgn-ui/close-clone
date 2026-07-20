@@ -41,23 +41,24 @@ Rules that keep it scalable:
 
 ## Inventory
 
-| Component                                       | Use for                                             | Key a11y contract                                     |
-| ----------------------------------------------- | --------------------------------------------------- | ----------------------------------------------------- |
-| `Button` / `IconButton`                         | Actions. `loading` disables + `aria-busy` + spinner | `IconButton` requires `label`                         |
-| `Input` / `Textarea` / `Select`                 | Form values                                         | `invalid` → `aria-invalid`; auto-wired inside `Field` |
-| `Field`                                         | Label + control + hint + error                      | `htmlFor`, `aria-describedby`, `role="alert"` error   |
-| `Checkbox`                                      | Form boolean / bulk-select (`indeterminate`)        | real `<input>`, Space, label click                    |
-| `Switch`                                        | Immediate-effect setting (NOT a form value)         | `role="switch"`, `aria-checked`                       |
-| `Tabs` (+`TabList`/`Tab`/`TabPanel`)            | In-page view switch                                 | roving tabindex, arrows activate, 0ms                 |
-| `Menu` (+`MenuItem`/`MenuSeparator`)            | Action dropdown ("⋯")                               | APG menu keyboard, focus restore                      |
-| `Tooltip`                                       | Label icon-only/ambiguous controls                  | shows on focus too; Escape; never on disabled         |
-| `Modal`                                         | Centered dialog                                     | focus trap, Escape, focus restore                     |
-| `Drawer`                                        | Edge-docked dialog (compose, enroll)                | = Modal contract + slide entrance                     |
-| `EmptyState`                                    | Zero-data                                           | —                                                     |
-| `ErrorState`                                    | Failed-to-load + retry                              | `role="alert"`, always offers a way forward           |
-| `Spinner` / `Skeleton`                          | Loading (bounded / layout-shaped)                   | `role="status"` / `aria-hidden`                       |
-| `StatusPill`, `Lamp`, `LampRail`, `StateLegend` | The six-state color system                          | see `DESIGN.md` §2                                    |
-| `Kbd`, `ListRow`, `VisuallyHidden`              | Keycaps, dense rows, SR-only text                   | —                                                     |
+| Component                                       | Use for                                             | Key a11y contract                                            |
+| ----------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------ |
+| `Button` / `IconButton`                         | Actions. `loading` disables + `aria-busy` + spinner | `IconButton` requires `label`                                |
+| `Input` / `Textarea` / `Select`                 | Form values                                         | `invalid` → `aria-invalid`; auto-wired inside `Field`        |
+| `Combobox`                                      | Searchable single-select (owner/sequence/status)    | APG combobox: `aria-activedescendant`, type-to-filter, async |
+| `Field`                                         | Label + control + hint + error                      | `htmlFor`, `aria-describedby`, `role="alert"` error          |
+| `Checkbox`                                      | Form boolean / bulk-select (`indeterminate`)        | real `<input>`, Space, label click                           |
+| `Switch`                                        | Immediate-effect setting (NOT a form value)         | `role="switch"`, `aria-checked`                              |
+| `Tabs` (+`TabList`/`Tab`/`TabPanel`)            | In-page view switch                                 | roving tabindex, arrows activate, 0ms                        |
+| `Menu` (+`MenuItem`/`MenuSeparator`)            | Action dropdown ("⋯")                               | APG menu keyboard, focus restore                             |
+| `Tooltip`                                       | Label icon-only/ambiguous controls                  | shows on focus too; Escape; never on disabled                |
+| `Modal`                                         | Centered dialog                                     | focus trap, Escape, focus restore                            |
+| `Drawer`                                        | Edge-docked dialog (compose, enroll)                | = Modal contract + slide entrance                            |
+| `EmptyState`                                    | Zero-data                                           | —                                                            |
+| `ErrorState`                                    | Failed-to-load + retry                              | `role="alert"`, always offers a way forward                  |
+| `Spinner` / `Skeleton`                          | Loading (bounded / layout-shaped)                   | `role="status"` / `aria-hidden`                              |
+| `StatusPill`, `Lamp`, `LampRail`, `StateLegend` | The six-state color system                          | see `DESIGN.md` §2                                           |
+| `Kbd`, `ListRow`, `VisuallyHidden`              | Keycaps, dense rows, SR-only text                   | —                                                            |
 
 ## Usage
 
@@ -137,6 +138,47 @@ const [tab, setTab] = useState('calls');
 
 `value` strings become element ids — keep them slugs. Panel content unmounts
 when inactive (no hidden queries firing).
+
+### Combobox — searchable single-select
+
+```tsx
+const [ownerId, setOwnerId] = useState<string | null>(null);
+<Field label="Owner">
+  <Combobox
+    label="Owner"
+    options={reps.map((r) => ({ value: r.id, label: r.name, sublabel: r.email }))}
+    value={ownerId}
+    onChange={setOwnerId}
+    placeholder="Search reps…"
+  />
+</Field>;
+```
+
+Type to filter (`label` + `sublabel` matched); `↓/↑` move the active option, `Enter`
+selects, `Esc` reverts, `Backspace` on an empty field clears. Focus stays in the input —
+the active option is tracked with `aria-activedescendant` (APG combobox). Inside a
+`Field` the visible label names the control (no `aria-label` needed) and a `Field` error
+turns the control's border red. For **server-side** filtering pass `onInputChange` — then
+the parent owns the `options` array and `loading` shows a "Searching…" status:
+
+```tsx
+<Combobox
+  label="Search accounts"
+  options={data ?? []}
+  value={accountId}
+  onChange={setAccountId}
+  loading={query.isFetching}
+  onInputChange={setSearch} // debounce upstream; Combobox forwards the raw query
+/>
+```
+
+Use `Combobox` when the list is searchable/large or rows need a `sublabel`/`accent`;
+use `Select` for a short fixed list, and `Menu` for actions (not value-picking).
+
+**Reveal-in-place** (a picker that swaps for its trigger button, e.g. the leads
+bulk bar): mount it with `defaultOpen` (opens + focuses on mount) and pass `onClose`
+— which fires only on a dismissal (Esc / click-outside / blur), _not_ on a pick — to
+revert to the button. `onChange` handles the pick; `onClose` handles the cancel.
 
 ### Drawer
 

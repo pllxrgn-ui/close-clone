@@ -77,6 +77,8 @@ interface StepRow {
 interface ScheduledWakeup {
   intentId: string;
   delayMs: number;
+  /** Absolute due time (epoch ms) — scopes the wake-up job id (see wakeupJobId). */
+  dueAtMs: number;
 }
 
 async function loadSteps(exec: Db, sequenceId: string): Promise<StepRow[]> {
@@ -136,7 +138,7 @@ export async function enrollContacts(
       await deps.queue.enqueue(
         SEND_JOB_NAME,
         { intentId: w.intentId },
-        { delayMs: w.delayMs, jobId: wakeupJobId(w.intentId) },
+        { delayMs: w.delayMs, jobId: wakeupJobId(w.intentId, w.dueAtMs) },
       );
     }
   }
@@ -223,7 +225,7 @@ async function enrollOne(
           .returning({ id: sendIntents.id });
         const intentId = intentRows[0]!.id;
         if (state === 'SCHEDULED') {
-          wakeups.push({ intentId, delayMs: Math.max(0, dueMs - now.getTime()) });
+          wakeups.push({ intentId, delayMs: Math.max(0, dueMs - now.getTime()), dueAtMs: dueMs });
         }
       }
 

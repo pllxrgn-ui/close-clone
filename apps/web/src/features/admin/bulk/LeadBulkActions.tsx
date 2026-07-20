@@ -3,7 +3,7 @@ import type { JSX } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { Lead } from '@switchboard/shared';
 import '../admin.css';
-import { Button } from '../../../ui/index.ts';
+import { Button, Combobox } from '../../../ui/index.ts';
 import { listLeadStatuses, listUsers } from '../../../api/reference.ts';
 import { listSequences } from '../api.ts';
 import { LEAD_STATUSES_QUERY_KEY, SEQUENCES_QUERY_KEY, USERS_QUERY_KEY } from '../queryKeys.ts';
@@ -17,7 +17,7 @@ import {
 } from '../icons.tsx';
 import type { CsvLabelCtx } from './csv.ts';
 import { clearBulkSelection, setBulkSelection } from './selectionStore.ts';
-import { DncReasonDialog, SelectDialog } from './pickers.tsx';
+import { DncReasonDialog } from './pickers.tsx';
 import { useBulkActions } from './useBulkActions.ts';
 
 /*
@@ -88,33 +88,99 @@ export function LeadBulkActions({ selectedLeads, onDone }: LeadBulkActionsProps)
 
   return (
     <>
-      <Button
-        size="sm"
-        variant="ghost"
-        disabled={actions.pending || usersQuery.data === undefined}
-        onClick={() => setDialog('owner')}
-      >
-        <AssignOwnerIcon size={14} />
-        Assign owner
-      </Button>
-      <Button
-        size="sm"
-        variant="ghost"
-        disabled={actions.pending || statusesQuery.data === undefined}
-        onClick={() => setDialog('status')}
-      >
-        <StatusIcon size={14} />
-        Edit status
-      </Button>
-      <Button
-        size="sm"
-        variant="ghost"
-        disabled={actions.pending || sequencesQuery.data === undefined}
-        onClick={() => setDialog('sequence')}
-      >
-        <SequenceIcon size={14} />
-        Enroll in sequence
-      </Button>
+      {dialog === 'owner' ? (
+        <Combobox
+          label="Assign owner"
+          className="bulk-bar__picker"
+          placeholder="Search reps…"
+          defaultOpen
+          clearable={false}
+          value={null}
+          options={users.map((u) => ({
+            value: u.id,
+            label: u.name,
+            sublabel: u.isActive ? u.role : `${u.role} · inactive`,
+          }))}
+          onChange={(id) => {
+            const owner = users.find((u) => u.id === id);
+            if (owner) void actions.assignOwner(selectedLeads, owner).then(done, close);
+          }}
+          onClose={close}
+        />
+      ) : (
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={actions.pending || usersQuery.data === undefined}
+          onClick={() => setDialog('owner')}
+        >
+          <AssignOwnerIcon size={14} />
+          Assign owner
+        </Button>
+      )}
+
+      {dialog === 'status' ? (
+        <Combobox
+          label="Set status"
+          className="bulk-bar__picker"
+          placeholder="Set status…"
+          defaultOpen
+          clearable={false}
+          value={null}
+          options={statuses.map((s) => {
+            const accent = statusAccent(s.label);
+            return { value: s.id, label: s.label, ...(accent ? { accent } : {}) };
+          })}
+          onChange={(id) => {
+            const status = statuses.find((s) => s.id === id);
+            if (status) void actions.setStatus(selectedLeads, status).then(done, close);
+          }}
+          onClose={close}
+        />
+      ) : (
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={actions.pending || statusesQuery.data === undefined}
+          onClick={() => setDialog('status')}
+        >
+          <StatusIcon size={14} />
+          Edit status
+        </Button>
+      )}
+
+      {dialog === 'sequence' ? (
+        <Combobox
+          label="Enroll in sequence"
+          className="bulk-bar__picker"
+          placeholder="Search sequences…"
+          emptyLabel="No active sequences."
+          defaultOpen
+          clearable={false}
+          value={null}
+          options={sequences.map((s) => ({
+            value: s.id,
+            label: s.name,
+            sublabel: `${s.activeEnrollments.toLocaleString('en-US')} active`,
+          }))}
+          onChange={(id) => {
+            const seq = sequences.find((s) => s.id === id);
+            if (seq) void actions.enroll(selectedLeads, seq).then(done, close);
+          }}
+          onClose={close}
+        />
+      ) : (
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={actions.pending || sequencesQuery.data === undefined}
+          onClick={() => setDialog('sequence')}
+        >
+          <SequenceIcon size={14} />
+          Enroll in sequence
+        </Button>
+      )}
+
       <Button size="sm" variant="ghost" onClick={() => actions.exportCsv(selectedLeads, ctx)}>
         <ExportIcon size={14} />
         Export CSV
@@ -129,48 +195,6 @@ export function LeadBulkActions({ selectedLeads, onDone }: LeadBulkActionsProps)
         {allDnc ? 'Clear DNC' : 'Set DNC'}
       </Button>
 
-      <SelectDialog
-        open={dialog === 'owner'}
-        title="Assign owner"
-        options={users.map((u) => ({
-          id: u.id,
-          label: u.name,
-          sublabel: u.isActive ? u.role : `${u.role} · inactive`,
-        }))}
-        onSelect={(id) => {
-          const owner = users.find((u) => u.id === id);
-          if (owner) void actions.assignOwner(selectedLeads, owner).then(done, close);
-        }}
-        onClose={close}
-      />
-      <SelectDialog
-        open={dialog === 'status'}
-        title="Set status"
-        options={statuses.map((s) => {
-          const accent = statusAccent(s.label);
-          return { id: s.id, label: s.label, ...(accent ? { accent } : {}) };
-        })}
-        onSelect={(id) => {
-          const status = statuses.find((s) => s.id === id);
-          if (status) void actions.setStatus(selectedLeads, status).then(done, close);
-        }}
-        onClose={close}
-      />
-      <SelectDialog
-        open={dialog === 'sequence'}
-        title="Enroll in sequence"
-        options={sequences.map((s) => ({
-          id: s.id,
-          label: s.name,
-          sublabel: `${s.activeEnrollments.toLocaleString('en-US')} active`,
-        }))}
-        emptyLabel="No active sequences."
-        onSelect={(id) => {
-          const seq = sequences.find((s) => s.id === id);
-          if (seq) void actions.enroll(selectedLeads, seq).then(done, close);
-        }}
-        onClose={close}
-      />
       <DncReasonDialog
         open={typeof dialog === 'object' && dialog !== null}
         mode={typeof dialog === 'object' && dialog !== null ? dialog.dnc : 'set'}

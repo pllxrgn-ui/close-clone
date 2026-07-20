@@ -20,7 +20,7 @@ const read = (rel: string): string => readFileSync(resolve(DEPLOY_DIR, rel), 'ut
 
 function toolAvailable(cmd: string, args: string[]): boolean {
   const r = spawnSync(cmd, args, { encoding: 'utf8' });
-  return !(r.error !== undefined && (r.error as NodeJS.ErrnoException).code === 'ENOENT');
+  return r.error === undefined && r.status === 0;
 }
 
 const HAS_BASH = toolAvailable('bash', ['-c', 'exit 0']);

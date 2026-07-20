@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { fetchWithTimeout } from '../../lib/fetch-with-timeout.ts';
 import {
   callSummaryContextSchema,
   callSummarySchema,
@@ -263,7 +264,11 @@ function parseJson(text: string): unknown {
 /** Production HTTP transport over global `fetch` (never exercised by the suite). */
 export class FetchAnthropicTransport implements AnthropicTransport {
   async request(req: AnthropicTransportRequest): Promise<AnthropicTransportResponse> {
-    const res = await fetch(req.url, { method: 'POST', headers: req.headers, body: req.body });
+    const res = await fetchWithTimeout(req.url, {
+      method: 'POST',
+      headers: req.headers,
+      body: req.body,
+    });
     return { status: res.status, body: await res.text() };
   }
 }

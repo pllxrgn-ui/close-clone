@@ -1,4 +1,5 @@
 import { createHmac } from 'node:crypto';
+import { fetchWithTimeout } from '../../lib/fetch-with-timeout.ts';
 import { z } from 'zod';
 import {
   browserCallTokenSchema,
@@ -339,7 +340,7 @@ export class FetchTwilioTransport implements TwilioTransport {
     for (const [key, value] of Object.entries(req.form)) encoded.append(key, value);
     const init: RequestInit = { method: req.method, headers: req.headers };
     if (req.method === 'POST') init.body = encoded.toString();
-    const res = await fetch(req.url, init);
+    const res = await fetchWithTimeout(req.url, init);
     return { status: res.status, body: await res.text() };
   }
 }

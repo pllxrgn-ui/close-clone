@@ -297,6 +297,7 @@ services:
   # ---------------------------------------------------------------------------
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
+    restart: unless-stopped
     profiles: ['keycloak']
     command: ['start-dev', '--import-realm', '--http-port=8081']
     environment:

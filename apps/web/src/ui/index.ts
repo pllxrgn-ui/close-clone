@@ -38,4 +38,5 @@ export {
 } from './Menu.tsx';
 export { Tabs, TabList, Tab, TabPanel, type TabsProps, type TabProps } from './Tabs.tsx';
 export { Drawer, type DrawerProps } from './Drawer.tsx';
+export { Combobox, type ComboboxProps, type ComboboxOption } from './Combobox.tsx';
 export * from './icons.tsx';

@@ -481,6 +481,11 @@
   align-items: center;
   gap: var(--space-2);
 }
+/* Reveal-in-place picker (owner/status/sequence) — replaces its trigger button
+ * inline, so it should read at roughly button width until opened. */
+.bulk-bar__picker {
+  width: clamp(200px, 26vw, 260px);
+}
 .bulk-bar__clear {
   margin-left: auto;
 }

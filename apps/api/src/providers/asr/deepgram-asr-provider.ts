@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { fetchWithTimeout } from '../../lib/fetch-with-timeout.ts';
 import {
   transcriptSchema,
   type ASRProvider,
@@ -179,7 +180,11 @@ function toTranscript(parsed: z.infer<typeof deepgramResponseSchema>): Transcrip
 /** Production HTTP transport over global `fetch` (never exercised by the suite). */
 export class FetchDeepgramTransport implements DeepgramTransport {
   async request(req: DeepgramTransportRequest): Promise<DeepgramTransportResponse> {
-    const res = await fetch(req.url, { method: req.method, headers: req.headers, body: req.body });
+    const res = await fetchWithTimeout(req.url, {
+      method: req.method,
+      headers: req.headers,
+      body: req.body,
+    });
     return { status: res.status, body: await res.text() };
   }
 }

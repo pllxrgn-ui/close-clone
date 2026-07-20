@@ -418,7 +418,8 @@
     animation: none;
   }
   .sb-tooltip,
-  .sb-menu {
+  .sb-menu,
+  .sb-combobox__panel {
     animation: none;
   }
   /* Drawer: keep the opacity fade (comprehension), drop the slide (movement). */
@@ -431,4 +432,97 @@
       transform: none;
     }
   }
+}
+
+/* ── Combobox listbox (portalled — pointer/keyboard dropdown) ─────────────────
+ * Enters like <Menu> (origin-aware scale+fade, 180ms). Option navigation is
+ * keyboard-frequency, so the active-row highlight is 0ms (no transition). */
+.sb-combobox__panel {
+  z-index: var(--z-popover);
+  max-width: min(94vw, 420px);
+  background: var(--surface-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-2);
+  box-shadow: var(--shadow-2);
+  animation: sb-menu-in var(--dur) var(--ease-out);
+  transform-origin: left top;
+}
+.sb-combobox__panel[data-side='top'] {
+  transform-origin: left bottom;
+}
+.sb-combobox__list {
+  max-height: min(50vh, 320px);
+  overflow-y: auto;
+  padding: var(--space-2);
+  margin: 0;
+  list-style: none;
+}
+.sb-combobox__option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
+  border-left: 2px solid transparent;
+  border-radius: var(--radius-1);
+  color: var(--ink-0);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  /* Arrow-key driven highlight → instant (0ms), like sb-menu__item. */
+}
+/* data-active is set for BOTH keyboard nav and pointer hover, so the two agree. */
+.sb-combobox__option[data-active] {
+  background: var(--accent-weak-bg);
+  border-left-color: var(--focus);
+}
+.sb-combobox__option[aria-selected='true'] {
+  font-weight: var(--fw-medium);
+}
+.sb-combobox__option[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.sb-combobox__option[data-accent]::before {
+  content: '';
+  flex: none;
+  width: 3px;
+  align-self: stretch;
+  margin: var(--space-2) 0;
+  background: var(--cb-accent);
+}
+.sb-combobox__option-text {
+  flex: 1;
+  min-width: 0; /* enable ellipsis on long names */
+}
+.sb-combobox__option-label {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.sb-combobox__option-sub {
+  display: block;
+  overflow: hidden;
+  color: var(--ink-2);
+  font-size: var(--fs-micro);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.sb-combobox__check {
+  flex: none;
+  color: var(--ink-2);
+}
+.sb-combobox__status,
+.sb-combobox__empty {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+}
+.sb-combobox__empty {
+  justify-content: flex-start;
 }
