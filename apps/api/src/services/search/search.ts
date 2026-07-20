@@ -140,10 +140,9 @@ function scoreExpr(cols: Cols, q: string, qLower: string, likePat: string, prefi
 }
 
 /** Row qualifies when any signal fires. */
-function matchPred(cols: Cols, q: string, qLower: string, likePat: string, prefixPat: string): SQL {
+function matchPred(cols: Cols, q: string, qLower: string, likePat: string): SQL {
   return sql`(
       ${ftsMatch(cols, q)}
-   OR ${raw(cols.name)} ILIKE ${prefixPat} ESCAPE '\\'
    OR ${raw(cols.text)} LIKE ${likePat} ESCAPE '\\'
    OR ${raw(cols.name)} % ${qLower}
   )`;
@@ -204,8 +203,11 @@ export class SearchService {
 
     const leadScore = scoreExpr(LEAD_COLS, q, qLower, likePat, prefixPat);
     const contactScore = scoreExpr(CONTACT_COLS, q, qLower, likePat, prefixPat);
-    const leadPred = matchPred(LEAD_COLS, q, qLower, likePat, prefixPat);
-    const contactPred = matchPred(CONTACT_COLS, q, qLower, likePat, prefixPat);
+    // `search_text` starts with lower(name), so every name-prefix match is
+    // already covered by the substring arm. Keep prefix in scoring, but avoid
+    // paying for a redundant fourth qualification/index-recheck predicate.
+    const leadPred = matchPred(LEAD_COLS, q, qLower, likePat);
+    const contactPred = matchPred(CONTACT_COLS, q, qLower, likePat);
 
     const cursorClause = cursor
       ? sql`WHERE (score < ${cursor.score}) OR (score = ${cursor.score} AND id > ${cursor.id})`
