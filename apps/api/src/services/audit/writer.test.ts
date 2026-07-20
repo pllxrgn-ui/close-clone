@@ -176,7 +176,9 @@ describe('append-only DB trigger (migration 0011)', () => {
     });
     await expect(
       ctx.db.update(auditLog).set({ reason: 'x' }).where(eq(auditLog.id, row.id)),
-    ).rejects.toThrow(/append-only/);
+    ).rejects.toMatchObject({
+      cause: expect.objectContaining({ message: expect.stringMatching(/append-only/) }),
+    });
   });
 });
 
