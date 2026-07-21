@@ -13,8 +13,7 @@ import type { FeatureActCopy } from './copy.ts';
  * The three feature acts. Each is a wide-caps label + two sentences + a LIVE
  * board vignette built from real primitives and fixture data (no screenshots,
  * no stock, no invented metrics). Each act rises 8px and fades in once when it
- * scrolls into view (useReveal / IntersectionObserver); with reduced motion or
- * no observer it is revealed from the start.
+ * scrolls into view; with reduced motion it stays visible.
  */
 
 function TriageVignette(): JSX.Element {
@@ -155,13 +154,12 @@ function actParts(id: string): { icon: JSX.Element; vignette: JSX.Element } | nu
 
 function FeatureAct({ act, flip }: { act: FeatureActCopy; flip: boolean }): JSX.Element | null {
   const parts = actParts(act.id);
-  const { ref, revealed } = useReveal<HTMLElement>();
+  const ref = useReveal<HTMLElement>();
   if (!parts) return null;
   return (
     <article
       ref={ref}
       className={cx('sb-welcome__act', flip && 'is-flip')}
-      data-reveal={revealed ? 'in' : 'out'}
     >
       <div className="sb-welcome__act-copy">
         <p className="sb-welcome__act-label">

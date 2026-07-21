@@ -634,17 +634,6 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr);
   align-items: center;
   gap: clamp(var(--space-6), 5vw, 56px);
-  transition:
-    opacity 300ms var(--ease-out),
-    transform 300ms var(--ease-out);
-}
-.sb-welcome__act[data-reveal='out'] {
-  opacity: 0;
-  transform: translateY(8px);
-}
-.sb-welcome__act[data-reveal='in'] {
-  opacity: 1;
-  transform: none;
 }
 .sb-welcome__act.is-flip .sb-welcome__act-visual {
   order: -1;
@@ -1125,16 +1114,12 @@
   }
 }
 
-/* Reduced motion: no ambient pulse, no reveal offset — content, not movement. */
+/* Reduced motion: no ambient pulse; content stays visible. */
 @media (prefers-reduced-motion: reduce) {
   .sb-welcome__lamp--reply .sb-welcome__lamp-dot,
   .sb-welcome__lamp--live .sb-welcome__lamp-dot {
     animation: none;
     opacity: 1;
-  }
-  .sb-welcome__act[data-reveal='out'] {
-    opacity: 1;
-    transform: none;
   }
   .sb-welcome__frame-dot--reply {
     box-shadow: var(--lamp-glow); /* glow is static — kept; only motion drops */
