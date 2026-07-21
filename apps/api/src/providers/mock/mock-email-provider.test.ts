@@ -55,6 +55,16 @@ describe('MockEmailProvider', () => {
       const t = await provider.exchangeCode('code', 'https://app/cb');
       expect(() => oauthTokensSchema.parse(t)).not.toThrow();
     });
+
+    test('getMailboxAddress returns the authenticated mock mailbox', async () => {
+      await expect(
+        (
+          provider as unknown as {
+            getMailboxAddress(tokens: OAuthTokens): Promise<string>;
+          }
+        ).getMailboxAddress(tokens),
+      ).resolves.toBe('rep@mock.test');
+    });
   });
 
   describe('history semantics', () => {

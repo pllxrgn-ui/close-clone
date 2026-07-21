@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { eq } from 'drizzle-orm';
 import { emailAccounts, emailMessages, webhookInbox } from '../db/index.ts';
+import type { AuthenticatedUser } from '../auth/types.ts';
 import { createTestDb, type TestDb } from '../db/test-helpers.ts';
 import { MockEmailProvider } from '../providers/mock/mock-email-provider.ts';
 import { MockGmailPushVerifier } from '../services/sync/webhook.ts';
@@ -22,6 +23,26 @@ let ctx: TestDb;
 let app: FastifyInstance;
 let provider: MockEmailProvider;
 let userId: string;
+let currentUser: AuthenticatedUser;
+let currentTime: Date;
+
+const POST_LINK_REDIRECT = 'https://app.test/settings?section=inboxes';
+
+async function startLink(address = ADDRESS): Promise<{ accountId: string; authUrl: string }> {
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/v1/oauth/gmail/start',
+    payload: { address },
+  });
+  expect(response.statusCode).toBe(200);
+  return response.json<{ accountId: string; authUrl: string }>();
+}
+
+function oauthState(authUrl: string): string {
+  const value = new URL(authUrl).searchParams.get('state');
+  if (!value) throw new Error('OAuth URL must include state');
+  return value;
+}
 
 function pushBody(historyId: string, messageId: string): Record<string, unknown> {
   const data = Buffer.from(JSON.stringify({ emailAddress: ADDRESS, historyId })).toString('base64');
@@ -34,8 +55,20 @@ function pushBody(historyId: string, messageId: string): Record<string, unknown>
 beforeEach(async () => {
   ctx = await createTestDb();
   provider = new MockEmailProvider({ address: ADDRESS });
+  currentTime = new Date('2026-07-20T12:00:00.000Z');
   userId = await seedUser(ctx.db);
+  currentUser = {
+    id: userId,
+    email: 'rep@example.com',
+    name: 'Rep',
+    role: 'rep',
+    isActive: true,
+    timezone: 'UTC',
+  };
   app = Fastify({ logger: false });
+  app.addHook('preHandler', async (request) => {
+    request.user = currentUser;
+  });
   registerEmailSyncRoutes(app, {
     db: ctx.db,
     provider,
@@ -43,7 +76,10 @@ beforeEach(async () => {
     verifier: new MockGmailPushVerifier(),
     redirectUri: 'https://app.test/cb',
     providerName: 'mock',
-  });
+    stateSecret: 'oauth-state-secret',
+    postLinkRedirect: POST_LINK_REDIRECT,
+    now: () => currentTime,
+  } as Parameters<typeof registerEmailSyncRoutes>[1]);
   await app.ready();
 });
 
@@ -58,14 +94,9 @@ describe('OAuth link flow', () => {
     provider.injectIncoming({ from: 'a@ext.test', subject: 'Hi' }, provider.nextHistoryId());
     provider.injectIncoming({ from: 'b@ext.test', subject: 'Yo' }, provider.nextHistoryId());
 
-    const start = await app.inject({
-      method: 'POST',
-      url: '/api/v1/oauth/gmail/start',
-      payload: { userId, address: ADDRESS },
-    });
-    expect(start.statusCode).toBe(200);
-    const { accountId, authUrl } = start.json<{ accountId: string; authUrl: string }>();
+    const { accountId, authUrl } = await startLink();
     expect(authUrl).toContain('mock.local/oauth/authorize');
+    const state = oauthState(authUrl);
 
     // Account is AUTHORIZING after start, with no tokens yet.
     const mid = await ctx.db.select().from(emailAccounts).where(eq(emailAccounts.id, accountId));
@@ -74,10 +105,10 @@ describe('OAuth link flow', () => {
 
     const cb = await app.inject({
       method: 'GET',
-      url: `/api/v1/oauth/gmail/callback?code=auth-code&state=${accountId}`,
+      url: `/api/v1/oauth/gmail/callback?code=auth-code&state=${encodeURIComponent(state)}`,
     });
-    expect(cb.statusCode).toBe(200);
-    expect(cb.json<{ status: string }>().status).toBe('LIVE');
+    expect(cb.statusCode).toBe(302);
+    expect(cb.headers.location).toBe(`${POST_LINK_REDIRECT}&gmail=connected`);
 
     const row = await ctx.db.select().from(emailAccounts).where(eq(emailAccounts.id, accountId));
     expect(row[0]!.syncStatus).toBe('LIVE');
@@ -96,18 +127,94 @@ describe('OAuth link flow', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/v1/oauth/gmail/start',
-      payload: { address: ADDRESS },
+      payload: { address: 'not-an-email' },
     });
     expect(res.statusCode).toBe(400);
     expect(res.json<{ error: { code: string } }>().error.code).toBe('VALIDATION_FAILED');
   });
 
-  test('callback with a non-uuid state is VALIDATION_FAILED', async () => {
+  test('start derives ownership from the signed-in user, never a body userId', async () => {
+    const otherUserId = await seedUser(ctx.db, 'other@example.com');
+    const { accountId } = await startLink();
+    const account = (
+      await ctx.db.select().from(emailAccounts).where(eq(emailAccounts.id, accountId))
+    )[0]!;
+    expect(account.userId).toBe(userId);
+    expect(account.userId).not.toBe(otherUserId);
+  });
+
+  test('callback rejects a tampered OAuth state', async () => {
     const res = await app.inject({
       method: 'GET',
-      url: '/api/v1/oauth/gmail/callback?code=x&state=not-a-uuid',
+      url: '/api/v1/oauth/gmail/callback?code=x&state=tampered',
     });
     expect(res.statusCode).toBe(400);
+  });
+
+  test('callback rejects an expired OAuth state', async () => {
+    const { authUrl } = await startLink();
+    currentTime = new Date(currentTime.getTime() + 11 * 60 * 1000);
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/v1/oauth/gmail/callback?code=x&state=${encodeURIComponent(oauthState(authUrl))}`,
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json<{ error: { message: string } }>().error.message).toMatch(/expired/i);
+  });
+
+  test('callback refuses a state issued for another signed-in user', async () => {
+    const { authUrl } = await startLink();
+    const otherUserId = await seedUser(ctx.db, 'other@example.com');
+    currentUser = { ...currentUser, id: otherUserId, email: 'other@example.com' };
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/v1/oauth/gmail/callback?code=x&state=${encodeURIComponent(oauthState(authUrl))}`,
+    });
+    expect(res.statusCode).toBe(403);
+  });
+
+  test('callback refuses authorization for a different Gmail address', async () => {
+    const { authUrl } = await startLink('different@mock.test');
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/v1/oauth/gmail/callback?code=x&state=${encodeURIComponent(oauthState(authUrl))}`,
+    });
+    expect(res.statusCode).toBe(409);
+    expect(res.json<{ error: { message: string } }>().error.message).toMatch(/different.*rep/i);
+  });
+
+  test('lists and disconnects only the signed-in user’s mailboxes', async () => {
+    const { accountId, authUrl } = await startLink();
+    await app.inject({
+      method: 'GET',
+      url: `/api/v1/oauth/gmail/callback?code=x&state=${encodeURIComponent(oauthState(authUrl))}`,
+    });
+    const otherUserId = await seedUser(ctx.db, 'other@example.com');
+    await ctx.db.insert(emailAccounts).values({
+      userId: otherUserId,
+      address: 'other@mock.test',
+      provider: 'mock',
+      syncStatus: 'LIVE',
+    });
+
+    const list = await app.inject({ method: 'GET', url: '/api/v1/email-accounts' });
+    expect(list.statusCode).toBe(200);
+    expect(list.json<Array<{ id: string; address: string }>>()).toEqual([
+      expect.objectContaining({ id: accountId, address: ADDRESS }),
+    ]);
+
+    const removed = await app.inject({
+      method: 'DELETE',
+      url: `/api/v1/email-accounts/${accountId}`,
+    });
+    expect(removed.statusCode).toBe(204);
+    const row = (
+      await ctx.db.select().from(emailAccounts).where(eq(emailAccounts.id, accountId))
+    )[0]!;
+    expect(row.syncStatus).toBe('REAUTH_REQUIRED');
+    expect(row.oauthTokens).toBeNull();
   });
 });
 

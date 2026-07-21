@@ -8,5 +8,6 @@ export const CUSTOM_FIELDS_QUERY_KEY = ['admin', 'custom-fields'] as const;
 export const TEMPLATES_QUERY_KEY = ['admin', 'templates'] as const;
 export const SNIPPETS_QUERY_KEY = ['admin', 'snippets'] as const;
 export const ORG_SETTINGS_QUERY_KEY = ['admin', 'org-settings'] as const;
+export const EMAIL_ACCOUNTS_QUERY_KEY = ['settings', 'email-accounts'] as const;
 export const USERS_QUERY_KEY = ['ref', 'users'] as const;
 export const LEAD_STATUSES_QUERY_KEY = ['ref', 'lead-statuses'] as const;

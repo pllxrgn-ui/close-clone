@@ -47,3 +47,16 @@ export class ReauthRequiredError extends SyncError {
     this.accountId = accountId;
   }
 }
+
+/** OAuth authorized a different mailbox than the address being linked. */
+export class MailboxAddressMismatchError extends SyncError {
+  readonly expected: string;
+  readonly actual: string;
+
+  constructor(expected: string, actual: string) {
+    super(`requested mailbox ${expected} but Google authorized ${actual}`);
+    this.name = 'MailboxAddressMismatchError';
+    this.expected = expected;
+    this.actual = actual;
+  }
+}

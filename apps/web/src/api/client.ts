@@ -55,8 +55,12 @@ async function toApiError(res: Response): Promise<ApiError> {
 
 export async function apiRequest<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/json', ...opts.headers };
+  const method = (opts.method ?? 'GET').toUpperCase();
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    headers['x-switchboard-csrf'] = '1';
+  }
   const init: RequestInit = {
-    method: opts.method ?? 'GET',
+    method,
     headers,
     credentials: 'include',
   };

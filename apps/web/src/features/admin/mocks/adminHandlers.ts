@@ -15,6 +15,7 @@
 import { http, HttpResponse } from 'msw';
 import type { Lead } from '@switchboard/shared';
 import { customFieldTypeValues } from '@switchboard/shared';
+import { readStoredUser } from '../../../auth/auth.ts';
 import { db } from '../../../mocks/fixtures.ts';
 import type { CustomFieldRow, EnrollResult } from '../types.ts';
 import { adminStore } from './adminStore.ts';
@@ -44,6 +45,66 @@ const SNAKE_CASE = /^[a-z][a-z0-9_]*$/;
 const nowIso = (): string => new Date().toISOString();
 
 export const adminHandlers = [
+  // ── Personal Gmail account linking ────────────────────────────────────────
+  http.get(api('/email-accounts'), () => {
+    const user = readStoredUser();
+    if (!user) return errorJson(401, 'UNAUTHENTICATED', 'No active session');
+    return HttpResponse.json(
+      adminStore.emailAccounts.filter((account) => account.userId === user.id),
+    );
+  }),
+  http.post(api('/oauth/gmail/start'), async ({ request }) => {
+    const user = readStoredUser();
+    if (!user) return errorJson(401, 'UNAUTHENTICATED', 'No active session');
+    const body = await readJson(request);
+    const address = typeof body?.address === 'string' ? body.address.trim().toLowerCase() : '';
+    if (!/^\S+@\S+\.\S+$/.test(address)) {
+      return errorJson(400, 'VALIDATION_FAILED', 'Enter a valid Gmail address', {
+        field: 'address',
+      });
+    }
+    const timestamp = nowIso();
+    let account = adminStore.emailAccounts.find(
+      (candidate) => candidate.userId === user.id && candidate.address === address,
+    );
+    if (account) {
+      account.syncStatus = 'LIVE';
+      account.updatedAt = timestamp;
+    } else {
+      account = {
+        id: crypto.randomUUID(),
+        userId: user.id,
+        address,
+        provider: 'gmail',
+        syncStatus: 'LIVE',
+        historyCursor: null,
+        backfillCheckpoint: null,
+        dailySendCount: 0,
+        dailyCountDate: null,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
+      adminStore.emailAccounts.push(account);
+    }
+    return HttpResponse.json({
+      accountId: account.id,
+      authUrl: '/settings?section=inboxes&gmail=connected',
+    });
+  }),
+  http.delete(api('/email-accounts/:id'), ({ params }) => {
+    const user = readStoredUser();
+    if (!user) return errorJson(401, 'UNAUTHENTICATED', 'No active session');
+    const account = adminStore.emailAccounts.find(
+      (candidate) => candidate.id === String(params.id) && candidate.userId === user.id,
+    );
+    if (!account) return errorJson(404, 'NOT_FOUND', 'Email account not found');
+    account.syncStatus = 'REAUTH_REQUIRED';
+    account.historyCursor = null;
+    account.backfillCheckpoint = null;
+    account.updatedAt = nowIso();
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   // ── Reference: sequences (with live enrollment counts) ─────────────────────
   http.get(api('/sequences'), () => HttpResponse.json(adminStore.sequences)),
 

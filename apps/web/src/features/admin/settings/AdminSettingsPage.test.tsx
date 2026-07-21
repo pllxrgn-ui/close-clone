@@ -5,9 +5,14 @@ import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ToastProvider } from '../../../feedback/ToastProvider.tsx';
+import { AuthProvider } from '../../../auth/AuthProvider.tsx';
+import { browserNav } from '../../../auth/browserNav.ts';
+import { storeUser } from '../../../auth/auth.ts';
 import { server } from '../../../mocks/server.ts';
+import { db } from '../../../mocks/fixtures.ts';
 import { adminHandlers } from '../mocks/adminHandlers.ts';
 import { adminStore, resetAdminStore } from '../mocks/adminStore.ts';
+import { disconnectEmailAccount } from '../api.ts';
 import { AdminSettingsPage } from './AdminSettingsPage.tsx';
 
 /*
@@ -17,15 +22,20 @@ import { AdminSettingsPage } from './AdminSettingsPage.tsx';
  * test.
  */
 
-function renderSettings(section = 'users'): void {
+function renderSettings(section?: string, role: 'admin' | 'rep' = 'admin'): void {
+  const signedInUser = db.users.find((candidate) => candidate.role === role);
+  if (!signedInUser) throw new Error(`Missing ${role} fixture`);
+  storeUser(signedInUser);
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={qc}>
-      <ToastProvider ttl={0}>
-        <MemoryRouter initialEntries={[`/settings?section=${section}`]}>
-          <AdminSettingsPage />
-        </MemoryRouter>
-      </ToastProvider>
+      <AuthProvider>
+        <ToastProvider ttl={0}>
+          <MemoryRouter initialEntries={[`/settings${section ? `?section=${section}` : ''}`]}>
+            <AdminSettingsPage />
+          </MemoryRouter>
+        </ToastProvider>
+      </AuthProvider>
     </QueryClientProvider>,
   );
 }
@@ -39,6 +49,11 @@ afterEach(() => {
 });
 
 describe('navigation', () => {
+  test('opens personal inbox settings by default', async () => {
+    renderSettings();
+    await screen.findByRole('heading', { name: 'Inboxes', level: 1 });
+  });
+
   test('renders Users by default and switches sections via the sub-rail', async () => {
     const user = userEvent.setup();
     renderSettings('users');
@@ -55,6 +70,79 @@ describe('navigation', () => {
       'href',
       '/welcome',
     );
+  });
+
+  test('keeps organization settings hidden from reps', async () => {
+    renderSettings(undefined, 'rep');
+    await screen.findByRole('heading', { name: 'Inboxes', level: 1 });
+    expect(screen.queryByRole('link', { name: 'Users' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Compliance' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'About' })).toBeInTheDocument();
+  });
+});
+
+describe('inboxes', () => {
+  test('connects and disconnects a Gmail account through the mock API', async () => {
+    const user = userEvent.setup();
+    const assign = vi.spyOn(browserNav, 'assign').mockImplementation(() => undefined);
+    renderSettings('inboxes');
+
+    await user.clear(await screen.findByLabelText(/Gmail address/));
+    await user.type(screen.getByLabelText(/Gmail address/), 'seller@example.com');
+    await user.click(screen.getByRole('button', { name: 'Connect Gmail' }));
+
+    await screen.findByText('seller@example.com');
+    expect(screen.getByText('Connected')).toBeInTheDocument();
+    expect(assign).not.toHaveBeenCalled();
+    expect(adminStore.emailAccounts).toHaveLength(1);
+    expect(adminStore.emailAccounts[0]?.address).toBe('seller@example.com');
+
+    await user.click(await screen.findByRole('button', { name: 'Disconnect seller@example.com' }));
+    expect(await screen.findByText('Needs reconnect')).toBeInTheDocument();
+    expect(adminStore.emailAccounts[0]?.syncStatus).toBe('REAUTH_REQUIRED');
+
+    await user.click(screen.getByRole('button', { name: 'Reconnect Gmail' }));
+    expect(await screen.findByText('Connected')).toBeInTheDocument();
+    expect(adminStore.emailAccounts[0]?.syncStatus).toBe('LIVE');
+  });
+
+  test('keeps the mock inbox flow scoped to the signed-in rep', async () => {
+    const admin = db.users.find((candidate) => candidate.role === 'admin');
+    const rep = db.users.find((candidate) => candidate.role === 'rep');
+    if (!admin || !rep) throw new Error('Missing admin or rep fixture');
+    adminStore.emailAccounts.push({
+      id: '00000000-0000-4000-8000-000000000099',
+      userId: admin.id,
+      address: 'admin-inbox@example.com',
+      provider: 'gmail',
+      syncStatus: 'LIVE',
+      historyCursor: null,
+      backfillCheckpoint: null,
+      dailySendCount: 0,
+      dailyCountDate: null,
+      createdAt: '2026-07-21T00:00:00.000Z',
+      updatedAt: '2026-07-21T00:00:00.000Z',
+    });
+
+    renderSettings('inboxes', 'rep');
+    await screen.findByRole('heading', { name: 'Inboxes', level: 1 });
+    await screen.findByText('No inbox connected');
+    expect(screen.queryByText('admin-inbox@example.com')).not.toBeInTheDocument();
+    await expect(disconnectEmailAccount(adminStore.emailAccounts[0]!.id)).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      status: 404,
+    });
+
+    const user = userEvent.setup();
+    await user.clear(screen.getByLabelText(/Gmail address/));
+    await user.type(screen.getByLabelText(/Gmail address/), 'rep-inbox@example.com');
+    await user.click(screen.getByRole('button', { name: 'Connect Gmail' }));
+
+    expect(await screen.findByText('rep-inbox@example.com')).toBeInTheDocument();
+    expect(
+      adminStore.emailAccounts.find((account) => account.address === 'rep-inbox@example.com')
+        ?.userId,
+    ).toBe(rep.id);
   });
 });
 

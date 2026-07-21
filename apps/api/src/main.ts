@@ -378,6 +378,8 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
                   transport: createFetchTransport(),
                 }),
             redirectUri: `${env['WEB_ORIGIN'] ?? ''}/api/v1/oauth/gmail/callback`,
+            stateSecret: config.sessionSecret,
+            postLinkRedirect: `${env['WEB_ORIGIN'] ?? 'http://localhost:5173'}/settings?section=inboxes`,
             providerName: config.mockMode ? 'mock' : 'gmail',
           },
         }

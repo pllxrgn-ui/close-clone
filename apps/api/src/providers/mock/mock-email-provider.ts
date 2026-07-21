@@ -155,6 +155,11 @@ export class MockEmailProvider implements EmailProvider {
     return this.mintTokens();
   }
 
+  async getMailboxAddress(tokens: OAuthTokens): Promise<string> {
+    oauthTokensSchema.parse(tokens);
+    return this.address;
+  }
+
   async listHistory(tokens: OAuthTokens, cursor: string): Promise<HistoryPage> {
     oauthTokensSchema.parse(tokens);
     const from = this.parseCursor(cursor);

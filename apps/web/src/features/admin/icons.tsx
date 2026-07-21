@@ -14,6 +14,7 @@ import {
   Info,
   ListChecks,
   Lock,
+  Mail,
   Pencil,
   Plus,
   ShieldCheck,
@@ -65,6 +66,7 @@ export const CustomFieldsIcon = toIcon(SlidersHorizontal);
 export const TemplatesIcon = toIcon(FileText);
 export const ComplianceIcon = toIcon(ShieldCheck);
 export const AboutIcon = toIcon(Info);
+export const InboxesIcon = toIcon(Mail);
 
 // Field-type + misc glyphs
 export const TypeTextIcon = toIcon(Type);

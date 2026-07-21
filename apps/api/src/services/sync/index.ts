@@ -10,6 +10,7 @@ export {
   SyncError,
   AccountNotFoundError,
   IllegalTransitionError,
+  MailboxAddressMismatchError,
   ReauthRequiredError,
   type SyncStatus,
 } from './errors.ts';

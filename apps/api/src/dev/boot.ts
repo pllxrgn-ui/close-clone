@@ -147,6 +147,8 @@ export async function buildDevServer(opts: BuildDevServerOptions = {}): Promise<
       cipher,
       verifier,
       redirectUri: `http://localhost:${config.port}/api/v1/oauth/gmail/callback`,
+      stateSecret: config.sessionSecret,
+      postLinkRedirect: 'http://localhost:5173/settings?section=inboxes',
       providerName: 'mock',
     },
     emailSend: { providerFor: senderRegistry.providerFor, cipher },

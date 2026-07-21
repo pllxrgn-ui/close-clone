@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from '../mocks/server.ts';
 import { ApiError } from './errors.ts';
+import { apiRequest } from './client.ts';
 import { getLead, getLeadTimeline, listLeads } from './leads.ts';
 import { previewSmartView } from './smartViews.ts';
 import { search } from './search.ts';
@@ -107,5 +108,19 @@ describe('error mapping', () => {
       expect(err.code).toBe('INTERNAL');
       expect(err.status).toBe(500);
     }
+  });
+});
+
+describe('production request security', () => {
+  test('mutating requests carry the first-party CSRF header', async () => {
+    let csrfHeader: string | null = null;
+    server.use(
+      http.post('*/api/v1/security-probe', ({ request }) => {
+        csrfHeader = request.headers.get('x-switchboard-csrf');
+        return HttpResponse.json({ ok: true });
+      }),
+    );
+    await apiRequest('/security-probe', { method: 'POST', body: {} });
+    expect(csrfHeader).toBe('1');
   });
 });
