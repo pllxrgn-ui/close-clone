@@ -59,9 +59,9 @@ beforeEach(() => {
   gsapFrom.mockReset();
   gsapToArray.mockReset();
   useGSAPConfig.mockReset();
-  gsapToArray.mockImplementation((selector: string, scope: HTMLElement) =>
-    [...scope.querySelectorAll<HTMLElement>(selector)],
-  );
+  gsapToArray.mockImplementation((selector: string, scope: HTMLElement) => [
+    ...scope.querySelectorAll<HTMLElement>(selector),
+  ]);
 });
 
 afterEach(() => {

@@ -11,9 +11,9 @@ interface RevealOptions {
   itemSelector?: string;
 }
 
-export function useReveal<T extends HTMLElement = HTMLElement>(
-  { itemSelector }: RevealOptions = {},
-): RefObject<T | null> {
+export function useReveal<T extends HTMLElement = HTMLElement>({
+  itemSelector,
+}: RevealOptions = {}): RefObject<T | null> {
   const ref = useRef<T | null>(null);
   const reduceMotion = prefersReducedMotion();
 

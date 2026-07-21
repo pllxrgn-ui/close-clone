@@ -157,10 +157,7 @@ function FeatureAct({ act, flip }: { act: FeatureActCopy; flip: boolean }): JSX.
   const ref = useReveal<HTMLElement>();
   if (!parts) return null;
   return (
-    <article
-      ref={ref}
-      className={cx('sb-welcome__act', flip && 'is-flip')}
-    >
+    <article ref={ref} className={cx('sb-welcome__act', flip && 'is-flip')}>
       <div className="sb-welcome__act-copy">
         <p className="sb-welcome__act-label">
           <span className="sb-welcome__act-icon">{parts.icon}</span>

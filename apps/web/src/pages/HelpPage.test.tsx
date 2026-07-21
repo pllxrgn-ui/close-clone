@@ -28,7 +28,9 @@ describe('HelpPage', () => {
       expect(screen.getByRole('heading', { name, level: 2 })).toBeInTheDocument();
     }
     expect(container.querySelectorAll('details.sb-help__faq-item')).toHaveLength(15);
-    expect(screen.getByText(/disconnecting removes Switchboard's authorization/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/disconnecting removes Switchboard's authorization/i),
+    ).toBeInTheDocument();
   });
 
   test('opens an answer through its native summary', async () => {
@@ -42,7 +44,10 @@ describe('HelpPage', () => {
 
   test('links to existing action surfaces', () => {
     renderHelp();
-    expect(screen.getByRole('link', { name: /Settings → Inboxes/i })).toHaveAttribute('href', '/settings');
+    expect(screen.getByRole('link', { name: /Settings → Inboxes/i })).toHaveAttribute(
+      'href',
+      '/settings',
+    );
     expect(screen.getByRole('link', { name: 'Smart Views' })).toHaveAttribute('href', '/views');
   });
 

@@ -36,12 +36,14 @@
 ### Task 1: Build factual, native Support disclosures
 
 **Files:**
+
 - Create: apps/web/src/pages/helpContent.tsx
 - Create: apps/web/src/pages/HelpPage.test.tsx
 - Modify: apps/web/src/pages/HelpPage.tsx
 - Modify: apps/web/src/app/shell.css
 
 **Interfaces:**
+
 - Produces HELP_GROUPS: readonly HelpGroup[].
 - HelpGroup has id, title, intro, and items.
 - HelpItem has question and answer: ReactNode.
@@ -172,7 +174,7 @@ Keep the responsive readable-measure grid. Add a wrapping topic strip, square bo
 
 - [ ] **Step 6: Run focused Help checks**
 
-    pnpm --filter @switchboard/web test -- src/pages/HelpPage.test.tsx src/app/rail.test.tsx
+  pnpm --filter @switchboard/web test -- src/pages/HelpPage.test.tsx src/app/rail.test.tsx
 
 Expected: PASS; the rail still opens the real Support page.
 
@@ -181,6 +183,7 @@ Expected: PASS; the rail still opens the real Support page.
 ### Task 2: Add the Welcome workflow story
 
 **Files:**
+
 - Create: apps/web/src/features/welcome/WorkflowStory.tsx
 - Modify: apps/web/src/features/welcome/copy.ts
 - Modify: apps/web/src/features/welcome/WelcomePage.tsx
@@ -188,32 +191,33 @@ Expected: PASS; the rail still opens the real Support page.
 - Modify: apps/web/src/features/welcome/welcome.css
 
 **Interfaces:**
+
 - Produces WORKFLOW_STORY and WorkflowStory.
 - Consumes useReveal and existing Welcome tokens.
 
 - [ ] **Step 1: Add failing content tests**
 
-    test('explains the connected workflow in three steps', () => {
-      const { container } = renderWelcome();
-      expect(screen.getByRole('heading', {
-        name: 'From connected inbox to completed follow-up',
-      })).toBeInTheDocument();
-      expect(screen.getByText('Connect your Gmail inbox')).toBeInTheDocument();
-      expect(screen.getByText('Work the next signal')).toBeInTheDocument();
-      expect(screen.getByText('Keep every touch together')).toBeInTheDocument();
-      expect(container.querySelectorAll('.sb-welcome__workflow-step')).toHaveLength(3);
-    });
+  test('explains the connected workflow in three steps', () => {
+  const { container } = renderWelcome();
+  expect(screen.getByRole('heading', {
+  name: 'From connected inbox to completed follow-up',
+  })).toBeInTheDocument();
+  expect(screen.getByText('Connect your Gmail inbox')).toBeInTheDocument();
+  expect(screen.getByText('Work the next signal')).toBeInTheDocument();
+  expect(screen.getByText('Keep every touch together')).toBeInTheDocument();
+  expect(container.querySelectorAll('.sb-welcome__workflow-step')).toHaveLength(3);
+  });
 
-    test('the Workflow anchor points at the real section', () => {
-      const { container } = renderWelcome();
-      expect(screen.getByRole('link', { name: 'Workflow' }))
-        .toHaveAttribute('href', '#welcome-workflow');
-      expect(container.querySelector('#welcome-workflow')).not.toBeNull();
-    });
+  test('the Workflow anchor points at the real section', () => {
+  const { container } = renderWelcome();
+  expect(screen.getByRole('link', { name: 'Workflow' }))
+  .toHaveAttribute('href', '#welcome-workflow');
+  expect(container.querySelector('#welcome-workflow')).not.toBeNull();
+  });
 
 - [ ] **Step 2: Prove the tests fail**
 
-    pnpm --filter @switchboard/web test -- src/features/welcome/WelcomePage.test.tsx
+  pnpm --filter @switchboard/web test -- src/features/welcome/WelcomePage.test.tsx
 
 Expected: FAIL because the section and nav anchor do not exist.
 
@@ -268,6 +272,7 @@ Repeat the Step 2 command. Expected: PASS.
 ### Task 3: Move scroll reveals to scoped GSAP
 
 **Files:**
+
 - Modify: apps/web/package.json
 - Modify: pnpm-lock.yaml
 - Modify: apps/web/src/features/welcome/useReveal.ts
@@ -276,12 +281,13 @@ Repeat the Step 2 command. Expected: PASS.
 - Modify: apps/web/src/features/welcome/welcome.css
 
 **Interfaces:**
+
 - Produces useReveal<T>(options?: RevealOptions): RefObject<T | null>.
 - RevealOptions has optional itemSelector: string.
 
 - [ ] **Step 1: Install the two requested dependencies**
 
-    pnpm --filter @switchboard/web add gsap @gsap/react
+  pnpm --filter @switchboard/web add gsap @gsap/react
 
 Expected: dependency entries only in apps/web/package.json and pnpm-lock.yaml.
 
@@ -307,7 +313,7 @@ For itemSelector, assert stagger is 0.08 and gsap.utils.toArray receives the sel
 
 - [ ] **Step 3: Prove the hook tests fail**
 
-    pnpm --filter @switchboard/web test -- src/features/welcome/useReveal.test.tsx
+  pnpm --filter @switchboard/web test -- src/features/welcome/useReveal.test.tsx
 
 Expected: FAIL because useReveal still uses IntersectionObserver.
 
@@ -365,7 +371,7 @@ FeatureActs consumes only const ref = useReveal<HTMLElement>() and removes data-
 
 - [ ] **Step 6: Run motion and Welcome tests**
 
-    pnpm --filter @switchboard/web test -- src/features/welcome/useReveal.test.tsx src/features/welcome/WelcomePage.test.tsx
+  pnpm --filter @switchboard/web test -- src/features/welcome/useReveal.test.tsx src/features/welcome/WelcomePage.test.tsx
 
 Expected: PASS; reduced motion creates no GSAP tween.
 
@@ -374,21 +380,22 @@ Expected: PASS; reduced motion creates no GSAP tween.
 ### Task 4: Verify and document
 
 **Files:**
+
 - Modify: docs/dev-notes.md
 
 - [ ] **Step 1: Run all focused tests**
 
-    pnpm --filter @switchboard/web test -- src/pages/HelpPage.test.tsx src/app/rail.test.tsx src/features/welcome/useReveal.test.tsx src/features/welcome/WelcomePage.test.tsx
+  pnpm --filter @switchboard/web test -- src/pages/HelpPage.test.tsx src/app/rail.test.tsx src/features/welcome/useReveal.test.tsx src/features/welcome/WelcomePage.test.tsx
 
 Expected: PASS.
 
 - [ ] **Step 2: Run static and production checks**
 
-    pnpm --filter @switchboard/web typecheck
-    pnpm --filter @switchboard/web lint
-    pnpm --filter @switchboard/web build
-    pnpm exec prettier --check apps/web/src/pages apps/web/src/features/welcome apps/web/src/app/shell.css docs/superpowers
-    git diff --check
+  pnpm --filter @switchboard/web typecheck
+  pnpm --filter @switchboard/web lint
+  pnpm --filter @switchboard/web build
+  pnpm exec prettier --check apps/web/src/pages apps/web/src/features/welcome apps/web/src/app/shell.css docs/superpowers
+  git diff --check
 
 Expected: exit 0. If the host remains on Node 22, record the engine warning and do not claim Node 24 verification.
 
@@ -402,7 +409,7 @@ Append 2026-07-21 - Welcome and Support motion refresh using Completed, Files Ch
 
 - [ ] **Step 5: Review the scoped diff without committing**
 
-    git status --short
-    git diff -- apps/web/src/pages apps/web/src/app/shell.css apps/web/src/features/welcome apps/web/package.json pnpm-lock.yaml docs/dev-notes.md docs/superpowers
+  git status --short
+  git diff -- apps/web/src/pages apps/web/src/app/shell.css apps/web/src/features/welcome apps/web/package.json pnpm-lock.yaml docs/dev-notes.md docs/superpowers
 
 Expected: only scoped work plus approved docs; unrelated dirty-tree changes remain untouched.

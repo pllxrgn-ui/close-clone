@@ -24,8 +24,8 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
         question: 'How do I connect my Gmail inbox?',
         answer: (
           <>
-            Open <Link to="/settings">Settings → Inboxes</Link>, then approve Google consent. You never
-            supply API keys.
+            Open <Link to="/settings">Settings → Inboxes</Link>, then approve Google consent. You
+            never supply API keys.
           </>
         ),
       },
@@ -33,9 +33,9 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
         question: 'What do the inbox statuses mean?',
         answer: (
           <>
-            <strong>Live</strong> means the inbox is connected and syncing, <strong>Connecting</strong>{' '}
-            means authorization or setup is still in progress, and <strong>Attention</strong> means it needs
-            action before syncing can continue.
+            <strong>Live</strong> means the inbox is connected and syncing,{' '}
+            <strong>Connecting</strong> means authorization or setup is still in progress, and{' '}
+            <strong>Attention</strong> means it needs action before syncing can continue.
           </>
         ),
       },
@@ -59,8 +59,8 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
         question: 'What is a Smart View?',
         answer: (
           <>
-            A Smart View is a live saved query. Open <Link to="/views">Smart Views</Link> to use or create
-            one.
+            A Smart View is a live saved query. Open <Link to="/views">Smart Views</Link> to use or
+            create one.
           </>
         ),
       },
@@ -68,8 +68,8 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
         question: 'How do keyboard shortcuts work?',
         answer: (
           <>
-            Press <Kbd>?</Kbd> for shortcuts, <Kbd>Ctrl K</Kbd> for the command palette, or <Kbd>g</Kbd>{' '}
-            then a rail letter to navigate.
+            Press <Kbd>?</Kbd> for shortcuts, <Kbd>Ctrl K</Kbd> for the command palette, or{' '}
+            <Kbd>g</Kbd> then a rail letter to navigate.
           </>
         ),
       },
@@ -84,14 +84,15 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
         question: 'How do calls and SMS work?',
         answer: (
           <>
-            Use the <Link to="/dialer">Dialer</Link> for calls and SMS; each touch is added to the shared
-            timeline.
+            Use the <Link to="/dialer">Dialer</Link> for calls and SMS; each touch is added to the
+            shared timeline.
           </>
         ),
       },
       {
         question: 'Why did my sequence stop?',
-        answer: 'A reply, unsubscribe, DNC, or bounce pauses the sequence before the next step can be claimed.',
+        answer:
+          'A reply, unsubscribe, DNC, or bounce pauses the sequence before the next step can be claimed.',
       },
       {
         question: 'Where do I manage sequences?',
@@ -106,7 +107,8 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
   {
     id: 'compliance',
     title: 'Compliance',
-    intro: 'Delivery safeguards are enforced at the point of outbound activity, not left to memory.',
+    intro:
+      'Delivery safeguards are enforced at the point of outbound activity, not left to memory.',
     items: [
       {
         question: 'Why can I not email or call this lead?',
@@ -115,7 +117,8 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
       },
       {
         question: 'Why is scheduled outbound waiting?',
-        answer: 'Quiet hours and daily caps can hold scheduled outbound until its next allowed window.',
+        answer:
+          'Quiet hours and daily caps can hold scheduled outbound until its next allowed window.',
       },
       {
         question: 'Are calls recorded?',
@@ -126,7 +129,8 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
   {
     id: 'admin',
     title: 'Admin support',
-    intro: 'Workspace administration stays with the people accountable for settings and audit history.',
+    intro:
+      'Workspace administration stays with the people accountable for settings and audit history.',
     items: [
       {
         question: 'Who can change workspace settings?',

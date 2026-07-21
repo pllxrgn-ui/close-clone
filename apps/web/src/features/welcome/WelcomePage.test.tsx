@@ -1,8 +1,9 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { RenderResult } from '@testing-library/react';
 import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import * as axe from 'axe-core';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { AppProviders } from '../../app/AppProviders.tsx';
 import { ROUTER_FUTURE } from '../../app/routerFuture.ts';
 import { THEME_STORAGE_KEY } from '../../theme/theme.ts';
@@ -66,6 +67,7 @@ beforeEach(() => {
   localStorage.clear();
 });
 afterEach(cleanup);
+afterAll(() => ScrollTrigger.disable(true, true));
 
 describe('WelcomePage — hero frame + nav menu + accounts band', () => {
   test('nav anchors point at real sections on the page', () => {

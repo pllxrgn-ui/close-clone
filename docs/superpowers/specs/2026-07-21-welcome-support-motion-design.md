@@ -102,4 +102,3 @@ admin. Keep internal links to existing routes where they help the user act.
 - Public ticketing, live chat, external help-desk URLs, CMS-managed FAQs, FAQ search,
   video, stock imagery, invented testimonials, or additional motion libraries.
 - Backend, database, authentication, or API contract changes.
-
