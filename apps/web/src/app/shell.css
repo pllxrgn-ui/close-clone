@@ -492,6 +492,25 @@
   align-items: start;
   gap: var(--space-7) var(--space-9);
 }
+.sb-help__topics {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.sb-help__topics a {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-0);
+  border-radius: 0;
+  color: var(--ink-1);
+  font-size: var(--fs-sm);
+  text-decoration: none;
+}
+.sb-help__topics a:focus-visible,
+.sb-help__q:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
 /* Below ~960px only one track fits, and a lone track would run to ~99ch. The
  * measure wins there: readability beats filling the last few hundred px. */
 .sb-help__section {
@@ -519,9 +538,27 @@
   border-top: 1px solid var(--border-0);
 }
 .sb-help__q {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
   color: var(--ink-0);
   font-size: var(--fs-md);
   font-weight: var(--fw-semibold);
+  cursor: pointer;
+  list-style: none;
+}
+.sb-help__q::-webkit-details-marker {
+  display: none;
+}
+.sb-help__q::after {
+  content: '+';
+  flex: none;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+}
+.sb-help__faq-item[open] .sb-help__q::after {
+  content: '−';
 }
 .sb-help__a {
   margin: var(--space-2) 0 0;
@@ -529,9 +566,27 @@
   font-size: var(--fs-base);
   line-height: var(--lh-loose);
 }
+.sb-help__faq-item[open] .sb-help__a {
+  animation: sb-help-answer-in 200ms var(--ease-out);
+}
 .sb-help__a strong {
   color: var(--ink-1);
   font-weight: var(--fw-semibold);
+}
+@keyframes sb-help-answer-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sb-help__faq-item[open] .sb-help__a {
+    animation: none;
+  }
 }
 
 /* ── Login screen ────────────────────────────────────────────────────────── */
