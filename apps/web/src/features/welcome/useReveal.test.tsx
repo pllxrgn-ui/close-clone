@@ -46,7 +46,7 @@ function stubReducedMotion(matches: boolean): void {
 }
 
 function Probe({ itemSelector }: { itemSelector?: string }): JSX.Element {
-  const ref = useReveal<HTMLElement>({ itemSelector });
+  const ref = useReveal<HTMLElement>(itemSelector === undefined ? {} : { itemSelector });
   return (
     <section ref={ref} data-testid="probe">
       <div data-reveal-item="one" />
