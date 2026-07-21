@@ -15,6 +15,7 @@ import { ReactLenis } from 'lenis/react';
 import { WelcomeNav } from './WelcomeNav.tsx';
 import { Hero } from './Hero.tsx';
 import { AccountsBand } from './AccountsBand.tsx';
+import { WorkflowStory } from './WorkflowStory.tsx';
 import { FeatureActs } from './FeatureActs.tsx';
 import { KeyboardStrip } from './KeyboardStrip.tsx';
 import { TrustLine } from './TrustLine.tsx';
@@ -45,6 +46,7 @@ export function WelcomePage(): JSX.Element {
       <main id="welcome-main" className="sb-welcome__main">
         <Hero ignition={ignition} />
         <AccountsBand />
+        <WorkflowStory />
         <FeatureActs />
         <KeyboardStrip />
       </main>
