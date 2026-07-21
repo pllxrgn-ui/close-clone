@@ -19,7 +19,7 @@ export function WorkflowStory(): JSX.Element {
         </h2>
         <p className="sb-welcome__workflow-sub">{WORKFLOW_STORY.sub}</p>
       </div>
-      <ol className="sb-welcome__workflow-steps">
+      <ol role="list" className="sb-welcome__workflow-steps">
         {WORKFLOW_STORY.steps.map((step) => (
           <li key={step.number} className="sb-welcome__workflow-step">
             <span className="sb-welcome__workflow-number">{step.number}</span>

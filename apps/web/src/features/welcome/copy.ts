@@ -133,7 +133,7 @@ export const TRUST_LINE =
 
 export const FOOTER = {
   cta: 'Open Switchboard',
-  note: 'Switchboard is an internal tool for the revenue team. Access is limited to staff accounts through single sign-on.',
+  note: 'Staff sign in through SSO. Role-based access keeps workspace settings and audit history admin-only while reps work customer records.',
 } as const;
 
 /** Both primary CTAs and the nav sign-in route to the dev-login gate. */

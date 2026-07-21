@@ -1,9 +1,8 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { RenderResult } from '@testing-library/react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import * as axe from 'axe-core';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { AppProviders } from '../../app/AppProviders.tsx';
 import { ROUTER_FUTURE } from '../../app/routerFuture.ts';
 import { THEME_STORAGE_KEY } from '../../theme/theme.ts';
@@ -67,7 +66,6 @@ beforeEach(() => {
   localStorage.clear();
 });
 afterEach(cleanup);
-afterAll(() => ScrollTrigger.disable(true, true));
 
 describe('WelcomePage — hero frame + nav menu + accounts band', () => {
   test('nav anchors point at real sections on the page', () => {
@@ -124,6 +122,16 @@ describe('WelcomePage — route + content', () => {
     expect(screen.getByText('Connect your Gmail inbox')).toBeInTheDocument();
     expect(screen.getByText('Work the next signal')).toBeInTheDocument();
     expect(screen.getByText('Keep every touch together')).toBeInTheDocument();
+    const workflow = container.querySelector<HTMLOListElement>('.sb-welcome__workflow-steps');
+    expect(workflow).toHaveAttribute('role', 'list');
+    expect(within(workflow as HTMLOListElement).getAllByRole('listitem')).toHaveLength(3);
+  });
+
+  test('states the role-based access boundary without adding a workflow step', () => {
+    const { container } = renderWelcome();
+    expect(
+      screen.getByText(/role-based access keeps workspace settings and audit history admin-only/i),
+    ).toBeInTheDocument();
     expect(container.querySelectorAll('.sb-welcome__workflow-step')).toHaveLength(3);
   });
 

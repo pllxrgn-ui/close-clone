@@ -1,9 +1,13 @@
 import { afterEach, describe, expect, test } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import * as axe from 'axe-core';
 import { MemoryRouter } from 'react-router-dom';
 import { HelpPage } from './HelpPage.tsx';
+
+const shellCss = readFileSync(resolve(process.cwd(), 'src/app/shell.css'), 'utf8');
 
 function renderHelp() {
   return render(
@@ -29,7 +33,7 @@ describe('HelpPage', () => {
     }
     expect(container.querySelectorAll('details.sb-help__faq-item')).toHaveLength(15);
     expect(
-      screen.getByText(/disconnecting removes Switchboard's authorization/i),
+      screen.getByText(/disconnecting clears Switchboard's Gmail authorization/i),
     ).toBeInTheDocument();
   });
 
@@ -46,9 +50,44 @@ describe('HelpPage', () => {
     renderHelp();
     expect(screen.getByRole('link', { name: /Settings → Inboxes/i })).toHaveAttribute(
       'href',
-      '/settings',
+      '/settings?section=inboxes',
     );
     expect(screen.getByRole('link', { name: 'Smart Views' })).toHaveAttribute('href', '/views');
+    expect(screen.getByRole('link', { name: 'Dialer' })).toHaveAttribute('href', '/dialer');
+    expect(screen.getByRole('link', { name: /open a lead/i })).toHaveAttribute('href', '/leads');
+    expect(screen.getByRole('link', { name: /Settings → About/i })).toHaveAttribute(
+      'href',
+      '/settings?section=about',
+    );
+  });
+
+  test('documents implemented inbox statuses and compliance behavior', () => {
+    renderHelp();
+    for (const status of [
+      'Not connected',
+      'Awaiting Google',
+      'Importing mail',
+      'Connected',
+      'Sync delayed',
+      'Resyncing mail',
+      'Needs reconnect',
+    ]) {
+      expect(screen.getByText(status)).toBeInTheDocument();
+    }
+    expect(
+      screen.getByText(/Replies and unsubscribes pause active sequences/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/DNC, suppression, and bounce safeguards block eligible sends/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/consent checks run at delivery/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Recording is off by default/i)).toBeInTheDocument();
+  });
+
+  test('uses a shrinkable mobile help track', () => {
+    expect(shellCss).toContain(
+      'grid-template-columns: repeat(auto-fit, minmax(min(24rem, 100%), 1fr));',
+    );
   });
 
   test('has no serious or critical axe violations', async () => {

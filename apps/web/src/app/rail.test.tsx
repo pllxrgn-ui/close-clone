@@ -58,7 +58,7 @@ describe('LeftRail — structure', () => {
       await screen.findByRole('heading', { name: 'Support & FAQs', level: 1 }, { timeout: 5000 }),
     ).toBeVisible();
     // Real answers, not placeholder copy.
-    expect(screen.getByText(/do not contact/i)).toBeInTheDocument();
+    expect(screen.getByText(/DNC and active email or phone suppressions/i)).toBeInTheDocument();
   });
 });
 

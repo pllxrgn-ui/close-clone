@@ -488,7 +488,7 @@
   /* NB: html sets font-size:13px, so 1rem = 13px here — 24rem ≈ 312px. That
    * min lets 1280/1440/1920 land on 3–4 tracks of ~48–59ch: full width, every
    * line inside the measure. */
-  grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(24rem, 100%), 1fr));
   align-items: start;
   gap: var(--space-7) var(--space-9);
 }

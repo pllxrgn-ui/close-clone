@@ -24,8 +24,8 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
         question: 'How do I connect my Gmail inbox?',
         answer: (
           <>
-            Open <Link to="/settings">Settings → Inboxes</Link>, then approve Google consent. You
-            never supply API keys.
+            Open <Link to="/settings?section=inboxes">Settings → Inboxes</Link>, then approve Google
+            consent. You never supply API keys.
           </>
         ),
       },
@@ -33,16 +33,19 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
         question: 'What do the inbox statuses mean?',
         answer: (
           <>
-            <strong>Live</strong> means the inbox is connected and syncing,{' '}
-            <strong>Connecting</strong> means authorization or setup is still in progress, and{' '}
-            <strong>Attention</strong> means it needs action before syncing can continue.
+            <strong>Not connected</strong> means no authorization yet;{' '}
+            <strong>Awaiting Google</strong> means approval is pending;{' '}
+            <strong>Importing mail</strong> and <strong>Resyncing mail</strong> mean sync work is
+            running; <strong>Connected</strong> means sync is live; <strong>Sync delayed</strong>{' '}
+            means Switchboard is retrying; and <strong>Needs reconnect</strong> means Google
+            approval is required again.
           </>
         ),
       },
       {
         question: 'What happens when I disconnect or reconnect?',
         answer:
-          "Disconnecting removes Switchboard's authorization and cursors but preserves imported mail; reconnecting resumes safely.",
+          "Disconnecting clears Switchboard's Gmail authorization and sync cursors but keeps imported mail. Reconnect Gmail starts Google approval again and resumes sync on the same inbox.",
       },
     ],
   },
@@ -84,7 +87,8 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
         question: 'How do calls and SMS work?',
         answer: (
           <>
-            Use the <Link to="/dialer">Dialer</Link> for calls and SMS; each touch is added to the
+            Use the <Link to="/dialer">Dialer</Link> for calls. To send SMS,{' '}
+            <Link to="/leads">open a lead</Link> and use its SMS action. Each touch is added to the
             shared timeline.
           </>
         ),
@@ -92,7 +96,7 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
       {
         question: 'Why did my sequence stop?',
         answer:
-          'A reply, unsubscribe, DNC, or bounce pauses the sequence before the next step can be claimed.',
+          'Replies and unsubscribes pause active sequences. DNC, suppression, and bounce safeguards block eligible sends before delivery.',
       },
       {
         question: 'Where do I manage sequences?',
@@ -113,7 +117,7 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
       {
         question: 'Why can I not email or call this lead?',
         answer:
-          'Do not contact (DNC), suppression, and consent checks run at delivery and can block email or calling.',
+          'DNC and active email or phone suppressions can block outbound email or calling at delivery.',
       },
       {
         question: 'Why is scheduled outbound waiting?',
@@ -140,7 +144,7 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
         question: 'Where are build and workspace details?',
         answer: (
           <>
-            Find them in <Link to="/settings">Settings → About</Link>.
+            Find them in <Link to="/settings?section=about">Settings → About</Link>.
           </>
         ),
       },

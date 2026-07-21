@@ -2,11 +2,14 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { JSX } from 'react';
 import { cleanup, render } from '@testing-library/react';
 
-const { gsapFrom, gsapToArray, useGSAPConfig } = vi.hoisted(() => ({
-  gsapFrom: vi.fn(),
-  gsapToArray: vi.fn(),
-  useGSAPConfig: vi.fn(),
-}));
+const { gsapFrom, gsapToArray, scrollTriggerDisable, scrollTriggerEnable, useGSAPConfig } =
+  vi.hoisted(() => ({
+    gsapFrom: vi.fn(),
+    gsapToArray: vi.fn(),
+    scrollTriggerDisable: vi.fn(),
+    scrollTriggerEnable: vi.fn(),
+    useGSAPConfig: vi.fn(),
+  }));
 
 vi.mock('gsap', () => ({
   default: {
@@ -16,16 +19,16 @@ vi.mock('gsap', () => ({
   },
 }));
 
-vi.mock('gsap/ScrollTrigger', () => ({ ScrollTrigger: {} }));
+vi.mock('gsap/ScrollTrigger', () => ({
+  ScrollTrigger: { disable: scrollTriggerDisable, enable: scrollTriggerEnable },
+}));
 
 vi.mock('@gsap/react', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
   return {
-    useGSAP(callback: () => void, config: unknown): void {
+    useGSAP(callback: () => void | (() => void), config: unknown): void {
       useGSAPConfig(config);
-      React.useLayoutEffect(() => {
-        callback();
-      }, []);
+      React.useLayoutEffect(callback, []);
     },
   };
 });
@@ -55,9 +58,21 @@ function Probe({ itemSelector }: { itemSelector?: string }): JSX.Element {
   );
 }
 
+function ProbeSet({ count }: { count: number }): JSX.Element {
+  return (
+    <>
+      {Array.from({ length: count }, (_, index) => (
+        <Probe key={index} />
+      ))}
+    </>
+  );
+}
+
 beforeEach(() => {
   gsapFrom.mockReset();
   gsapToArray.mockReset();
+  scrollTriggerDisable.mockReset();
+  scrollTriggerEnable.mockReset();
   useGSAPConfig.mockReset();
   gsapToArray.mockImplementation((selector: string, scope: HTMLElement) => [
     ...scope.querySelectorAll<HTMLElement>(selector),
@@ -106,6 +121,33 @@ describe('useReveal', () => {
     const { getByTestId } = render(<Probe />);
 
     expect(gsapFrom).not.toHaveBeenCalled();
+    expect(scrollTriggerEnable).not.toHaveBeenCalled();
+    expect(scrollTriggerDisable).toHaveBeenCalledTimes(1);
     expect(getByTestId('probe')).toBeVisible();
+  });
+
+  test('keeps the scheduler active until the last reveal scope unmounts', () => {
+    stubReducedMotion(false);
+    const { rerender, unmount } = render(<ProbeSet count={2} />);
+
+    expect(scrollTriggerEnable).toHaveBeenCalledTimes(1);
+    expect(gsapFrom).toHaveBeenCalledTimes(2);
+    rerender(<ProbeSet count={1} />);
+    expect(scrollTriggerDisable).not.toHaveBeenCalled();
+    unmount();
+    expect(scrollTriggerDisable).toHaveBeenCalledTimes(1);
+  });
+
+  test('re-enables the scheduler before creating a trigger on re-entry', () => {
+    stubReducedMotion(false);
+    const first = render(<Probe />);
+    first.unmount();
+    render(<Probe />);
+
+    expect(scrollTriggerEnable).toHaveBeenCalledTimes(2);
+    expect(scrollTriggerDisable).toHaveBeenCalledTimes(1);
+    expect(scrollTriggerEnable.mock.invocationCallOrder[1]).toBeLessThan(
+      gsapFrom.mock.invocationCallOrder[1]!,
+    );
   });
 });
