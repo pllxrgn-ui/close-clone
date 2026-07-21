@@ -2,9 +2,10 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { JSX } from 'react';
 import { cleanup, render } from '@testing-library/react';
 
-const { gsapFrom, gsapToArray } = vi.hoisted(() => ({
+const { gsapFrom, gsapToArray, useGSAPConfig } = vi.hoisted(() => ({
   gsapFrom: vi.fn(),
   gsapToArray: vi.fn(),
+  useGSAPConfig: vi.fn(),
 }));
 
 vi.mock('gsap', () => ({
@@ -20,7 +21,8 @@ vi.mock('gsap/ScrollTrigger', () => ({ ScrollTrigger: {} }));
 vi.mock('@gsap/react', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
   return {
-    useGSAP(callback: () => void): void {
+    useGSAP(callback: () => void, config: unknown): void {
+      useGSAPConfig(config);
       React.useLayoutEffect(() => {
         callback();
       }, []);
@@ -56,6 +58,7 @@ function Probe({ itemSelector }: { itemSelector?: string }): JSX.Element {
 beforeEach(() => {
   gsapFrom.mockReset();
   gsapToArray.mockReset();
+  useGSAPConfig.mockReset();
   gsapToArray.mockImplementation((selector: string, scope: HTMLElement) =>
     [...scope.querySelectorAll<HTMLElement>(selector)],
   );
@@ -72,6 +75,7 @@ describe('useReveal', () => {
     const { getByTestId } = render(<Probe />);
     const section = getByTestId('probe');
 
+    expect(useGSAPConfig).toHaveBeenCalledWith(expect.objectContaining({ revertOnUpdate: true }));
     expect(gsapFrom).toHaveBeenCalledWith([section], {
       opacity: 0,
       y: 12,

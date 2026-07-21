@@ -12,7 +12,7 @@ import type { FeatureActCopy } from './copy.ts';
 /*
  * The three feature acts. Each is a wide-caps label + two sentences + a LIVE
  * board vignette built from real primitives and fixture data (no screenshots,
- * no stock, no invented metrics). Each act rises 8px and fades in once when it
+ * no stock, no invented metrics). Each act rises 12px and fades in once when it
  * scrolls into view; with reduced motion it stays visible.
  */
 

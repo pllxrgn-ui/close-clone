@@ -37,7 +37,7 @@ export function useReveal<T extends HTMLElement = HTMLElement>(
         },
       });
     },
-    { scope: ref, dependencies: [itemSelector, reduceMotion] },
+    { scope: ref, dependencies: [itemSelector, reduceMotion], revertOnUpdate: true },
   );
 
   return ref;
