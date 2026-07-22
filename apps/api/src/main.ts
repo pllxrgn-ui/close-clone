@@ -46,8 +46,8 @@ import { registerWebhookSubscriptionRoutes } from './routes/webhook-subscription
 import {
   createWebhookDeliveryProcessor,
   createActivityWebhookEmitter,
+  createSecureWebhookSender,
   sweepPendingWebhookDeliveries,
-  type WebhookSender,
 } from './services/webhooks/index.ts';
 import { SessionCodec } from './auth/session/session.ts';
 import { OidcTxnCodec } from './auth/session/txn.ts';
@@ -91,6 +91,9 @@ const SWEEP_INTERVAL_MS = 15_000;
 
 /** A CLAIMED intent older than this is expired to FAILED_TIMEOUT by the sweeper. */
 const CLAIM_TIMEOUT_MS = 5 * 60_000;
+
+/** Caller ID used only by MOCK_MODE when no Twilio number exists. */
+const MOCK_PHONE_NUMBER = '+15550000001';
 
 export type AppRole = 'server' | 'worker';
 
@@ -143,32 +146,49 @@ function buildSessionReader(config: AppConfig): SessionReader {
  */
 export function assertRealModeConfig(config: AppConfig, env: NodeJS.ProcessEnv): void {
   if (config.mockMode) return;
-  const requiredProductionKeys = [
+  const requiredCoreKeys = [
     'OIDC_ISSUER',
     'OIDC_CLIENT_ID',
     'OIDC_CLIENT_SECRET',
     'WEB_ORIGIN',
     'PUBLIC_WEBHOOK_URL',
-    'GOOGLE_CLIENT_ID',
-    'GOOGLE_CLIENT_SECRET',
-    'GMAIL_SENDER_ADDRESS',
-    'GMAIL_PUSH_AUDIENCE',
-    'GMAIL_PUSH_SERVICE_ACCOUNT_EMAIL',
-    'TWILIO_ACCOUNT_SID',
-    'TWILIO_AUTH_TOKEN',
-    'TWILIO_API_KEY_SID',
-    'TWILIO_API_KEY_SECRET',
-    'TWILIO_TWIML_APP_SID',
-    'TWILIO_PHONE_NUMBER',
-    'DEEPGRAM_API_KEY',
-    'ANTHROPIC_API_KEY',
   ] as const;
-  const missing = requiredProductionKeys.filter((key) => (env[key] ?? '').trim() === '');
-  if (missing.length > 0) {
+  const missingCore = requiredCoreKeys.filter((key) => (env[key] ?? '').trim() === '');
+  if (missingCore.length > 0) {
     throw new Error(
-      `MOCK_MODE=0 requires every production integration: ${missing.join(', ')} unset. ` +
-        'Configure them before launch; production does not silently disable features.',
+      `MOCK_MODE=0 requires production core configuration: ${missingCore.join(', ')} unset.`,
     );
+  }
+
+  const providerGroups = [
+    [
+      'Gmail',
+      [
+        'GOOGLE_CLIENT_ID',
+        'GOOGLE_CLIENT_SECRET',
+        'GMAIL_PUSH_AUDIENCE',
+        'GMAIL_PUSH_SERVICE_ACCOUNT_EMAIL',
+      ],
+    ],
+    [
+      'Twilio',
+      [
+        'TWILIO_ACCOUNT_SID',
+        'TWILIO_AUTH_TOKEN',
+        'TWILIO_API_KEY_SID',
+        'TWILIO_API_KEY_SECRET',
+        'TWILIO_TWIML_APP_SID',
+        'TWILIO_PHONE_NUMBER',
+      ],
+    ],
+  ] as const;
+  for (const [name, keys] of providerGroups) {
+    const configured = keys.filter((key) => (env[key] ?? '').trim() !== '');
+    if (configured.length === 0) continue;
+    const missing = keys.filter((key) => (env[key] ?? '').trim() === '');
+    if (missing.length > 0) {
+      throw new Error(`${name} configuration is incomplete: ${missing.join(', ')} unset.`);
+    }
   }
 }
 
@@ -210,7 +230,6 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
       ? {
           clientId: env['GOOGLE_CLIENT_ID']!,
           clientSecret: env['GOOGLE_CLIENT_SECRET'] ?? '',
-          address: env['GMAIL_SENDER_ADDRESS'] ?? '',
         }
       : undefined;
   const publicBaseUrl = env['PUBLIC_WEBHOOK_URL'] ?? `http://localhost:${config.port}`;
@@ -401,12 +420,10 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
     // delivers them). Wired for the notes surface; other activity producers
     // adopt the same one-param pattern.
     activityEmitter,
-    // Telephony (click-to-call, /wh/twilio ingress) + AI (summaries, drafting,
-    // NL→Smart View) mount only when their providers exist — mock now; the real
-    // Twilio/Deepgram/Haiku adapters + accounts are HUMAN_TODO (WIRING.md §5),
-    // and the registry real branch builds only email, so in real mode these
-    // stay unmounted until that lands. Twilio signs the FULL public URL, so
-    // publicBaseUrl must be the external origin, never the proxy host.
+    // Provider routes activate independently. Twilio brings calling, SMS, the
+    // dialer, voicemail, and ingress; Anthropic brings drafting + NL search;
+    // Deepgram additionally unlocks call summaries. Twilio signs the FULL public
+    // URL, so publicBaseUrl must be the external origin, never the proxy host.
     ...(registry?.telephony !== undefined
       ? {
           telephony: {
@@ -417,14 +434,26 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
             now: () => new Date(),
             publicBaseUrl,
             queue,
-            ...(env['TWILIO_PHONE_NUMBER'] !== undefined
-              ? { callerId: env['TWILIO_PHONE_NUMBER'] }
-              : {}),
+            callerId: env['TWILIO_PHONE_NUMBER'] ?? MOCK_PHONE_NUMBER,
+            dialerClient: pool,
+            orgTimezone: env['ORG_TIMEZONE'] ?? 'UTC',
+            voicemailProvider: registry.telephony,
+          },
+          sms: {
+            provider: registry.telephony,
+            now: () => new Date(),
+            fromNumber: env['TWILIO_PHONE_NUMBER'] ?? MOCK_PHONE_NUMBER,
           },
         }
       : {}),
-    ...(registry?.asr !== undefined && registry.ai !== undefined
-      ? { ai: { asr: registry.asr, ai: registry.ai, now: () => new Date() } }
+    ...(registry.ai !== undefined
+      ? {
+          ai: {
+            ai: registry.ai,
+            ...(registry.asr !== undefined ? { asr: registry.asr } : {}),
+            now: () => new Date(),
+          },
+        }
       : {}),
   });
 
@@ -490,12 +519,9 @@ export async function buildProductionApp(options: BuildOptions = {}): Promise<Bu
   // this processor POSTs each with its stored HMAC-signed envelope and owns
   // retries/backoff/dead-letter. The sender is the one network seam — the target
   // URL was validated (https + public host, SSRF guard) at subscription create;
-  // delivery-time resolve-and-pin against DNS rebinding is the documented
-  // remaining hardening (WIRING.md).
-  const webhookSender: WebhookSender = async ({ url, headers, body }) => {
-    const res = await fetch(url, { method: 'POST', headers, body });
-    return { status: res.status };
-  };
+  // delivery resolves again, rejects every non-public answer, and pins the
+  // checked IP for the HTTPS socket to defeat DNS rebinding.
+  const webhookSender = createSecureWebhookSender();
   const webhookDeliveryProcessor = createWebhookDeliveryProcessor({
     db,
     sender: webhookSender,

@@ -24,7 +24,6 @@ const COMPLETE_PRODUCTION_ENV = {
   PUBLIC_WEBHOOK_URL: 'https://switchboard-api.example.com',
   GOOGLE_CLIENT_ID: 'google-client',
   GOOGLE_CLIENT_SECRET: 'google-secret',
-  GMAIL_SENDER_ADDRESS: 'sales@example.com',
   GMAIL_PUSH_AUDIENCE: 'https://switchboard.example.com/wh/gmail',
   GMAIL_PUSH_SERVICE_ACCOUNT_EMAIL: 'pubsub@project.iam.gserviceaccount.com',
   TWILIO_ACCOUNT_SID: 'AC123',
@@ -75,8 +74,41 @@ describe('assertRealModeConfig — fail closed without an IdP', () => {
     expect(() => assertRealModeConfig(loadConfig(env), env)).not.toThrow();
   });
 
-  test('a partially configured provider refuses to boot instead of disabling a feature', () => {
-    const env = { ...COMPLETE_PRODUCTION_ENV, TWILIO_API_KEY_SECRET: '' } as NodeJS.ProcessEnv;
+  test('production core boots before optional provider accounts are available', () => {
+    const env = {
+      ...REAL,
+      OIDC_ISSUER: COMPLETE_PRODUCTION_ENV.OIDC_ISSUER,
+      OIDC_CLIENT_ID: COMPLETE_PRODUCTION_ENV.OIDC_CLIENT_ID,
+      OIDC_CLIENT_SECRET: COMPLETE_PRODUCTION_ENV.OIDC_CLIENT_SECRET,
+      WEB_ORIGIN: COMPLETE_PRODUCTION_ENV.WEB_ORIGIN,
+      PUBLIC_WEBHOOK_URL: COMPLETE_PRODUCTION_ENV.PUBLIC_WEBHOOK_URL,
+    } as NodeJS.ProcessEnv;
+    expect(() => assertRealModeConfig(loadConfig(env), env)).not.toThrow();
+  });
+
+  test('a partially configured provider group refuses to boot with the missing keys', () => {
+    const env = {
+      ...REAL,
+      OIDC_ISSUER: COMPLETE_PRODUCTION_ENV.OIDC_ISSUER,
+      OIDC_CLIENT_ID: COMPLETE_PRODUCTION_ENV.OIDC_CLIENT_ID,
+      OIDC_CLIENT_SECRET: COMPLETE_PRODUCTION_ENV.OIDC_CLIENT_SECRET,
+      WEB_ORIGIN: COMPLETE_PRODUCTION_ENV.WEB_ORIGIN,
+      PUBLIC_WEBHOOK_URL: COMPLETE_PRODUCTION_ENV.PUBLIC_WEBHOOK_URL,
+      TWILIO_ACCOUNT_SID: COMPLETE_PRODUCTION_ENV.TWILIO_ACCOUNT_SID,
+    } as NodeJS.ProcessEnv;
     expect(() => assertRealModeConfig(loadConfig(env), env)).toThrow(/TWILIO_API_KEY_SECRET/);
+  });
+
+  test('a partial Gmail group is rejected without affecting an entirely absent group', () => {
+    const env = {
+      ...REAL,
+      OIDC_ISSUER: COMPLETE_PRODUCTION_ENV.OIDC_ISSUER,
+      OIDC_CLIENT_ID: COMPLETE_PRODUCTION_ENV.OIDC_CLIENT_ID,
+      OIDC_CLIENT_SECRET: COMPLETE_PRODUCTION_ENV.OIDC_CLIENT_SECRET,
+      WEB_ORIGIN: COMPLETE_PRODUCTION_ENV.WEB_ORIGIN,
+      PUBLIC_WEBHOOK_URL: COMPLETE_PRODUCTION_ENV.PUBLIC_WEBHOOK_URL,
+      GOOGLE_CLIENT_ID: COMPLETE_PRODUCTION_ENV.GOOGLE_CLIENT_ID,
+    } as NodeJS.ProcessEnv;
+    expect(() => assertRealModeConfig(loadConfig(env), env)).toThrow(/GOOGLE_CLIENT_SECRET/);
   });
 });

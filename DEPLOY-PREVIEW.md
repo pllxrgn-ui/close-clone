@@ -9,9 +9,11 @@ The production topology is split by responsibility:
 
 ## Required external configuration
 
-Before the first Render Blueprint deploy, add billing information and provide every `sync: false`
-secret requested by `render.yaml`: company OIDC, Gmail, Twilio, Deepgram, Anthropic, and optional
-Sentry. Register these callbacks with the providers:
+Before the first Render Blueprint deploy, add billing information and provide the
+core OIDC values requested by `render.yaml`. Gmail and Twilio are optional but
+atomic groups; Anthropic and Deepgram are individually optional. Blank optional
+groups leave only their provider-backed capability unavailable. Register callbacks
+for each provider you enable:
 
 - OIDC: `https://switchboard-demo-omega.vercel.app/api/v1/auth/callback`
 - Gmail OAuth: `https://switchboard-demo-omega.vercel.app/api/v1/oauth/gmail/callback`

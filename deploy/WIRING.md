@@ -13,11 +13,13 @@
 > account-gated (Gmail/Twilio/Deepgram/Haiku, real IdP) degrades gracefully —
 > unmounted until its account lands, never blocking boot.
 >
-> **Genuinely remaining** (account-gated or service-layer, NOT `main.ts`): real
-> provider construction in `createProviderRegistry`'s real branch for
-> telephony/asr/ai + Gmail; webhook EMISSION (firing `emitWebhookEvent` on
-> domain events — a service-layer hook); delivery-time resolve-and-pin vs DNS
-> rebinding. The sections below are the original checklist, kept for reference.
+> **Current state (2026-07-20):** provider construction, domain-event emission,
+> SMS/calling/dialer/voicemail/AI route wiring, and delivery-time DNS
+> resolve/check/pin are complete. Real-mode core requires SSO + public origins;
+> Gmail and Twilio are optional atomic groups, while Anthropic and Deepgram can
+> activate independently. An absent group disables only its provider-backed
+> capability; a partial group fails startup with the missing variable names.
+> The sections below are historical implementation notes, not an open checklist.
 
 The Wave A subsystems (SSO, API tokens, outbound webhooks, observability) are merged, tested (399 tests), and exported as factories. This file is the checklist to wire them into the **production** composition root when the deploy environment exists (Redis, a real OIDC issuer, real Postgres). They are intentionally NOT force-wired into the minimal `apps/api/src/server.ts` (a test/embedded helper) or the PGlite dev server, because each needs infra to run and end-to-end verify. Security headers ARE already wired (infra-free).
 
@@ -64,12 +66,16 @@ None of the above is "done" until it runs green against real Postgres + Redis + 
 
 ## 5. Telephony / SMS / AI (Phase 3 — `apps/api/src/{providers/telephony,providers/ai,providers/asr,services/telephony,services/sms,services/ai}`)
 
-`registerRoutes` now threads optional `telephony` / `sms` / `ai` deps (mounted only when supplied). Under MOCK_MODE the registry binds `telephony`/`asr`/`ai` mocks; wire the real adapters + route deps at the deploy root:
+`registerRoutes` threads optional `telephony` / `sms` / `ai` deps. The production
+and zero-account dev roots now bind the complete route set; credentials only
+select the real adapter:
 
 - **Providers (real branch of `createProviderRegistry`):** `telephony: createTwilioTelephonyProvider({ accountSid, authToken, apiKeySid, apiKeySecret, twimlAppSid, voiceUrl, statusCallbackUrl, transport: new FetchTwilioTransport() })`, `asr: createDeepgramASRProvider({ apiKey, transport })`, `ai: createHaikuAIProvider({ apiKey, transport })`. All keyed by accounts in HUMAN_TODO (Twilio/Deepgram/Anthropic).
 - **Telephony routes:** `registerRoutes(app, { …, telephony: { verifier: new SignatureTwilioVerifier(authToken), dialProvider: registry.telephony, now, publicBaseUrl: <external origin, NOT the proxy host>, callerId: TWILIO_PHONE_NUMBER, queue?, dialerClient: <raw pg client> } })`. Twilio signs the full public URL — `publicBaseUrl` must be the real external origin. Under MOCK_MODE use `SignatureTwilioVerifier(MOCK_TWILIO_AUTH_TOKEN)` + the mock provider.
 - **SMS route:** `sms: { provider: registry.telephony, now, fromNumber: TWILIO_PHONE_NUMBER }`. Outbound quiet-hours (I-QUIET) + DNC are enforced in the send engine; inbound STOP is handled by the telephony ingress processor.
-- **AI routes:** `ai: { asr: registry.asr, ai: registry.ai, now, fieldCatalog? }`. I-AI holds: summaries land as DRAFT notes; a separate confirm endpoint (carrying `confirmedBy`) flips to final + emits the timeline event. NL→Smart View re-parses the model's DSL through the shared parser (invalid = visible error).
+- **AI routes:** Anthropic alone enables email drafting and NL→Smart View;
+  Deepgram additionally enables call-summary transcription. I-AI holds:
+  summaries land as DRAFT notes; confirmation is the only finalizing action.
 - **Webhook worker:** the telephony ingress persists then enqueues `twilio:process`; the composition root's combined QueueDriver processor must call `handleTelephonyJob(...)` alongside the sequence handler, and run `processPendingTwilioWebhooks(...)` on a sweeper interval (mirrors the sequence sweeper).
 - **Ring group (contract gap):** no first-class ring-group table in C1; v1 routes inbound to active-users-minus-owner (`ActiveUsersRingGroup`, injectable). A real ring group needs a schema addition (migration 0012+) if desired.
 - **Recording (I-REC):** default OFF (`org_settings.recording_enabled`); enabling is an admin+audited switch; `recording_consent_played` is emitted before recording on every recorded call. Legal sign-off is HUMAN_TODO.

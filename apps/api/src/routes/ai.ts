@@ -50,7 +50,8 @@ import { sendError } from './http.ts';
 
 export interface AiRouteDeps {
   db: Db;
-  asr: ASRProvider;
+  /** Optional because drafting and NL-to-Smart-View need only the AI provider. */
+  asr?: ASRProvider;
   ai: AIProvider;
   now?: () => Date;
   /** Default NL→Smart View field catalog when a request omits one. */
@@ -98,6 +99,13 @@ export function registerAiRoutes(app: FastifyInstance, deps: AiRouteDeps): void 
         'VALIDATION_FAILED',
         'invalid call summary request',
         parsed.error.flatten(),
+      );
+    }
+    if (deps.asr === undefined) {
+      return sendError(
+        reply,
+        'PROVIDER_ERROR',
+        'Call transcription is unavailable until Deepgram is configured',
       );
     }
     try {

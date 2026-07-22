@@ -39,6 +39,13 @@ async function seedCall(): Promise<string> {
   return rows[0]!.id;
 }
 
+async function remountWithoutAsr(): Promise<void> {
+  await app.close();
+  app = Fastify();
+  registerAiRoutes(app, { db, ai });
+  await app.ready();
+}
+
 beforeEach(async () => {
   ctx = await createTestDb();
   db = ctx.db;
@@ -57,6 +64,21 @@ afterEach(async () => {
 });
 
 describe('POST /api/v1/ai/call-summaries (+ confirm) — §I-AI through the API', () => {
+  test('reports transcription as unavailable when Anthropic is configured without Deepgram', async () => {
+    await remountWithoutAsr();
+    const callId = await seedCall();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/ai/call-summaries',
+      payload: { callId },
+    });
+
+    expect(res.statusCode).toBe(502);
+    expect(res.json()).toMatchObject({
+      error: { code: 'PROVIDER_ERROR', message: expect.stringMatching(/Deepgram/i) },
+    });
+  });
+
   test('generate writes a draft only; confirm flips to final + emits note_added', async () => {
     const callId = await seedCall();
 

@@ -97,6 +97,16 @@ describe('dev-server boot', () => {
     expect(res.headers['access-control-allow-origin']).toBe('http://localhost:5173');
     expect(res.headers['access-control-allow-credentials']).toBe('true');
   });
+
+  test.each([
+    ['/api/v1/calls/dial', 'POST'],
+    ['/api/v1/sms/send', 'POST'],
+    ['/api/v1/ai/email-drafts', 'POST'],
+    ['/api/v1/imports', 'POST'],
+  ] as const)('%s is mounted in the zero-account real-API demo', async (url, method) => {
+    const res = await inject(method, url, { payload: {} });
+    expect(res.status).not.toBe(404);
+  });
 });
 
 describe('dev-login', () => {
@@ -139,6 +149,75 @@ describe('dev-login', () => {
     const res = await inject('GET', '/api/v1/auth/me');
     expect(res.status).toBe(401);
     expectC7Error(res.body, 'UNAUTHENTICATED');
+  });
+
+  test('authenticated dev session reaches account-scoped inbox routes', async () => {
+    const users = (await inject('GET', '/api/v1/auth/dev-users')).body as Array<{ id: string }>;
+    const login = (
+      await inject('POST', '/api/v1/auth/dev-login', { payload: { userId: users[0]!.id } })
+    ).body as { token: string };
+
+    const accounts = await inject('GET', '/api/v1/email-accounts', {
+      cookies: { sb_dev_session: login.token },
+    });
+
+    expect(accounts.status).toBe(200);
+    expect(accounts.body).toEqual([]);
+  });
+
+  test('connects the signed-in user inbox through the local mock OAuth callback', async () => {
+    const users = (await inject('GET', '/api/v1/auth/dev-users')).body as Array<{
+      id: string;
+      email: string;
+    }>;
+    expect(users.length).toBeGreaterThan(1);
+
+    for (const user of users.slice(0, 2)) {
+      const login = (
+        await inject('POST', '/api/v1/auth/dev-login', { payload: { userId: user.id } })
+      ).body as { token: string };
+      const cookies = { sb_dev_session: login.token };
+
+      const started = await inject('POST', '/api/v1/oauth/gmail/start', {
+        payload: { address: user.email },
+        cookies,
+      });
+      expect(started.status).toBe(200);
+      const authorization = new URL((started.body as { authUrl: string }).authUrl);
+      expect(authorization.hostname).toBe('localhost');
+      expect(authorization.pathname).toBe('/api/v1/oauth/gmail/callback');
+
+      const callback = await inject('GET', `${authorization.pathname}${authorization.search}`, {
+        cookies,
+      });
+      expect(callback.status).toBe(302);
+      expect(String(callback.headers['location'])).toContain(
+        '/settings?section=inboxes&gmail=connected',
+      );
+
+      const accounts = await inject('GET', '/api/v1/email-accounts', { cookies });
+      expect(accounts.body).toEqual([
+        expect.objectContaining({ address: user.email, syncStatus: 'LIVE' }),
+      ]);
+    }
+  });
+
+  test('dev sessions own the smart views they create', async () => {
+    const users = (await inject('GET', '/api/v1/auth/dev-users')).body as Array<{ id: string }>;
+    expect(users.length).toBeGreaterThan(1);
+
+    for (const [index, user] of users.slice(0, 2).entries()) {
+      const login = (
+        await inject('POST', '/api/v1/auth/dev-login', { payload: { userId: user.id } })
+      ).body as { token: string };
+      const created = await inject('POST', '/api/v1/smart-views', {
+        payload: { name: `Owned view ${index}`, dsl: 'name is_set' },
+        cookies: { sb_dev_session: login.token },
+      });
+
+      expect(created.status).toBe(201);
+      expect(created.body).toMatchObject({ ownerId: user.id });
+    }
   });
 
   test('dev-login with a bad body is 400', async () => {

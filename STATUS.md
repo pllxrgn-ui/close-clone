@@ -1,5 +1,32 @@
 # STATUS — Switchboard build
 
+## SELF-SERVICE GMAIL CONNECTION (2026-07-20, D-060)
+
+Signed-in users can now manage their own Gmail mailbox from **Settings → Inboxes**: connect, see live sync state, disconnect without deleting imported history, and reconnect. The API derives ownership from the session, signs and expires OAuth state, verifies the Google-authorized mailbox matches the requested address, encrypts tokens, and scopes list/disconnect operations to the owner. Reps see only personal Inboxes and About settings; organization settings and their command-palette entries remain admin-only. The zero-account MSW path implements the same visible flow without external credentials.
+
+Verification completed on the current Node 22 host (repo target: Node 24): 78 focused API tests, 13 Settings tests, 11 fetch-client security tests, and API/web typechecks. A rendered Playwright click-through as a rep covered connect → Connected → disconnect → Needs reconnect → reconnect with zero console errors. A real Google consent round-trip remains an account-gated production smoke test after the project OAuth credentials are provisioned.
+
+## ZERO-ACCOUNT COMPLETION PASS (2026-07-20, D-059)
+
+All credential-independent provider wiring is complete. Real mode now requires
+only the secure core (OIDC + public origins); Gmail and Twilio activate as atomic
+optional groups, and Anthropic activates drafting/NL Smart Views independently
+of optional Deepgram transcription. Production and `dev:mock` both mount the
+complete calling, SMS, dialer, voicemail, AI, import, and async sequence/telephony
+paths. Missing providers produce explicit provider errors instead of accidental
+500s, hidden routes, or worker retry crashes.
+
+Outbound webhook delivery now closes the recorded DNS-rebinding gap: it resolves
+the target at delivery time, rejects every private/reserved result, and pins the
+checked address to the HTTPS socket while preserving hostname/SNI. Focused API
+verification passes 80/80 tests, and the credential-free production browser
+journeys pass 13/13. Typecheck, lint, formatting, build, and deploy-kit checks
+also pass. The saturated workspace runs hit unrelated fixed-timeout failures on
+this Node 22 host; every affected retry set and every changed suite passed in
+isolation. External accounts, Node 24 CI parity, the rendered manual browser
+clickthrough, and live-provider/deploy smoke remain external gates, not unfinished
+functions.
+
 ## AUDIT FINISH PASS (2026-07-20, D-057)
 
 The stale `feat/ui-combobox` work was audited against current `origin/main` (the old branch was 97 upstream commits behind), preserved, and replayed without committing onto `finish/audit-combobox` at `87e5d2e`. The affected scope is now code-complete: the shared Combobox is keyboard/APG hardened and live in lead bulk actions; queue wake-ups are attempt-scoped and BullMQ-safe; provider calls compose caller cancellation with native timeouts; high-traffic indexes and cached money formatting are in place; insecure example-secret placeholders fail closed; deploy restart/capability checks and the stale DNC E2E fixture are repaired; the web shell now serves a favicon without a console 404. Existing untracked UI proposals were preserved.

@@ -20,7 +20,7 @@ const configDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(configDir, '..');
 const STORAGE_STATE = resolve(configDir, '.auth', 'user.json');
 
-const PORT = 4173;
+const PORT = Number(process.env.E2E_PORT ?? '4173');
 const HOST = '127.0.0.1';
 const baseURL = `http://${HOST}:${PORT}`;
 const isCI = !!process.env.CI;
@@ -69,7 +69,10 @@ export default defineConfig({
     command: webServerCommand,
     cwd: repoRoot,
     url: baseURL,
-    reuseExistingServer: !isCI,
+    env: { VITE_API_MODE: 'mock' },
+    // Never attach the suite to an arbitrary process that happens to own the
+    // port. A collision should fail clearly; E2E_PORT selects another port.
+    reuseExistingServer: false,
     timeout: 180_000,
     stdout: 'pipe',
     stderr: 'pipe',

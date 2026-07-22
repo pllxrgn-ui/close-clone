@@ -32,10 +32,9 @@ import type { Clock, IdSource } from './mock/clock.ts';
  * only on the `EmailProvider` interface, so every code path above is identical
  * whether the process is mocked or live.
  *
- * The real branch binds the Gmail REST adapter (task 2b). It needs OAuth client
- * credentials plus a default mailbox identity, supplied by the caller from parsed
- * config (never `process.env` here — see `config.ts`). Absent that config the
- * branch fails fast with a configuration error rather than degrading silently.
+ * The real branch binds only the adapters whose complete configuration is
+ * supplied by the caller (never `process.env` here — see `main.ts`). Provider
+ * groups are optional capabilities; partial groups fail during startup.
  */
 
 /**
@@ -48,14 +47,14 @@ import type { Clock, IdSource } from './mock/clock.ts';
 export interface GmailBindingConfig {
   clientId: string;
   clientSecret: string;
-  address: string;
+  /** Optional only for the shared OAuth/sync adapter; sends bind the account address below. */
+  address?: string;
   scopes?: string[];
 }
 
 export interface ProviderRegistry {
   email?: EmailProvider;
-  /** All bound under mockMode; the real Twilio/Deepgram/Haiku adapters are wired
-   *  at the deploy composition root (they need accounts — see deploy/WIRING.md). */
+  /** All bound under mockMode; real adapters activate independently by config. */
   telephony?: TelephonyProvider;
   asr?: ASRProvider;
   ai?: AIProvider;
@@ -72,6 +71,7 @@ export interface RegistryConfig {
 
 export interface MockRegistryOverrides {
   address?: string;
+  authorizationUrl?: string;
   clock?: Clock;
   ids?: IdSource;
 }
@@ -97,7 +97,7 @@ export function createProviderRegistry(
           email: new GmailEmailProvider({
             clientId: config.gmail.clientId,
             clientSecret: config.gmail.clientSecret,
-            address: config.gmail.address,
+            address: config.gmail.address ?? 'oauth-linking@invalid.local',
             ...(config.gmail.scopes !== undefined ? { scopes: config.gmail.scopes } : {}),
           }),
         }

@@ -31,11 +31,12 @@ pnpm --dir e2e exec playwright install chromium
 pnpm --dir e2e test
 ```
 
-- The `webServer` in `playwright.config.ts` builds `apps/web` then previews it on
-  `http://127.0.0.1:4173` locally (one command, clean checkout works). In CI the
-  dist is prebuilt by the workflow, so it previews only. `reuseExistingServer` is
-  on locally, so if you already have a preview on `:4173` it is reused (no
-  rebuild) — handy for fast iteration.
+- The `webServer` in `playwright.config.ts` builds `apps/web` in mock mode then
+  previews it on `http://127.0.0.1:4173` locally (one command, clean checkout works).
+  Set `E2E_PORT` when that port is occupied by another app. In CI the
+  dist is prebuilt by the workflow, so it previews only. The suite never reuses
+  an existing listener: a port collision fails clearly instead of testing the
+  wrong application.
 - **Browser download note:** `playwright install` fetches chromium (~180 MB) from
   `cdn.playwright.dev`. On a host without that network access the browser can't be
   installed and the suite can't run locally — that's expected; **CI installs and
@@ -47,12 +48,12 @@ pnpm --dir e2e test
 
 | Spec                   | Guide §8 step                | Asserts                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | ---------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `rep-loop.spec.ts`     | 1–4 (the continuous journey) | `/welcome` ignition → **Open Switchboard** → dev-login → land in `/inbox`; open Leads → open a lead → **timeline renders**; open the **Email composer** → live merge-tag (`{{lead.name}}`) resolves in the preview → close; Inbox queue renders; **completing a task** removes its row and drops "Needs you now" (and lifts "Done today"); **a reply sends** and its row leaves.                                                                                                                                                                                      |
+| `rep-loop.spec.ts`     | 1–4 (the continuous journey) | `/welcome` ignition → **Open Switchboard** → dev-login → land in `/overview`; open Leads → open a lead → **timeline renders**; open the **Email composer** → live merge-tag (`{{lead.name}}`) resolves in the preview → close; Inbox queue renders; **completing a task** removes its row and drops "Needs you now" (and lifts "Done today"); **a reply sends** and its row leaves.                                                                                                                                                                                   |
 | `surfaces.spec.ts`     | 5–9 (the key surfaces)       | **Sequences:** step ladder (3 steps, "Needs review"), the **`Paused · reply`** enrollment (I-SEND-2), and **Enroll → roster count ticks +1**. **Pipeline:** board with the 5 stage columns + currency-separated sums + "Weighted" header + deal count. **Reports:** Activity/Funnel/Sequences tabs render numbers, and **switching the range re-queries** (Calls-logged 810 @30D → 189 @7D). **Settings → Compliance:** the invariant-tagged rails render (recording **Off**/I-REC, unsubscribe **On**/I-SEND-5, quiet-hours window/I-QUIET, daily cap 200/I-SEND-4). |
 | `keyboard.spec.ts`     | 10                           | **Ctrl/Cmd+K** opens the command palette immediately, typing filters it, **Enter navigates**; **?** opens the shortcut sheet (Escape closes).                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `compliance.spec.ts`   | rails                        | The email composer on a **DNC lead** shows the do-not-contact block and **disables Send** — no override control (I-DNC / SUPPRESSED).                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `theme-motion.spec.ts` | themes + reduced motion      | Toggling the theme **persists across reload** (`<html data-theme>` + `sb-theme`); the app renders in **dark** color scheme; the app renders under **`prefers-reduced-motion: reduce`** (leads surface flags `data-reduced-motion="true"`).                                                                                                                                                                                                                                                                                                                            |
-| `ai-confirm.spec.ts`   | AI confirm-before-commit     | See skip list below, plus a positive guard: the composer exposes **no AI write-path** (Send is the only commit).                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `ai-confirm.spec.ts`   | AI confirm-before-commit     | Opens **Draft with AI**, generates and inserts a draft, proves the composer remains open with no send toast, and confirms **Send** remains the only commit path.                                                                                                                                                                                                                                                                                                                                                                                                      |
 
 `auth.setup.ts` is a Playwright **setup project**: it logs in once through the real
 dev-login UI (as the admin fixture user **Ada Okafor**, so Settings is reachable)
@@ -60,20 +61,9 @@ and saves the authenticated `localStorage` as `storageState`. Every authed spec
 reuses it; `rep-loop.spec.ts` opts out (`test.use({ storageState: … empty }`) so it
 exercises the real welcome → login flow itself.
 
-## Skip list (with reasons)
+## Skip list
 
-- **`ai-confirm.spec.ts` → "AI output requires an explicit user confirm before it
-  writes"** — `test.skip`. As of this build there is **no AI affordance wired into
-  the web UI**. The three AI paths in ARCHITECTURE §7 (call-summary draft note,
-  email draft/rewrite, NL → Smart View) have no rendered control on any surface
-  this suite drives (composer, inbox, pipeline, reports, sequences, settings were
-  all verified free of AI/draft/rewrite/generate controls). There is no AI
-  write-path to confirm end-to-end yet, so per task 5d the confirm-flow is skipped
-  rather than fabricated. A passing guard test in the same file locks in that the
-  composer's only backend write is the explicit **Send** button. Enable the skipped
-  test once an AI affordance appears (assert: invoking AI must not mutate/send
-  until the rep clicks a confirm control — I-AI: the confirming request carries
-  `confirmedBy`).
+There are no skipped E2E journeys in the current suite.
 
 ## CI
 

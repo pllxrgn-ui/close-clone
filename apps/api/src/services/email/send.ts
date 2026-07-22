@@ -609,10 +609,10 @@ export async function sendOneOff(
     ...(references.length > 0 ? { references } : {}),
   };
 
-  const provider = deps.providerFor({ address: account.address, provider: account.provider });
   const tokens = deps.cipher.decrypt(account.oauthTokens);
   let result: SendResult;
   try {
+    const provider = deps.providerFor({ address: account.address, provider: account.provider });
     result = await provider.send(tokens, draft, key);
   } catch (err) {
     throw new SendProviderError(err instanceof Error ? err.message : String(err));

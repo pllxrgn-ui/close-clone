@@ -48,6 +48,8 @@ jobs:
       # `vite preview` (in CI it previews only — no rebuild).
       - name: Build the web app (mock mode)
         run: pnpm --filter @switchboard/web build
+        env:
+          VITE_API_MODE: mock
 
       - name: Run E2E
         run: pnpm --dir e2e test

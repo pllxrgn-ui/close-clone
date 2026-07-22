@@ -49,8 +49,6 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
-      - key: GMAIL_SENDER_ADDRESS
-        sync: false
       - key: GMAIL_PUSH_AUDIENCE
         value: https://switchboard-api-pllxrgn.onrender.com/wh/gmail
       - key: GMAIL_PUSH_SERVICE_ACCOUNT_EMAIL

@@ -125,27 +125,36 @@ function toView(row: ViewRow): WebhookSubscriptionView {
  * rules, closing those bypasses. A DNS-name host is screened for the known
  * loopback names only.
  *
- * Deferred hardening (see deploy/WIRING.md): resolve-and-pin to fully defeat DNS
- * rebinding — a name that passes here can still resolve to an internal address at
- * delivery time. The delivery worker must resolve the host, re-check the resolved IP against this
- * same block list, and connect to that pinned IP. That belongs in the delivery
- * path (it needs the network), not in this synchronous create/update validator.
+ * The delivery path repeats this check after DNS resolution and pins the checked
+ * address to the HTTPS socket (`secure-sender.ts`), defeating DNS rebinding.
  */
 const BLOCKED_HOST_IPS = new BlockList();
 // IPv4: this-network (incl. 0.0.0.0), loopback, private, link-local (incl. metadata).
 BLOCKED_HOST_IPS.addSubnet('0.0.0.0', 8, 'ipv4');
 BLOCKED_HOST_IPS.addSubnet('10.0.0.0', 8, 'ipv4');
+BLOCKED_HOST_IPS.addSubnet('100.64.0.0', 10, 'ipv4');
 BLOCKED_HOST_IPS.addSubnet('127.0.0.0', 8, 'ipv4');
 BLOCKED_HOST_IPS.addSubnet('169.254.0.0', 16, 'ipv4');
 BLOCKED_HOST_IPS.addSubnet('172.16.0.0', 12, 'ipv4');
+BLOCKED_HOST_IPS.addSubnet('192.0.0.0', 24, 'ipv4');
+BLOCKED_HOST_IPS.addSubnet('192.0.2.0', 24, 'ipv4');
+BLOCKED_HOST_IPS.addSubnet('192.88.99.0', 24, 'ipv4');
 BLOCKED_HOST_IPS.addSubnet('192.168.0.0', 16, 'ipv4');
+BLOCKED_HOST_IPS.addSubnet('198.18.0.0', 15, 'ipv4');
+BLOCKED_HOST_IPS.addSubnet('198.51.100.0', 24, 'ipv4');
+BLOCKED_HOST_IPS.addSubnet('203.0.113.0', 24, 'ipv4');
+BLOCKED_HOST_IPS.addSubnet('224.0.0.0', 4, 'ipv4');
+BLOCKED_HOST_IPS.addSubnet('240.0.0.0', 4, 'ipv4');
 // IPv6: unspecified, loopback, unique-local (fc00::/7), link-local (fe80::/10).
 BLOCKED_HOST_IPS.addAddress('::', 'ipv6');
 BLOCKED_HOST_IPS.addAddress('::1', 'ipv6');
+BLOCKED_HOST_IPS.addSubnet('100::', 64, 'ipv6');
+BLOCKED_HOST_IPS.addSubnet('2001:db8::', 32, 'ipv6');
 BLOCKED_HOST_IPS.addSubnet('fc00::', 7, 'ipv6');
 BLOCKED_HOST_IPS.addSubnet('fe80::', 10, 'ipv6');
+BLOCKED_HOST_IPS.addSubnet('ff00::', 8, 'ipv6');
 
-function assertPublicHost(hostname: string): void {
+export function assertPublicWebhookHost(hostname: string): void {
   // `URL.hostname` wraps IPv6 literals in brackets; strip them for isIP/BlockList.
   const bare =
     hostname.startsWith('[') && hostname.endsWith(']') ? hostname.slice(1, -1) : hostname;
@@ -173,7 +182,7 @@ function validateUrl(url: string): string {
   if (parsed.protocol !== 'https:') {
     throw new WebhookValidationError('webhook url must use https');
   }
-  assertPublicHost(parsed.hostname);
+  assertPublicWebhookHost(parsed.hostname);
   return parsed.toString();
 }
 

@@ -80,3 +80,13 @@ export {
 } from './delivery.ts';
 
 export { WEBHOOK_DELIVERY_JOB, webhookDeliveryJobId } from './job-names.ts';
+
+export {
+  createSecureWebhookSender,
+  resolvePublicWebhookTarget,
+  type PinnedWebhookRequest,
+  type PinnedWebhookTransport,
+  type ResolvedWebhookAddress,
+  type SecureWebhookSenderOptions,
+  type WebhookAddressResolver,
+} from './secure-sender.ts';
