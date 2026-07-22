@@ -1,6 +1,8 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import { asc } from 'drizzle-orm';
-import { dirname, resolve } from 'node:path';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { loadConfig, type AppConfig } from '../config.ts';
@@ -17,10 +19,18 @@ import { createProviderRegistry, createEmailSenderRegistry } from '../providers/
 import { InProcessQueueDriver } from '../queue/index.ts';
 import { TokenCipher } from '../services/sync/token-cipher.ts';
 import { MockGmailPushVerifier } from '../services/sync/index.ts';
+import { SignatureTwilioVerifier } from '../services/telephony/ingress.ts';
+import { MOCK_TWILIO_AUTH_TOKEN } from '../providers/telephony/twilio-signature.ts';
+import { ImportStorage } from '../services/imports/storage.ts';
+import { processIntent } from '../services/sequences/dispatch.ts';
+import { SEND_JOB_NAME } from '../services/sequences/job-names.ts';
+import { handleTelephonyJob, TWILIO_PROCESS_JOB } from '../services/telephony/worker.ts';
 import { registerDevCors } from './cors.ts';
 import { registerDevAuthRoutes } from './auth.ts';
 import { registerDevReferenceRoutes } from './reference.ts';
 import { seedDevSmartViews, type RawQueryable } from './smart-views.ts';
+import { resolveCurrentUserId } from './util.ts';
+import { loadActiveUser } from '../auth/guards.ts';
 
 /**
  * Dev-server composition root (DEV-ONLY). Boots embedded PGlite (real Postgres
@@ -59,6 +69,8 @@ export interface BuildDevServerOptions {
   loadFixtures?: boolean;
   /** Extra CORS origins beyond the Vite dev defaults. */
   corsOrigins?: readonly string[];
+  /** Import storage override. By default an owned temporary directory is used. */
+  importsRoot?: string;
 }
 
 export interface DevServerTimings {
@@ -107,11 +119,27 @@ export async function buildDevServer(opts: BuildDevServerOptions = {}): Promise<
   const tSeeded = Date.now();
 
   // `me` fallback for previews with no dev session: a real fixture owner.
-  const firstUser = await db.select({ id: users.id }).from(users).orderBy(asc(users.id)).limit(1);
+  const firstUser = await db
+    .select({ id: users.id, email: users.email })
+    .from(users)
+    .orderBy(asc(users.name))
+    .limit(1);
   const defaultUserId = firstUser[0]?.id ?? '00000000-0000-4000-8000-000000000000';
+  const defaultUserEmail = firstUser[0]?.email ?? 'rep@mock.test';
 
   const app = Fastify({ logger: false });
   registerDevCors(app, opts.corsOrigins !== undefined ? { origins: opts.corsOrigins } : {});
+
+  // Keep the intentionally open demo reads, but attach a valid dev-login
+  // identity so account-scoped routes use the same request context as production.
+  app.addHook('preHandler', async (request) => {
+    const userId = resolveCurrentUserId(request, config.sessionSecret);
+    if (userId === null) return;
+    const user = await loadActiveUser(db, userId);
+    if (user === null) return;
+    request.user = user;
+    request.actor = { id: user.id, type: 'user' };
+  });
 
   // Liveness + dev info.
   app.get('/healthz', async () => ({
@@ -131,11 +159,31 @@ export async function buildDevServer(opts: BuildDevServerOptions = {}): Promise<
   // dev read-shims for leads/lead-detail/smart-views are GONE (superseded — they
   // would collide with the real routes); seedDevSmartViews still seeds the demo
   // views into the real `smart_views` table that the real route reads.
-  const registry = createProviderRegistry({ mockMode: true });
+  const gmailCallbackUrl = `http://localhost:${config.port}/api/v1/oauth/gmail/callback`;
+  const registry = createProviderRegistry(
+    { mockMode: true },
+    {
+      address: defaultUserEmail,
+      authorizationUrl: gmailCallbackUrl,
+    },
+  );
+  if (
+    registry.email === undefined ||
+    registry.telephony === undefined ||
+    registry.asr === undefined ||
+    registry.ai === undefined
+  ) {
+    throw new Error('mock provider registry requires every provider');
+  }
+  const telephony = registry.telephony;
+  const asr = registry.asr;
+  const ai = registry.ai;
   const senderRegistry = createEmailSenderRegistry({ mockMode: true });
   const cipher = new TokenCipher(config.sessionSecret);
   const verifier = new MockGmailPushVerifier();
-  const queue = new InProcessQueueDriver();
+  const queue = new InProcessQueueDriver({ mode: 'timer' });
+  const ownsImportsRoot = opts.importsRoot === undefined;
+  const importsRoot = opts.importsRoot ?? (await mkdtemp(join(tmpdir(), 'switchboard-imports-')));
   // Dev admin guard: dev-login users are treated as admins (no OIDC in dev).
   const devAdminGuard: preHandlerHookHandler = async () => {};
   registerRoutes(app, {
@@ -145,15 +193,78 @@ export async function buildDevServer(opts: BuildDevServerOptions = {}): Promise<
       provider: registry.email,
       cipher,
       verifier,
-      redirectUri: `http://localhost:${config.port}/api/v1/oauth/gmail/callback`,
+      redirectUri: gmailCallbackUrl,
+      stateSecret: config.sessionSecret,
+      postLinkRedirect: 'http://localhost:5173/settings?section=inboxes',
       providerName: 'mock',
     },
     emailSend: { providerFor: senderRegistry.providerFor, cipher },
     sequences: { queue, now: () => new Date() },
-    smartViews: { client, orgTimezone: DEV_ORG_TIMEZONE, defaultUserId },
-    bulk: { client, orgTimezone: DEV_ORG_TIMEZONE, queue, defaultUserId },
+    smartViews: {
+      client,
+      orgTimezone: DEV_ORG_TIMEZONE,
+      defaultUserId,
+      getActor: (request) => (request.user ? { userId: request.user.id } : null),
+    },
+    bulk: {
+      client,
+      orgTimezone: DEV_ORG_TIMEZONE,
+      queue,
+      defaultUserId,
+      getActor: (request) => (request.user ? { userId: request.user.id } : null),
+    },
     adminCrud: { adminGuard: devAdminGuard },
     inbox: { queue },
+    telephony: {
+      verifier: new SignatureTwilioVerifier(MOCK_TWILIO_AUTH_TOKEN),
+      dialProvider: telephony,
+      voicemailProvider: telephony,
+      now: () => new Date(),
+      publicBaseUrl: `http://localhost:${config.port}`,
+      callerId: '+15550000001',
+      queue,
+      dialerClient: client,
+      orgTimezone: DEV_ORG_TIMEZONE,
+    },
+    sms: {
+      provider: telephony,
+      now: () => new Date(),
+      fromNumber: '+15550000001',
+    },
+    ai: { asr, ai, now: () => new Date() },
+    imports: {
+      storage: new ImportStorage(importsRoot),
+      getActor: (request) => (request.user ? { userId: request.user.id } : null),
+      preHandler: devAdminGuard,
+    },
+  });
+
+  // The zero-account real-API demo runs the same async behavior as production:
+  // enrollment wake-ups send through the mock providers and inbound Twilio jobs
+  // materialize on the timeline. Timer mode means no manual test tick is needed.
+  const dispatchDeps = {
+    db,
+    providerFor: senderRegistry.providerFor,
+    cipher,
+    queue,
+    workerId: `dev:${process.pid}`,
+    now: () => new Date(),
+    unsubscribe: {
+      baseUrl: `http://localhost:${config.port}`,
+      mailbox: 'unsubscribe@switchboard.test',
+      secret: config.sessionSecret,
+    },
+    sms: { provider: telephony, fromNumber: '+15550000001' },
+  };
+  queue.process(async (job) => {
+    if (job.name === SEND_JOB_NAME) {
+      const intentId = job.data['intentId'];
+      if (typeof intentId === 'string') await processIntent(dispatchDeps, intentId);
+      return;
+    }
+    if (job.name === TWILIO_PROCESS_JOB) {
+      await handleTelephonyJob({ db, provider: telephony }, job);
+    }
   });
 
   // Dev-only shims that are NOT superseded: dev-login (OIDC stub) + reference reads.
@@ -177,7 +288,9 @@ export async function buildDevServer(opts: BuildDevServerOptions = {}): Promise<
     },
     close: async () => {
       await app.close();
+      await queue.close();
       await tdb.close();
+      if (ownsImportsRoot) await rm(importsRoot, { recursive: true, force: true });
     },
   };
 }

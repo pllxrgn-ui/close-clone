@@ -7,8 +7,21 @@ import type {
 import { MockEmailProvider } from './mock/mock-email-provider.ts';
 import { GmailEmailProvider } from './email/gmail-email-provider.ts';
 import { createMockTelephonyProvider } from './telephony/index.ts';
-import { createMockASRProvider } from './asr/index.ts';
-import { createMockAIProvider } from './ai/index.ts';
+import {
+  createTwilioTelephonyProvider,
+  FetchTwilioTransport,
+  type TwilioTelephonyConfig,
+} from './telephony/twilio-telephony-provider.ts';
+import {
+  createDeepgramASRProvider,
+  createMockASRProvider,
+  FetchDeepgramTransport,
+} from './asr/index.ts';
+import {
+  createHaikuAIProvider,
+  createMockAIProvider,
+  FetchAnthropicTransport,
+} from './ai/index.ts';
 import type { Clock, IdSource } from './mock/clock.ts';
 
 /**
@@ -19,10 +32,9 @@ import type { Clock, IdSource } from './mock/clock.ts';
  * only on the `EmailProvider` interface, so every code path above is identical
  * whether the process is mocked or live.
  *
- * The real branch binds the Gmail REST adapter (task 2b). It needs OAuth client
- * credentials plus a default mailbox identity, supplied by the caller from parsed
- * config (never `process.env` here — see `config.ts`). Absent that config the
- * branch fails fast with a configuration error rather than degrading silently.
+ * The real branch binds only the adapters whose complete configuration is
+ * supplied by the caller (never `process.env` here — see `main.ts`). Provider
+ * groups are optional capabilities; partial groups fail during startup.
  */
 
 /**
@@ -35,14 +47,14 @@ import type { Clock, IdSource } from './mock/clock.ts';
 export interface GmailBindingConfig {
   clientId: string;
   clientSecret: string;
-  address: string;
+  /** Optional only for the shared OAuth/sync adapter; sends bind the account address below. */
+  address?: string;
   scopes?: string[];
 }
 
 export interface ProviderRegistry {
-  email: EmailProvider;
-  /** All bound under mockMode; the real Twilio/Deepgram/Haiku adapters are wired
-   *  at the deploy composition root (they need accounts — see deploy/WIRING.md). */
+  email?: EmailProvider;
+  /** All bound under mockMode; real adapters activate independently by config. */
   telephony?: TelephonyProvider;
   asr?: ASRProvider;
   ai?: AIProvider;
@@ -52,10 +64,14 @@ export interface RegistryConfig {
   mockMode: boolean;
   /** Required for the real (non-mock) branch; ignored under `mockMode`. */
   gmail?: GmailBindingConfig;
+  twilio?: Omit<TwilioTelephonyConfig, 'transport'>;
+  deepgramApiKey?: string;
+  anthropicApiKey?: string;
 }
 
 export interface MockRegistryOverrides {
   address?: string;
+  authorizationUrl?: string;
   clock?: Clock;
   ids?: IdSource;
 }
@@ -75,19 +91,41 @@ export function createProviderRegistry(
       ai: createMockAIProvider(),
     };
   }
-  if (config.gmail === undefined) {
-    throw new Error(
-      'real email provider requires gmail OAuth config (clientId/clientSecret/address); ' +
-        'set MOCK_MODE=1 to use the in-memory provider',
-    );
-  }
   return {
-    email: new GmailEmailProvider({
-      clientId: config.gmail.clientId,
-      clientSecret: config.gmail.clientSecret,
-      address: config.gmail.address,
-      ...(config.gmail.scopes !== undefined ? { scopes: config.gmail.scopes } : {}),
-    }),
+    ...(config.gmail
+      ? {
+          email: new GmailEmailProvider({
+            clientId: config.gmail.clientId,
+            clientSecret: config.gmail.clientSecret,
+            address: config.gmail.address ?? 'oauth-linking@invalid.local',
+            ...(config.gmail.scopes !== undefined ? { scopes: config.gmail.scopes } : {}),
+          }),
+        }
+      : {}),
+    ...(config.twilio
+      ? {
+          telephony: createTwilioTelephonyProvider({
+            ...config.twilio,
+            transport: new FetchTwilioTransport(),
+          }),
+        }
+      : {}),
+    ...(config.deepgramApiKey
+      ? {
+          asr: createDeepgramASRProvider({
+            apiKey: config.deepgramApiKey,
+            transport: new FetchDeepgramTransport(),
+          }),
+        }
+      : {}),
+    ...(config.anthropicApiKey
+      ? {
+          ai: createHaikuAIProvider({
+            apiKey: config.anthropicApiKey,
+            transport: new FetchAnthropicTransport(),
+          }),
+        }
+      : {}),
   };
 }
 

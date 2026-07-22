@@ -1,6 +1,7 @@
 import type { JSX } from 'react';
 import type { IconProps } from '../ui/icons.tsx';
 import {
+  BoltIcon,
   InboxIcon,
   LeadsIcon,
   ReportsIcon,
@@ -40,6 +41,7 @@ export interface NavItem {
 
 /** The daily work surfaces — the rail's main list. */
 export const PRIMARY_NAV: readonly NavItem[] = [
+  { to: '/overview', label: 'Overview', key: 'o', icon: BoltIcon },
   { to: '/inbox', label: 'Inbox', key: 'i', icon: InboxIcon },
   { to: '/leads', label: 'Leads', key: 'l', icon: LeadsIcon },
   { to: '/pipeline', label: 'Pipeline', key: 'p', icon: PipelineIcon },
@@ -51,7 +53,7 @@ export const PRIMARY_NAV: readonly NavItem[] = [
  * About the tool, not the work — pinned to the bottom of the rail, under a
  * divider, so the daily surfaces stay at the top where the eye lands.
  */
-import { importNavItem } from '../features/import/index.ts';
+import { importNavItem } from '../features/import/nav.ts';
 
 export const FOOTER_NAV: readonly NavItem[] = [
   importNavItem,

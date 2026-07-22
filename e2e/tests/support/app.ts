@@ -25,14 +25,14 @@ export const DNC_LEAD_ID = 'e1834476-227f-4747-81b1-2985fef9ff8d';
 /** The Onboarding sequence (deterministic id/name; roster starts at 8). */
 export const ONBOARDING = { id: 'seq-onboarding', name: 'Onboarding' } as const;
 
-/** Log in through the dev-login UI as the given fixture user, landing in /inbox. */
+/** Log in through the dev-login UI as the given fixture user, landing in /overview. */
 export async function devLogin(page: Page, userName: string): Promise<void> {
   await page.goto('/login');
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
   // The user list is served by MSW (GET /auth/dev-users).
   await page.getByRole('button', { name: new RegExp(userName) }).click();
-  await expect(page).toHaveURL(/\/inbox$/);
-  await expect(page.getByRole('heading', { level: 1, name: 'Inbox' })).toBeVisible();
+  await expect(page).toHaveURL(/\/overview$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
 }
 
 /** The first data row of the leads grid (skips the columnheader row). */

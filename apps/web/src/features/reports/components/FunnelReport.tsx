@@ -9,7 +9,7 @@ import type { JSX } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { EmptyState } from '../../../ui/index.ts';
 import { ApiError } from '../../../api/errors.ts';
-import { fetchFunnelReport } from '../api/reports.ts';
+import { fetchCompleteFunnelReport } from '../api/reports.ts';
 import { formatInt, formatMoneyCents } from '../lib/format.ts';
 import { stageKind } from '../lib/stages.ts';
 import type { FunnelStageRow } from '../types.ts';
@@ -120,7 +120,7 @@ function FunnelGroup({
 export function FunnelReport(): JSX.Element {
   const q = useQuery({
     queryKey: ['reports', 'funnel'],
-    queryFn: ({ signal }) => fetchFunnelReport({ limit: 500 }, signal),
+    queryFn: ({ signal }) => fetchCompleteFunnelReport({}, signal),
   });
 
   if (q.isLoading) {

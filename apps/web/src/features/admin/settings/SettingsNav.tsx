@@ -5,6 +5,7 @@ import {
   AboutIcon,
   ComplianceIcon,
   CustomFieldsIcon,
+  InboxesIcon,
   type IconProps,
   TemplatesIcon,
   UsersIcon,
@@ -21,33 +22,37 @@ export interface SettingsSectionMeta {
   id: string;
   label: string;
   icon: (props: IconProps) => JSX.Element;
+  adminOnly?: boolean;
 }
 
 export const SETTINGS_SECTIONS: readonly SettingsSectionMeta[] = [
-  { id: 'users', label: 'Users', icon: UsersIcon },
-  { id: 'custom-fields', label: 'Custom fields', icon: CustomFieldsIcon },
-  { id: 'templates', label: 'Templates & snippets', icon: TemplatesIcon },
-  { id: 'compliance', label: 'Compliance', icon: ComplianceIcon },
+  { id: 'inboxes', label: 'Inboxes', icon: InboxesIcon },
+  { id: 'users', label: 'Users', icon: UsersIcon, adminOnly: true },
+  { id: 'custom-fields', label: 'Custom fields', icon: CustomFieldsIcon, adminOnly: true },
+  { id: 'templates', label: 'Templates & snippets', icon: TemplatesIcon, adminOnly: true },
+  { id: 'compliance', label: 'Compliance', icon: ComplianceIcon, adminOnly: true },
   { id: 'about', label: 'About', icon: AboutIcon },
 ];
 
-export const DEFAULT_SECTION = 'users';
+export const DEFAULT_SECTION = 'inboxes';
 
 /** Resolve a `?section=` value to a known section id, falling back to default. */
-export function resolveSection(raw: string | null): string {
-  return SETTINGS_SECTIONS.some((s) => s.id === raw) ? (raw as string) : DEFAULT_SECTION;
+export function resolveSection(raw: string | null, isAdmin: boolean): string {
+  const section = SETTINGS_SECTIONS.find((candidate) => candidate.id === raw);
+  return section && (!section.adminOnly || isAdmin) ? section.id : DEFAULT_SECTION;
 }
 
 interface SettingsNavProps {
   active: string;
+  isAdmin: boolean;
 }
 
-export function SettingsNav({ active }: SettingsNavProps): JSX.Element {
+export function SettingsNav({ active, isAdmin }: SettingsNavProps): JSX.Element {
   return (
     <nav className="admin-subrail" aria-label="Settings sections">
       <p className="admin-subrail__label">Settings</p>
       <ul className="admin-subrail__list">
-        {SETTINGS_SECTIONS.map((section) => {
+        {SETTINGS_SECTIONS.filter((section) => isAdmin || !section.adminOnly).map((section) => {
           const Icon = section.icon;
           const isActive = section.id === active;
           return (

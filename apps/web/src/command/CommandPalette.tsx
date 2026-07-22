@@ -7,14 +7,14 @@ import { fuzzyMatch, scoreEntry } from './fuzzy.ts';
 import { useDebouncedValue } from './useDebouncedValue.ts';
 import { COMMAND_GROUPS, useLeadCommands, useStaticCommands } from './commands.ts';
 import type { Command, CommandGroupName } from './commands.ts';
-import { useCommsCommands } from '../features/comms/index.ts';
-import { useAdminCommands } from '../features/admin/index.ts';
-import { usePipelineCommands } from '../features/pipeline/index.ts';
-import { useInboxCommands } from '../features/inbox/index.ts';
-import { useCallingCommands } from '../features/calling/index.ts';
-import { useSmsCommands } from '../features/sms/index.ts';
-import { useAiCommands } from '../features/ai/index.ts';
-import { useImportCommands } from '../features/import/index.ts';
+import { useCommsCommands } from '../features/comms/commands.ts';
+import { useAdminCommands } from '../features/admin/commands.ts';
+import { usePipelineCommands } from '../features/pipeline/commands/commands.ts';
+import { useInboxCommands } from '../features/inbox/commands.ts';
+import { useCallingCommands } from '../features/calling/commands.ts';
+import { useSmsCommands } from '../features/sms/commands.ts';
+import { useAiCommands } from '../features/ai/commands.ts';
+import { useImportCommands } from '../features/import/commands.ts';
 
 interface OptionVM {
   command: Command;

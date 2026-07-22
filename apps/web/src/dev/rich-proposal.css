@@ -1,0 +1,183 @@
+/* PROPOSAL styling for a richer Combobox — "channel strip" treatment.
+ * Throwaway mockup only; not shipped. Pushes the patch-bay vernacular:
+ * state lamps (with glow), a mono channel tag, right-aligned data meta, and a
+ * keyboard strip footer. All color still comes from tokens (state = information). */
+
+.rp {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink-0);
+  font-family: var(--font-body);
+  padding: var(--space-8);
+  box-sizing: border-box;
+}
+.rp-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: var(--space-7);
+}
+.rp-h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-display-sm);
+}
+.rp-sub {
+  margin: var(--space-1) 0 0;
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+}
+.rp-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 360px));
+  gap: var(--space-8);
+  align-items: start;
+}
+.rp-col__title {
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--space-3);
+}
+
+/* Closed control — the selected channel shows its lamp + tag at rest. */
+.rp-control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: var(--control-h-lg);
+  padding: 0 var(--space-2) 0 var(--space-4);
+  background: var(--surface-inset);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-1);
+}
+.rp-control__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.rp-control__chev {
+  color: var(--ink-2);
+}
+
+/* Panel — same surface + shadow as sb-combobox__panel. */
+.rp-panel {
+  margin-top: var(--space-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-2);
+  box-shadow: var(--shadow-2);
+  overflow: hidden;
+}
+.rp-panel__cap {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.rp-list {
+  padding: var(--space-1) var(--space-2) var(--space-2);
+}
+
+/* Channel strip row. */
+.rp-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: 40px;
+  padding: 0 var(--space-2) 0 var(--space-2);
+  border-left: 2px solid transparent;
+  border-radius: var(--radius-1);
+}
+.rp-row[data-active] {
+  background: var(--accent-weak-bg);
+  border-left-color: var(--focus);
+}
+.rp-row[data-disabled] {
+  opacity: 0.45;
+}
+
+/* Lamp — reuse the state system; glow for live/reply in dark (tokens handle it). */
+.rp-lamp {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--state-idle);
+  box-shadow: var(--lamp-glow);
+  color: var(--state-idle);
+}
+.rp-lamp[data-state='live'] {
+  background: var(--state-live);
+  color: var(--state-live);
+}
+.rp-lamp[data-state='reply'] {
+  background: var(--state-reply);
+  color: var(--state-reply);
+}
+.rp-lamp[data-state='seq'] {
+  background: var(--state-seq);
+  color: var(--state-seq);
+  box-shadow: none;
+}
+.rp-lamp[data-state='overdue'] {
+  background: var(--state-overdue);
+  color: var(--state-overdue);
+  box-shadow: none;
+}
+.rp-lamp[data-state='idle'] {
+  box-shadow: none;
+}
+
+/* Mono channel tag — fixed width, uppercase, data face. */
+.rp-tag {
+  flex: none;
+  width: 26px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.08em;
+  color: var(--ink-2);
+  text-transform: uppercase;
+}
+.rp-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink-0);
+  font-size: var(--fs-sm);
+}
+.rp-meta {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.rp-check {
+  flex: none;
+  color: var(--state-live);
+}
+
+/* Keyboard strip footer — the shortcut map as a design object (DESIGN §7). */
+.rp-foot {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--border-0);
+  background: var(--surface-1);
+  color: var(--ink-3);
+  font-size: var(--fs-micro);
+}
+.rp-foot__grp {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}

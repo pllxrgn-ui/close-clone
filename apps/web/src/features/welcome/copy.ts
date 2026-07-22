@@ -17,6 +17,7 @@ export interface NavMenuItem {
 
 /** Landing nav menu — anchors into the page, no dead links. */
 export const NAV_MENU: readonly NavMenuItem[] = [
+  { name: 'Workflow', href: '#welcome-workflow' },
   { name: 'Features', href: '#welcome-acts' },
   { name: 'Shortcuts', href: '#welcome-keys' },
   { name: 'Compliance', href: '#welcome-trust' },
@@ -57,6 +58,32 @@ export const HERO_STATS: readonly HeroStat[] = [
   { value: '1 key', label: 'to the next call' },
   { value: '100%', label: 'of touches on the timeline' },
 ];
+
+export const WORKFLOW_STORY = {
+  label: 'How it works',
+  title: 'From connected inbox to completed follow-up',
+  sub: 'One operating loop keeps the signal, the conversation, and the record together.',
+  steps: [
+    {
+      number: '01',
+      title: 'Connect your Gmail inbox',
+      body: 'Authorize your own mailbox from Settings. Switchboard syncs the conversation without asking you for provider API keys.',
+      meta: 'Owner-scoped · encrypted authorization',
+    },
+    {
+      number: '02',
+      title: 'Work the next signal',
+      body: 'Replies, overdue tasks, calls, and active sequences are prioritized into one keyboard-driven queue.',
+      meta: 'Inbox · Smart Views · shortcuts',
+    },
+    {
+      number: '03',
+      title: 'Keep every touch together',
+      body: 'Email, calls, SMS, notes, and sequence outcomes land on the same shared lead timeline.',
+      meta: 'One ordered history · team-visible',
+    },
+  ],
+} as const;
 
 export interface FeatureActCopy {
   id: string;
@@ -106,7 +133,7 @@ export const TRUST_LINE =
 
 export const FOOTER = {
   cta: 'Open Switchboard',
-  note: 'Switchboard is an internal tool for the revenue team. Access is limited to staff accounts through single sign-on.',
+  note: 'Staff sign in through SSO. Role-based access keeps workspace settings and audit history admin-only while reps work customer records.',
 } as const;
 
 /** Both primary CTAs and the nav sign-in route to the dev-login gate. */

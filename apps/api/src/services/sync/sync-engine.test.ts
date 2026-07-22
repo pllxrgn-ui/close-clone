@@ -29,6 +29,9 @@ class CountingProvider implements EmailProvider {
   getAuthUrl(a: string, r: string): Promise<string> {
     return this.inner.getAuthUrl(a, r);
   }
+  getMailboxAddress(tokens: OAuthTokens): Promise<string> {
+    return this.inner.getMailboxAddress(tokens);
+  }
   exchangeCode(c: string, r: string): Promise<OAuthTokens> {
     return this.inner.exchangeCode(c, r);
   }

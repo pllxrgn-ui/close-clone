@@ -2,7 +2,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import type { EmailProvider } from '@switchboard/shared/providers';
 import { emailProviderValues } from '@switchboard/shared';
 import { emailAccounts, type Db } from '../../db/index.ts';
-import { AccountNotFoundError } from './errors.ts';
+import { AccountNotFoundError, MailboxAddressMismatchError } from './errors.ts';
 import { SyncStateService } from './state.ts';
 import { TokenCipher } from './token-cipher.ts';
 
@@ -96,13 +96,19 @@ export async function completeLinking(
   input: CompleteLinkingInput,
 ): Promise<{ accountId: string }> {
   const exists = await deps.db
-    .select({ id: emailAccounts.id })
+    .select({ id: emailAccounts.id, address: emailAccounts.address })
     .from(emailAccounts)
     .where(eq(emailAccounts.id, input.accountId))
     .limit(1);
-  if (exists[0] === undefined) throw new AccountNotFoundError(input.accountId);
+  const account = exists[0];
+  if (account === undefined) throw new AccountNotFoundError(input.accountId);
 
   const tokens = await deps.provider.exchangeCode(input.code, input.redirectUri);
+  const actualAddress = await deps.provider.getMailboxAddress(tokens);
+  if (actualAddress.toLowerCase() !== account.address.toLowerCase()) {
+    await deps.state.transition(input.accountId, 'REAUTH_REQUIRED', 'oauth:address-mismatch');
+    throw new MailboxAddressMismatchError(account.address, actualAddress);
+  }
   const encrypted = deps.cipher.encrypt(tokens);
 
   await deps.db.transaction(async (txRaw) => {

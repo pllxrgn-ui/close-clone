@@ -27,8 +27,8 @@ test('rep loop: welcome → login → lead + composer → inbox queue', async ({
     await expect(page).toHaveURL(/\/login$/);
     await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
     await page.getByRole('button', { name: new RegExp(ADMIN_USER.name) }).click();
-    await expect(page).toHaveURL(/\/inbox$/);
-    await expect(page.getByRole('heading', { level: 1, name: 'Inbox' })).toBeVisible();
+    await expect(page).toHaveURL(/\/overview$/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
   });
 
   await test.step('open Leads → open a lead → timeline renders', async () => {

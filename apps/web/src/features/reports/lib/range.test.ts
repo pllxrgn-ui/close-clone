@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import {
   MAX_RANGE_DAYS,
   REPORT_NOW,
@@ -7,9 +7,15 @@ import {
   presetByKey,
   presetRange,
   rangeForKey,
+  reportNow,
   resolveRange,
   toUtcDateString,
 } from './range.ts';
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.useRealTimers();
+});
 
 describe('presetRange', () => {
   test('spans exactly `days` calendar days, inclusive of `to`', () => {
@@ -27,6 +33,13 @@ describe('presetRange', () => {
 
   test('REPORT_NOW is the fixed demo anchor', () => {
     expect(toUtcDateString(REPORT_NOW)).toBe('2026-07-15');
+  });
+
+  test('real mode uses the wall clock instead of the demo anchor', () => {
+    vi.stubEnv('VITE_API_MODE', 'real');
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2030-01-02T12:00:00Z'));
+    expect(reportNow().toISOString()).toBe('2030-01-02T12:00:00.000Z');
   });
 });
 

@@ -110,6 +110,22 @@ describe('exchangeCode', () => {
   });
 });
 
+describe('getMailboxAddress', () => {
+  test('reads the authenticated address from the Gmail profile', async () => {
+    const p = provider([
+      {
+        match: (request) => request.url.endsWith('/profile'),
+        body: { emailAddress: 'actual@company.test', historyId: '9000' },
+      },
+    ]);
+    await expect(
+      (
+        p as unknown as { getMailboxAddress(tokens: OAuthTokens): Promise<string> }
+      ).getMailboxAddress(TOKENS),
+    ).resolves.toBe('actual@company.test');
+  });
+});
+
 describe('listMessages (backfill)', () => {
   test('maps refs, snapshots profile historyId, and carries the page token', async () => {
     const p = provider([

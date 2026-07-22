@@ -7,6 +7,8 @@ import { CustomFieldsSection } from './sections/CustomFieldsSection.tsx';
 import { TemplatesSection } from './sections/TemplatesSection.tsx';
 import { ComplianceSection } from './sections/ComplianceSection.tsx';
 import { AboutSection } from './sections/AboutSection.tsx';
+import { EmailAccountsSection } from './sections/EmailAccountsSection.tsx';
+import { useAuth } from '../../../auth/AuthProvider.tsx';
 
 /*
  * The /settings route surface (replaces the placeholder). A left sub-rail in the
@@ -18,6 +20,8 @@ import { AboutSection } from './sections/AboutSection.tsx';
 
 function renderSection(section: string): JSX.Element {
   switch (section) {
+    case 'inboxes':
+      return <EmailAccountsSection />;
     case 'custom-fields':
       return <CustomFieldsSection />;
     case 'templates':
@@ -34,11 +38,13 @@ function renderSection(section: string): JSX.Element {
 
 export function AdminSettingsPage(): JSX.Element {
   const [searchParams] = useSearchParams();
-  const active = resolveSection(searchParams.get('section'));
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  const active = resolveSection(searchParams.get('section'), isAdmin);
 
   return (
     <div className="admin-settings">
-      <SettingsNav active={active} />
+      <SettingsNav active={active} isAdmin={isAdmin} />
       <div className="admin-settings__content">{renderSection(active)}</div>
     </div>
   );

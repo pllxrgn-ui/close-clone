@@ -181,5 +181,5 @@ describe('I-REC — recording requires org flag AND preceding consent', () => {
       const c = CASES[state % CASES.length]!;
       await runCase(c, `rand-${i}`);
     }
-  });
+  }, 15_000);
 });

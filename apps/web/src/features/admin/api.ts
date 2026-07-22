@@ -4,7 +4,7 @@
  * snippets, sequences, and leads-mutation calls this feature needs. Reference
  * lookups (users, lead-statuses) are reused from api/reference.ts.
  */
-import type { Lead, OrgSettings, Snippet, Template } from '@switchboard/shared';
+import type { EmailAccount, Lead, OrgSettings, Snippet, Template } from '@switchboard/shared';
 import { apiRequest } from '../../api/client.ts';
 import type {
   CreateCustomFieldInput,
@@ -34,6 +34,20 @@ export function enrollLeads(sequenceId: string, leadIds: readonly string[]): Pro
 
 export function listSequences(signal?: AbortSignal): Promise<SequenceWithCount[]> {
   return apiRequest<SequenceWithCount[]>('/sequences', signal ? { signal } : {});
+}
+
+// ── Settings: personal inboxes ───────────────────────────────────────────────
+
+export function listEmailAccounts(signal?: AbortSignal): Promise<EmailAccount[]> {
+  return apiRequest<EmailAccount[]>('/email-accounts', signal ? { signal } : {});
+}
+
+export function startGmailLink(address: string): Promise<{ accountId: string; authUrl: string }> {
+  return apiRequest('/oauth/gmail/start', { method: 'POST', body: { address } });
+}
+
+export function disconnectEmailAccount(id: string): Promise<void> {
+  return apiRequest<void>(`/email-accounts/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
 
 // ── Settings: custom fields ─────────────────────────────────────────────────────

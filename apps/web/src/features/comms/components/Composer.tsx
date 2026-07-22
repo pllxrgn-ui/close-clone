@@ -36,7 +36,7 @@ import {
 import { applySnippet, detectSlashToken, matchSnippets } from '../lib/snippets.ts';
 import { MergePreview } from './MergePreview.tsx';
 import { SnippetMenu } from './SnippetMenu.tsx';
-import { AiDraftControl } from '../../ai/index.ts';
+import { AiDraftControl } from '../../ai/components/AiDraftControl.tsx';
 import {
   AlertTriangleIcon,
   BanIcon,

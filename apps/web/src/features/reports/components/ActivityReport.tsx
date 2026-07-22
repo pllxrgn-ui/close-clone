@@ -12,8 +12,14 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { EmptyState } from '../../../ui/index.ts';
 import { ApiError } from '../../../api/errors.ts';
 import { usersQuery } from '../../../api/refQueries.ts';
-import { fetchActivityReport } from '../api/reports.ts';
-import { DEFAULT_PRESET_KEY, RANGE_PRESETS, presetByKey, rangeForKey } from '../lib/range.ts';
+import { fetchCompleteActivityReport } from '../api/reports.ts';
+import {
+  DEFAULT_PRESET_KEY,
+  RANGE_PRESETS,
+  presetByKey,
+  rangeForKey,
+  reportNow,
+} from '../lib/range.ts';
 import { formatDateRangeLabel, formatInt, formatTalkTime } from '../lib/format.ts';
 import { sumActivityRows } from '../lib/totals.ts';
 import { BarComparison, StatTile } from './charts.tsx';
@@ -22,13 +28,13 @@ import { ReportError, RowsSkeleton, TilesSkeleton } from './states.tsx';
 export function ActivityReport(): JSX.Element {
   const [params, setParams] = useSearchParams();
   const presetKey = presetByKey(params.get('range') ?? DEFAULT_PRESET_KEY).key;
-  const range = rangeForKey(presetKey);
+  const range = rangeForKey(presetKey, reportNow());
 
   const usersQ = useQuery({ ...usersQuery(), staleTime: Number.POSITIVE_INFINITY });
   const q = useQuery({
     queryKey: ['reports', 'activity', range.from, range.to],
     queryFn: ({ signal }) =>
-      fetchActivityReport({ from: range.from, to: range.to, limit: 500 }, signal),
+      fetchCompleteActivityReport({ from: range.from, to: range.to }, signal),
     placeholderData: keepPreviousData,
   });
 
@@ -65,7 +71,9 @@ export function ActivityReport(): JSX.Element {
           </button>
         ))}
       </div>
-      <span className="rpt-toolbar__caption">{formatDateRangeLabel(range.from, range.to)}</span>
+      <span className="rpt-toolbar__caption">
+        {formatDateRangeLabel(range.from, range.to)} · UTC
+      </span>
     </div>
   );
 

@@ -112,8 +112,8 @@ curl -sI http://localhost:${WEB_HTTP_PORT:-8080}/ \
   `/wh/twilio/*` 403 sig-check). Real provider integrations (Gmail/Twilio/
   Deepgram/Haiku, real IdP) stay unmounted until their accounts land — set
   `MOCK_MODE=0` + the credential group to enable each.
-- **Worker service:** profile-gated OFF until `apps/api/src/worker.ts` exists (v1
-  runs sweep/send in-process in `api`). See `README.md` → Workers.
+- **Worker service:** optional `worker` profile runs the same composition root
+  with `APP_ROLE=worker` and no HTTP listener. See `README.md` → Workers.
 - **Real integrations:** to turn any on, set `MOCK_MODE=0` and fill the matching
   credential group in `.env` (see the `README.md` matrix + `HUMAN_TODO.md`), then
   redeploy. Each group blocks only its own feature.

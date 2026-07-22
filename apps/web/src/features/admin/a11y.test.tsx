@@ -6,6 +6,8 @@ import * as axe from 'axe-core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { Lead } from '@switchboard/shared';
+import { AuthProvider } from '../../auth/AuthProvider.tsx';
+import { storeUser } from '../../auth/auth.ts';
 import { ToastProvider } from '../../feedback/ToastProvider.tsx';
 import { db } from '../../mocks/fixtures.ts';
 import { server } from '../../mocks/server.ts';
@@ -36,17 +38,23 @@ function Providers({ children }: { children: JSX.Element }): JSX.Element {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return (
     <QueryClientProvider client={qc}>
-      <ToastProvider ttl={0}>{children}</ToastProvider>
+      <AuthProvider>
+        <ToastProvider ttl={0}>{children}</ToastProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
 
 beforeEach(() => {
+  const admin = db.users.find((user) => user.role === 'admin');
+  if (!admin) throw new Error('Missing admin fixture');
+  storeUser(admin);
   resetAdminStore();
   server.use(...adminHandlers);
   document.documentElement.lang = 'en';
 });
 afterEach(() => {
+  storeUser(null);
   document.documentElement.removeAttribute('data-theme');
   cleanup();
 });

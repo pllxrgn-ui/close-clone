@@ -162,6 +162,14 @@ export class GmailEmailProvider implements EmailProvider {
     });
   }
 
+  async getMailboxAddress(tokens: OAuthTokens): Promise<string> {
+    const profile = await this.profile(tokens);
+    if (profile.emailAddress === undefined) {
+      throw new GmailApiError(profile.status, 'profile missing emailAddress');
+    }
+    return profile.emailAddress;
+  }
+
   // --- Backfill -------------------------------------------------------------
 
   async listMessages(tokens: OAuthTokens, pageToken?: string): Promise<MessagePage> {
@@ -273,11 +281,21 @@ export class GmailEmailProvider implements EmailProvider {
   }
 
   private async currentHistoryId(tokens: OAuthTokens): Promise<string> {
-    const res = await this.get(tokens, `${API_BASE}/profile`);
-    const json = this.parseOk(res) as { historyId?: string };
-    if (json.historyId === undefined)
-      throw new GmailApiError(res.status, 'profile missing historyId');
-    return json.historyId;
+    const profile = await this.profile(tokens);
+    if (profile.historyId === undefined) {
+      throw new GmailApiError(profile.status, 'profile missing historyId');
+    }
+    return profile.historyId;
+  }
+
+  private async profile(tokens: OAuthTokens): Promise<{
+    emailAddress?: string;
+    historyId?: string;
+    status: number;
+  }> {
+    const response = await this.get(tokens, `${API_BASE}/profile`);
+    const profile = this.parseOk(response) as { emailAddress?: string; historyId?: string };
+    return { ...profile, status: response.status };
   }
 
   private parseOk(res: GmailHttpResponse): unknown {

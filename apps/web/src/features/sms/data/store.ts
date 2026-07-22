@@ -20,12 +20,12 @@ import type { SmsMessage } from '@switchboard/shared';
 import { db } from '../../../mocks/fixtures.ts';
 import { workspaceMode } from '../../../mocks/workspace.ts';
 import { mulberry32, uuidFrom } from '../../../mocks/seed.ts';
+import { COMPANY_TIMEZONE } from '../lib/config.ts';
 import { phoneMatchKey } from '../lib/sms.ts';
 
 /** The org's outbound SMS sender number (the Switchboard Twilio number). */
 export const ORG_SMS_NUMBER = '+12065550100';
-/** Fallback timezone for quiet-hours when an area code cannot be inferred. */
-export const COMPANY_TIMEZONE = 'America/New_York';
+export { COMPANY_TIMEZONE };
 
 /** A fixed instant INSIDE the 8am–9pm window (10am PT / 1pm ET) — the default clock. */
 const WITHIN_WINDOW = new Date('2026-07-15T17:00:00.000Z');

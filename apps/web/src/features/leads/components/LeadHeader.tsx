@@ -8,16 +8,24 @@ import { Suspense, lazy } from 'react';
 // the launchers are single controls in the actions row and hydrate in the same
 // paint in practice (chunks are shared with their feature routes).
 const LeadComposerLauncher = lazy(() =>
-  import('../../comms/index.ts').then((m) => ({ default: m.LeadComposerLauncher })),
+  import('../../comms/components/LeadComposerLauncher.tsx').then((m) => ({
+    default: m.LeadComposerLauncher,
+  })),
 );
 const LeadCallLauncher = lazy(() =>
-  import('../../calling/index.ts').then((m) => ({ default: m.LeadCallLauncher })),
+  import('../../calling/components/LeadCallLauncher.tsx').then((m) => ({
+    default: m.LeadCallLauncher,
+  })),
 );
 const LeadSmsLauncher = lazy(() =>
-  import('../../sms/index.ts').then((m) => ({ default: m.LeadSmsLauncher })),
+  import('../../sms/components/LeadSmsLauncher.tsx').then((m) => ({
+    default: m.LeadSmsLauncher,
+  })),
 );
 const LeadEnrollLauncher = lazy(() =>
-  import('../../comms/index.ts').then((m) => ({ default: m.LeadEnrollLauncher })),
+  import('../../comms/components/LeadEnrollLauncher.tsx').then((m) => ({
+    default: m.LeadEnrollLauncher,
+  })),
 );
 import type { StatusTone } from '../../../ui/index.ts';
 import { initials } from '../../../lib/format.ts';

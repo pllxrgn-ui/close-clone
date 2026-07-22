@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { RenderResult } from '@testing-library/react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import * as axe from 'axe-core';
 import { AppProviders } from '../../app/AppProviders.tsx';
@@ -114,6 +114,36 @@ describe('WelcomePage — hero frame + nav menu + accounts band', () => {
 });
 
 describe('WelcomePage — route + content', () => {
+  test('explains the connected workflow in three steps', () => {
+    const { container } = renderWelcome();
+    expect(
+      screen.getByRole('heading', { name: 'From connected inbox to completed follow-up' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Connect your Gmail inbox')).toBeInTheDocument();
+    expect(screen.getByText('Work the next signal')).toBeInTheDocument();
+    expect(screen.getByText('Keep every touch together')).toBeInTheDocument();
+    const workflow = container.querySelector<HTMLOListElement>('.sb-welcome__workflow-steps');
+    expect(workflow).toHaveAttribute('role', 'list');
+    expect(within(workflow as HTMLOListElement).getAllByRole('listitem')).toHaveLength(3);
+  });
+
+  test('states the role-based access boundary without adding a workflow step', () => {
+    const { container } = renderWelcome();
+    expect(
+      screen.getByText(/role-based access keeps workspace settings and audit history admin-only/i),
+    ).toBeInTheDocument();
+    expect(container.querySelectorAll('.sb-welcome__workflow-step')).toHaveLength(3);
+  });
+
+  test('the Workflow anchor points at the real section', () => {
+    const { container } = renderWelcome();
+    expect(screen.getByRole('link', { name: 'Workflow' })).toHaveAttribute(
+      'href',
+      '#welcome-workflow',
+    );
+    expect(container.querySelector('#welcome-workflow')).not.toBeNull();
+  });
+
   test('renders at /welcome with the headline, sub, and stat readout', () => {
     renderWelcome();
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Pick up the line.');

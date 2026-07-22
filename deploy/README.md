@@ -107,12 +107,10 @@ memory limit sized for a small VM (honoured by `docker compose up` in Compose v2
 `api` and `worker` are the **same image**; the role is chosen by `APP_ROLE`
 (`server` | `worker`) in `deploy/scripts/entrypoint.sh`.
 
-- **v1 (default):** the sequence sweeper/sender runs **in-process** in the `api`
-  server. The dedicated `worker` service is **profile-gated OFF** because the
-  standalone worker composition root (`apps/api/src/worker.ts`) is a tracked
-  follow-up — the entrypoint fails fast with a clear message if you enable the
-  profile before that entry exists.
-- **When the worker entry lands:** `docker compose --profile worker up -d` runs it.
+- **Default:** queue consumers and sweepers run in-process in the `api` server.
+- **Optional separation:** `docker compose --profile worker up -d` also runs the
+  same composition root with `APP_ROLE=worker`; it starts consumers/sweepers but
+  does not listen for HTTP. BullMQ and database claims make multiple consumers safe.
   Set `MIGRATE_ON_BOOT=0` on every non-primary process (already set on `worker`).
 - **Multiple api replicas:** only ONE process may migrate. Run migrations as a
   one-shot before rolling the fleet (see `MIGRATION-SAFETY.md`), and set
@@ -122,11 +120,9 @@ memory limit sized for a small VM (honoured by `docker compose up` in Compose v2
 > Runtime note: this repo runs TypeScript **directly** via Node type-stripping (no
 > JS build; `apps/api "start": node src/index.ts`). The image ships the TS source +
 > a pnpm-workspace `node_modules` so `@switchboard/shared` resolves through its
-> symlink — the layout Node's `--experimental-strip-types` requires. The api's
-> production composition root (`src/index.ts`) currently serves `/healthz` and
-> migrates; wiring the full route/provider/worker graph into it is a separate
-> in-flight task. The image and entrypoint host whatever `src/index.ts` grows into
-> with no Dockerfile change.
+> symlink — the layout Node's `--experimental-strip-types` requires. The complete
+> route/provider/worker graph is owned by `src/main.ts` and entered through
+> `src/index.ts` for both server and worker roles.
 
 ## Backups & the restore drill
 

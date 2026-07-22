@@ -11,7 +11,7 @@
  * `resetAdminStore()` rebuilds every seed so colocated tests start from a known
  * state (module state persists across tests within a file otherwise).
  */
-import type { OrgSettings, Snippet, Template, User } from '@switchboard/shared';
+import type { EmailAccount, OrgSettings, Snippet, Template, User } from '@switchboard/shared';
 import { db } from '../../../mocks/fixtures.ts';
 import type { CustomFieldRow, SequenceWithCount } from '../types.ts';
 
@@ -235,6 +235,7 @@ export interface AdminStore {
   snippets: Snippet[];
   orgSettings: OrgSettings;
   sequences: SequenceWithCount[];
+  emailAccounts: EmailAccount[];
 }
 
 function build(): AdminStore {
@@ -244,6 +245,7 @@ function build(): AdminStore {
     snippets: seedSnippets(),
     orgSettings: seedOrgSettings(),
     sequences: seedSequences(),
+    emailAccounts: [],
   };
 }
 
@@ -258,4 +260,5 @@ export function resetAdminStore(): void {
   adminStore.snippets = fresh.snippets;
   adminStore.orgSettings = fresh.orgSettings;
   adminStore.sequences = fresh.sequences;
+  adminStore.emailAccounts = fresh.emailAccounts;
 }

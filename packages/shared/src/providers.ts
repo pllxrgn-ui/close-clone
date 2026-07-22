@@ -195,6 +195,7 @@ export class MessageNotFoundError extends Error {
 export interface EmailProvider {
   getAuthUrl(accountHint: string, redirectUri: string): Promise<string>;
   exchangeCode(code: string, redirectUri: string): Promise<OAuthTokens>;
+  getMailboxAddress(tokens: OAuthTokens): Promise<string>;
   listHistory(tokens: OAuthTokens, cursor: string): Promise<HistoryPage>;
   listMessages(tokens: OAuthTokens, pageToken?: string): Promise<MessagePage>;
   getMessage(tokens: OAuthTokens, providerMessageId: string): Promise<RawEmail>;

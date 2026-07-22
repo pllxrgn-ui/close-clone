@@ -57,9 +57,9 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm format:check
-      - run: pnpm test
       - name: Generate golden fixtures (smoke)
         run: pnpm fixtures:generate --golden
+      - run: pnpm test
 
   perf:
     name: perf gate (100k latency, authoritative on real PG)

@@ -6,7 +6,7 @@ import { ADMIN_USER } from './support/app';
 /*
  * Setup project: logs in once through the real dev-login UI and saves the
  * authenticated localStorage as storageState for the authed specs to reuse.
- * Doubles as a smoke of the /welcome → Open Switchboard → dev-login → app path.
+ * Doubles as a smoke of the /welcome → Open Switchboard → dev-login → overview path.
  * Logs in as the admin fixture user so admin-only surfaces (Settings) work.
  */
 
@@ -21,8 +21,8 @@ setup('authenticate as the admin fixture user', async ({ page }) => {
   await expect(page).toHaveURL(/\/login$/);
 
   await page.getByRole('button', { name: new RegExp(ADMIN_USER.name) }).click();
-  await expect(page).toHaveURL(/\/inbox$/);
-  await expect(page.getByRole('heading', { level: 1, name: 'Inbox' })).toBeVisible();
+  await expect(page).toHaveURL(/\/overview$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
 
   await page.context().storageState({ path: STORAGE_STATE });
 });

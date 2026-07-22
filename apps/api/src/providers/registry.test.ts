@@ -2,6 +2,9 @@ import { describe, expect, test } from 'vitest';
 import { createProviderRegistry } from './registry.ts';
 import { MockEmailProvider } from './mock/mock-email-provider.ts';
 import { GmailEmailProvider } from './email/gmail-email-provider.ts';
+import { TwilioTelephonyProvider } from './telephony/twilio-telephony-provider.ts';
+import { DeepgramASRProvider } from './asr/deepgram-asr-provider.ts';
+import { HaikuAIProvider } from './ai/haiku-ai-provider.ts';
 import { ManualClock } from './mock/clock.ts';
 
 describe('provider registry (composition root, CONTRACTS §C2)', () => {
@@ -19,8 +22,8 @@ describe('provider registry (composition root, CONTRACTS §C2)', () => {
     expect((registry.email as MockEmailProvider).address).toBe('ceo@mock.test');
   });
 
-  test('non-mock mode without gmail config fails fast with a config error', () => {
-    expect(() => createProviderRegistry({ mockMode: false })).toThrow(/gmail/i);
+  test('non-mock mode leaves account-gated providers disabled when unconfigured', () => {
+    expect(createProviderRegistry({ mockMode: false })).toEqual({});
   });
 
   test('non-mock mode binds the real GmailEmailProvider when configured', () => {
@@ -29,5 +32,17 @@ describe('provider registry (composition root, CONTRACTS §C2)', () => {
       gmail: { clientId: 'cid', clientSecret: 'secret', address: 'rep@company.test' },
     });
     expect(registry.email).toBeInstanceOf(GmailEmailProvider);
+  });
+
+  test('non-mock mode binds every configured production provider', () => {
+    const registry = createProviderRegistry({
+      mockMode: false,
+      twilio: { accountSid: 'AC123', authToken: 'secret' },
+      deepgramApiKey: 'deepgram-key',
+      anthropicApiKey: 'anthropic-key',
+    });
+    expect(registry.telephony).toBeInstanceOf(TwilioTelephonyProvider);
+    expect(registry.asr).toBeInstanceOf(DeepgramASRProvider);
+    expect(registry.ai).toBeInstanceOf(HaikuAIProvider);
   });
 });

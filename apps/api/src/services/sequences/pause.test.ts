@@ -143,6 +143,7 @@ describe('reply during the claim window (phase B)', () => {
       const real = realFor(identity);
       const wrapper: EmailProvider = {
         getAuthUrl: (hint, uri) => real.getAuthUrl(hint, uri),
+        getMailboxAddress: (tokens) => real.getMailboxAddress(tokens),
         exchangeCode: (code, uri) => real.exchangeCode(code, uri),
         listHistory: (tokens, cursor) => real.listHistory(tokens, cursor),
         listMessages: (tokens, pageToken) => real.listMessages(tokens, pageToken),

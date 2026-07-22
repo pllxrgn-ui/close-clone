@@ -62,3 +62,36 @@ export function fetchSequencesReport(
     ...(signal ? { signal } : {}),
   });
 }
+
+async function fetchAllPages<TQuery extends { cursor?: string; limit?: number }, TRow>(
+  fetchPage: (query: TQuery, signal?: AbortSignal) => Promise<Page<TRow>>,
+  query: TQuery,
+  signal?: AbortSignal,
+): Promise<Page<TRow>> {
+  const items: TRow[] = [];
+  let cursor: string | undefined;
+  const seen = new Set<string>();
+  do {
+    const page = await fetchPage({ ...query, limit: 500, cursor } as TQuery, signal);
+    items.push(...page.items);
+    cursor = page.nextCursor;
+    if (cursor !== undefined && seen.has(cursor)) throw new Error('report cursor repeated');
+    if (cursor !== undefined) seen.add(cursor);
+  } while (cursor !== undefined);
+  return { items };
+}
+
+export const fetchCompleteActivityReport = (
+  query: ActivityQuery,
+  signal?: AbortSignal,
+): Promise<Page<ActivityReportRow>> => fetchAllPages(fetchActivityReport, query, signal);
+
+export const fetchCompleteFunnelReport = (
+  query: FunnelQuery = {},
+  signal?: AbortSignal,
+): Promise<Page<FunnelStageRow>> => fetchAllPages(fetchFunnelReport, query, signal);
+
+export const fetchCompleteSequencesReport = (
+  query: SequencesQuery = {},
+  signal?: AbortSignal,
+): Promise<Page<SequenceReportRow>> => fetchAllPages(fetchSequencesReport, query, signal);

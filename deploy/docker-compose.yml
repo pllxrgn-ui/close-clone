@@ -11,8 +11,8 @@
 #   postgres  — the only source of truth. Named data volume + WAL archiving to a
 #               SECOND named volume (base for point-in-time recovery / the drill).
 #   redis     — BullMQ transport only (never state; every job re-derivable from PG).
-#   worker    — same image as api, APP_ROLE=worker. Profile-gated OFF until the
-#               standalone worker composition root lands (see README "Workers").
+#   worker    — same image as api, APP_ROLE=worker. Optional profile for
+#               separate queue processing (see README "Workers").
 #   glitchtip — optional self-hosted error tracking, profile-gated OFF.
 #
 # TLS is terminated upstream by the company proxy / internal LB; every service
@@ -143,10 +143,8 @@ services:
           memory: 768M
 
   # ---------------------------------------------------------------------------
-  # Worker — SAME image as api, APP_ROLE=worker, no migrations. Profile-gated
-  # OFF: the standalone worker composition root (apps/api/src/worker.ts) is a
-  # tracked follow-up; v1 runs sweep/send in-process in `api`. Enable with
-  # `--profile worker` once that entry exists (README "Workers & multi-replica").
+  # Worker — SAME image as api, APP_ROLE=worker, no migrations. Optional profile
+  # for separating queue consumers/sweepers from the HTTP-serving process.
   # ---------------------------------------------------------------------------
   worker:
     build:

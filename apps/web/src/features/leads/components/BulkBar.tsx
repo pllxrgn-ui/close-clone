@@ -7,7 +7,7 @@ import type { Lead } from '@switchboard/shared';
 // Lazy: the admin feature must not ride in the leads chunk (audit #6) — the
 // bar only exists after a selection, so the fetch cost hides behind the click.
 const LeadBulkActions = lazy(() =>
-  import('../../admin/index.ts').then((m) => ({ default: m.LeadBulkActions })),
+  import('../../admin/bulk/LeadBulkActions.tsx').then((m) => ({ default: m.LeadBulkActions })),
 );
 
 /*

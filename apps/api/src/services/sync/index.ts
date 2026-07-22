@@ -10,6 +10,7 @@ export {
   SyncError,
   AccountNotFoundError,
   IllegalTransitionError,
+  MailboxAddressMismatchError,
   ReauthRequiredError,
   type SyncStatus,
 } from './errors.ts';
@@ -49,6 +50,7 @@ export {
   processGmailInboxRow,
   gmailPushSchema,
   gmailNotificationSchema,
+  GooglePubSubPushVerifier,
   MockGmailPushVerifier,
   InvalidPushError,
   type GmailPush,

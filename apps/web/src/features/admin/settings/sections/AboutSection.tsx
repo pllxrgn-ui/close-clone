@@ -12,7 +12,7 @@ import { ExternalLinkIcon } from '../../icons.tsx';
 const API_MODE = import.meta.env.VITE_API_MODE === 'real' ? 'Live API' : 'Mock (MSW)';
 
 const STATS: ReadonlyArray<{ value: string; label: string }> = [
-  { value: '5', label: 'Settings sections' },
+  { value: '6', label: 'Settings sections' },
   { value: '5', label: 'Bulk actions' },
   { value: '6', label: 'State lamps' },
   { value: '46', label: 'Admin surface checks' },

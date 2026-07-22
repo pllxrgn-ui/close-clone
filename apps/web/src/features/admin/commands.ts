@@ -13,6 +13,7 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Command } from '../../command/index.ts';
 import { useToast } from '../../feedback/ToastProvider.tsx';
+import { useAuth } from '../../auth/AuthProvider.tsx';
 import { SETTINGS_SECTIONS } from './settings/SettingsNav.tsx';
 import { csvFilename, downloadCsv, leadsToCsv } from './bulk/csv.ts';
 import { useBulkSelection } from './bulk/selectionStore.ts';
@@ -20,10 +21,13 @@ import { useBulkSelection } from './bulk/selectionStore.ts';
 export function useAdminCommands(onRun: () => void): Command[] {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const selection = useBulkSelection();
 
   return useMemo(() => {
-    const navCommands: Command[] = SETTINGS_SECTIONS.map((section) => ({
+    const navCommands: Command[] = SETTINGS_SECTIONS.filter(
+      (section) => user?.role === 'admin' || !section.adminOnly,
+    ).map((section) => ({
       id: `settings:${section.id}`,
       title: `Settings — ${section.label}`,
       group: 'Navigate',
@@ -56,5 +60,5 @@ export function useAdminCommands(onRun: () => void): Command[] {
     }
 
     return [...navCommands, ...actionCommands];
-  }, [navigate, toast, selection, onRun]);
+  }, [navigate, toast, selection, onRun, user?.role]);
 }

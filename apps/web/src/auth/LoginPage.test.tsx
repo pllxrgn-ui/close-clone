@@ -2,7 +2,9 @@ import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vi
 import { cleanup, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import * as axe from 'axe-core';
+import { http, HttpResponse } from 'msw';
 import { db } from '../mocks/fixtures.ts';
+import { server } from '../mocks/server.ts';
 import { renderRoutes } from '../test/renderRoutes.tsx';
 import { browserNav, SSO_LOGIN_PATH } from './browserNav.ts';
 
@@ -51,12 +53,15 @@ describe('LoginPage — mock mode (VITE_API_MODE unset)', () => {
   test('picking a user signs in and lands on the requested route', async () => {
     renderRoutes('/login');
     await userEvent.click(await screen.findByRole('button', { name: new RegExp(USER.name) }));
-    expect(await screen.findByRole('heading', { name: 'Inbox', level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Overview', level: 1 })).toBeInTheDocument();
   });
 });
 
 describe('LoginPage — real mode (VITE_API_MODE=real)', () => {
-  beforeEach(() => vi.stubEnv('VITE_API_MODE', 'real'));
+  beforeEach(() => {
+    vi.stubEnv('VITE_API_MODE', 'real');
+    server.use(http.get('*/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })));
+  });
 
   test('renders the SSO screen and no fixture identities or password field', async () => {
     renderRoutes('/login');
@@ -93,8 +98,9 @@ describe('LoginPage — real mode (VITE_API_MODE=real)', () => {
   });
 
   test('an existing session skips the SSO screen', async () => {
-    renderRoutes('/login', { user: USER });
-    expect(await screen.findByRole('heading', { name: 'Inbox', level: 1 })).toBeInTheDocument();
+    server.use(http.get('*/api/v1/auth/me', () => HttpResponse.json(USER)));
+    renderRoutes('/login');
+    expect(await screen.findByRole('heading', { name: 'Overview', level: 1 })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /single sign-on/i })).not.toBeInTheDocument();
   });
 

@@ -8,9 +8,10 @@
 
 - **Leads, contacts, opportunities** with typed custom fields, on an append-only activity timeline (the product's spine — every touch exactly once, ordered, attributed)
 - **Smart Views** — saved dynamic filters in a small query DSL (`last_contacted < 7d ago and owner in (me)`) compiled to parameterized SQL; visual builder and raw-DSL editor share one AST and can never diverge (round-trip property-tested)
+- **Self-service Gmail inboxes** — every signed-in rep can connect, monitor, disconnect, and reconnect their own mailbox from Settings; OAuth tokens are encrypted and account ownership is enforced server-side
 - **Gmail-model email sync engine** — history-id incremental sync as a resumable state machine; replay/reorder/duplicate any input and the state is byte-identical (property-tested with 32 seeds)
 - **Sequence engine with proven never-events** — a step _never_ sends twice (transactional claim), _never_ after a reply or bounce (re-checked inside the send transaction, raced adversarially), _never_ to a suppressed/DNC address, _never_ outside the window or over the cap — 15 adversarial interleaving properties, 8–16 workers racing every claim
-- **Telephony adapter layer** — mock provider with scripted call-lifecycle webhooks; signature verification pinned to Twilio's published test vector (real Twilio adapter is next phase)
+- **Calling + SMS** — complete Twilio adapter, signed/idempotent webhook ingress, dialer, voicemail, recording consent rail, quiet hours, STOP/DNC enforcement, and a zero-account mock provider
 - **CSV import** — streaming parse, typed mapping, dedupe (domain + email + trigram fuzzy name), dry-run preview, idempotent resumable commit; 10k rows in ~36s
 - **Reporting** — rep activity, currency-aware funnel, sequence performance
 - **Audit & data ownership** — append-only audit log (DB-trigger-enforced), full JSON/CSV export with credential redaction, admin CLI (lookup, merge-leads, hard-delete with audit trail)
@@ -39,6 +40,9 @@ pnpm monorepo: `apps/api` (Fastify + Drizzle + Postgres; Redis/BullMQ behind a q
 
 Read the law and the ledger: [ARCHITECTURE.md](ARCHITECTURE.md) · [CONTRACTS.md](CONTRACTS.md) · [DESIGN.md](DESIGN.md) · [DECISIONS.md](DECISIONS.md) · [DEMO.md](DEMO.md) · [STATUS.md](STATUS.md)
 
-## Roadmap
+## Production handoff
 
-Real Twilio calling/SMS + Deepgram transcription + Haiku summaries (adapters ready) · inbox/pipeline/reports UI (in flight) · OIDC SSO + RBAC · Playwright E2E · observability · one-command Docker deploy · security review.
+The product, mock adapters, real Gmail/Twilio/Deepgram/Anthropic adapters, OIDC/RBAC,
+observability, Playwright flows, and Docker/Render deployment roots are built.
+Remaining work is account and infrastructure provisioning in
+[HUMAN_TODO.md](HUMAN_TODO.md), followed by live-provider smoke tests.

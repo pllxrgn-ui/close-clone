@@ -546,13 +546,13 @@ export async function processIntent(deps: DispatchDeps, intentId: string): Promi
   if (phaseA.kind === 'sms_ready') return finishSmsSend(deps, phaseA, intentId, nowIso);
 
   // --- Phase B: provider.send OUTSIDE the transaction (idempotencyKey=intentId).
-  const provider: EmailProvider = deps.providerFor({
-    address: phaseA.address,
-    provider: phaseA.provider,
-  });
   const tokens = deps.cipher.decrypt(phaseA.oauthTokens);
   let providerMessageId: string;
   try {
+    const provider: EmailProvider = deps.providerFor({
+      address: phaseA.address,
+      provider: phaseA.provider,
+    });
     const res = await provider.send(tokens, phaseA.draft, intentId);
     providerMessageId = res.providerMessageId;
   } catch (err) {

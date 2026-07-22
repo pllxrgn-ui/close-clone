@@ -41,6 +41,8 @@ const DEFAULT_BACKFILL_PAGE_SIZE = 100;
 const DEFAULT_WATCH_TTL_MS = 7 * 24 * 60 * 60 * 1000; // Gmail watch ≈ 7 days
 const INBOX_LABEL = 'INBOX';
 const SENT_LABEL = 'SENT';
+const DEMO_AUTH_CODE_PREFIX = 'mock-mailbox.';
+const MOCK_ACCESS_TOKEN_PREFIX = 'mock-access-';
 
 type HistoryOp = 'add' | 'delete' | 'label';
 
@@ -76,6 +78,8 @@ interface StoredMessage {
 export interface MockEmailProviderOptions {
   /** Mailbox address the provider serves. */
   address?: string;
+  /** Authorization endpoint override for an in-process demo OAuth callback. */
+  authorizationUrl?: string;
   clock?: Clock;
   ids?: IdSource;
   /** Max history records returned per `listHistory` page (forces multi-page). */
@@ -107,6 +111,8 @@ export class MockEmailProvider implements EmailProvider {
   private readonly historyPageSize: number;
   private readonly backfillPageSize: number;
   private readonly watchTtlMs: number;
+  private readonly authorizationUrl: string;
+  private readonly usesLocalAuthorizationCallback: boolean;
 
   /** Insertion-ordered message store (order = backfill order). */
   private readonly messages = new Map<string, StoredMessage>();
@@ -132,6 +138,8 @@ export class MockEmailProvider implements EmailProvider {
     this.historyPageSize = options.historyPageSize ?? DEFAULT_HISTORY_PAGE_SIZE;
     this.backfillPageSize = options.backfillPageSize ?? DEFAULT_BACKFILL_PAGE_SIZE;
     this.watchTtlMs = options.watchTtlMs ?? DEFAULT_WATCH_TTL_MS;
+    this.authorizationUrl = options.authorizationUrl ?? 'https://mock.local/oauth/authorize';
+    this.usesLocalAuthorizationCallback = options.authorizationUrl !== undefined;
     const start = options.startHistoryId ?? 1;
     this.currentHistoryId = start;
     this.oldestHistoryId = start;
@@ -140,19 +148,34 @@ export class MockEmailProvider implements EmailProvider {
   // --- EmailProvider (CONTRACTS §C2) ---------------------------------------
 
   async getAuthUrl(accountHint: string, redirectUri: string): Promise<string> {
-    const params = new URLSearchParams({
-      login_hint: accountHint,
-      redirect_uri: redirectUri,
-      response_type: 'code',
-      provider: 'mock',
-    });
-    return `https://mock.local/oauth/authorize?${params.toString()}`;
+    const url = new URL(this.authorizationUrl);
+    url.searchParams.set('login_hint', accountHint);
+    url.searchParams.set('redirect_uri', redirectUri);
+    url.searchParams.set('response_type', 'code');
+    url.searchParams.set('provider', 'mock');
+    if (this.usesLocalAuthorizationCallback) {
+      url.searchParams.set(
+        'code',
+        `${DEMO_AUTH_CODE_PREFIX}${Buffer.from(accountHint, 'utf8').toString('base64url')}`,
+      );
+    }
+    return url.toString();
   }
 
   async exchangeCode(code: string, redirectUri: string): Promise<OAuthTokens> {
     if (code.length === 0) throw new Error('mock exchangeCode: empty authorization code');
     if (redirectUri.length === 0) throw new Error('mock exchangeCode: empty redirect uri');
-    return this.mintTokens();
+    const address = code.startsWith(DEMO_AUTH_CODE_PREFIX)
+      ? Buffer.from(code.slice(DEMO_AUTH_CODE_PREFIX.length), 'base64url').toString('utf8')
+      : this.address;
+    return this.mintTokensFor(address);
+  }
+
+  async getMailboxAddress(tokens: OAuthTokens): Promise<string> {
+    oauthTokensSchema.parse(tokens);
+    return tokens.accessToken.startsWith(MOCK_ACCESS_TOKEN_PREFIX)
+      ? tokens.accessToken.slice(MOCK_ACCESS_TOKEN_PREFIX.length)
+      : this.address;
   }
 
   async listHistory(tokens: OAuthTokens, cursor: string): Promise<HistoryPage> {
@@ -376,10 +399,17 @@ export class MockEmailProvider implements EmailProvider {
 
   /** Mint valid tokens for this mailbox (dev-login / test wiring). */
   mintTokens(scope = 'https://www.googleapis.com/auth/gmail.modify'): OAuthTokens {
+    return this.mintTokensFor(this.address, scope);
+  }
+
+  private mintTokensFor(
+    address: string,
+    scope = 'https://www.googleapis.com/auth/gmail.modify',
+  ): OAuthTokens {
     const expiresAt = new Date(this.clock.now().getTime() + 3600_000).toISOString();
     return {
-      accessToken: `mock-access-${this.address}`,
-      refreshToken: `mock-refresh-${this.address}`,
+      accessToken: `${MOCK_ACCESS_TOKEN_PREFIX}${address}`,
+      refreshToken: `mock-refresh-${address}`,
       expiresAt,
       scope,
       tokenType: 'Bearer',

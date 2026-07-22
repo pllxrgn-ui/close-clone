@@ -35,21 +35,11 @@ server)
   exec $NODE_TS "$APP_DIR/src/index.ts"
   ;;
 worker)
-  # v1 runs sweep/send in-process in the api server; the standalone worker
-  # composition root (apps/api/src/worker.ts) is a tracked follow-up. Fail fast
-  # with an actionable message rather than idling silently.
-  WORKER_ENTRY="${WORKER_ENTRY:-$APP_DIR/src/worker.ts}"
-  if [ ! -f "$WORKER_ENTRY" ]; then
-    echo "[entrypoint] APP_ROLE=worker but no worker entry at $WORKER_ENTRY." >&2
-    echo "[entrypoint] v1 runs sweep/send in-process in 'api'; the standalone" >&2
-    echo "[entrypoint] worker is a follow-up (see deploy/README.md 'Workers')." >&2
-    exit 1
-  fi
   # Liveness heartbeat for the compose healthcheck (updated every 30s).
   ( while true; do touch /tmp/worker-alive; sleep 30; done ) &
   echo "[entrypoint] starting worker"
   # shellcheck disable=SC2086
-  exec $NODE_TS "$WORKER_ENTRY"
+  exec $NODE_TS "$APP_DIR/src/index.ts"
   ;;
 *)
   echo "[entrypoint] unknown APP_ROLE='$ROLE' (expected server|worker)" >&2
